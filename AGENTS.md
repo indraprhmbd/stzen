@@ -59,3 +59,76 @@ All business routes live under `/api/v1`. Infrastructure endpoints (`/api/health
 - One file per feature domain: `admin.ts`, `products.ts`, `orders.ts`
 - Version router (`v1.ts`, `v2.ts`) composes feature routes
 - Main `index.ts` only handles middleware, version mounting, and server startup
+
+## Modular Monolith Architecture
+
+### Directory Structure
+```
+server/
+  app.ts                          # createApp() factory + AppType export
+  index.ts                        # Entrypoint: createApp + serve (minimal)
+  shared/                         # Cross-module kernel
+    db/                           # Drizzle client + schema re-exports
+    middleware/                    # auth, require-role
+    errors/                       # AppError classes + global handler
+    lib/                          # crypto, db-helpers
+  modules/                        # Feature modules (self-contained)
+    products/                     # routes, service, schema, types, index
+    orders/
+    checkout/
+    vault/
+    admin/
+```
+
+### Module Convention
+Each module has up to 5 files:
+- `*.routes.ts` — Hono sub-app with HTTP handlers (thin, delegate to service)
+- `*.service.ts` — Business logic + DB queries (testable without HTTP)
+- `*.schema.ts` — Zod validation schemas
+- `*.types.ts` — TypeScript types (exported for cross-module use)
+- `index.ts` — Public API: re-exports routes + service
+
+### Import Rules
+1. **Modules import from `shared/` only.** Never import from another module's internal files.
+2. **Cross-module data access** goes through the target module's service (e.g., `checkoutService` calls `productsService.getById()`).
+3. **Shared kernel imports from `db/schema.ts`.** Modules re-export types from there.
+4. **`app.ts` composes all modules.** No module imports from `app.ts`.
+
+### Service Layer Pattern
+```typescript
+// Handler (thin)
+route.post('/', zValidator('json', Schema), async (c) => {
+  const data = c.req.valid('json')
+  const result = await myService.doWork(data)
+  return c.json(result)
+})
+
+// Service (business logic)
+export const myService = {
+  async doWork(data: Input) {
+    // DB queries, validation, state transitions
+    // Throw AppError subclasses on failure
+  }
+}
+```
+
+### Error Handling
+- Throw `NotFoundError`, `ConflictError`, `ForbiddenError`, etc. from `shared/errors/http.ts`
+- Global `app.onError(errorHandler)` catches all and returns consistent JSON
+- Never return `c.json({ error: ... }, status)` from services — throw instead
+
+### Order State Machine
+Centralized in `orders.service.ts`:
+```
+PENDING  -> PAID (approve), REJECTED (reject)
+PAID     -> DELIVERED (deliver)
+REJECTED -> (terminal)
+DELIVERED -> (terminal)
+```
+Adding new states requires updating `VALID_TRANSITIONS` and `ACTION_TO_STATUS` in one file.
+
+### Adding a New Module
+1. Create `server/modules/<name>/` with routes, service, types, index
+2. Import shared kernel from `../../shared/`
+3. Mount in `server/app.ts`: `app.route('/api/v1/<name>', <name>Routes)`
+4. Export `AppType` is auto-updated via `ReturnType<typeof createApp>`
