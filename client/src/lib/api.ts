@@ -1,5 +1,5 @@
 import { hc } from 'hono/client'
-import type { AppType } from '../../../server/index'
+import type { AppType } from '../../../server/app'
 
 // End-to-end type-safe API client
 // Uses Hono RPC to infer types directly from server routes

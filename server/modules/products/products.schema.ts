@@ -26,15 +26,8 @@ export const BulkStockSchema = z.object({
     ),
 })
 
-// ─── Checkout Schema ────────────────────────────────────────────────────────
-
-export const CheckoutSchema = z.object({
-  productId: z.string().uuid('Invalid product ID'),
-})
-
 // ─── Inferred Types ─────────────────────────────────────────────────────────
 
 export type ProductCreate = z.infer<typeof ProductCreateSchema>
 export type ProductUpdate = z.infer<typeof ProductUpdateSchema>
 export type BulkStock = z.infer<typeof BulkStockSchema>
-export type Checkout = z.infer<typeof CheckoutSchema>
