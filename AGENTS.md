@@ -132,3 +132,52 @@ Adding new states requires updating `VALID_TRANSITIONS` and `ACTION_TO_STATUS` i
 2. Import shared kernel from `../../shared/`
 3. Mount in `server/app.ts`: `app.route('/api/v1/<name>', <name>Routes)`
 4. Export `AppType` is auto-updated via `ReturnType<typeof createApp>`
+
+## UI Design System: "Zen" Neubrutalism
+
+### Anti-AI Design Rules (MANDATORY)
+
+1. **NEVER** use `rounded-xl`, `rounded-2xl`, or `rounded-full` on cards or containers. Use `rounded-sm` or `rounded-md` max.
+2. **NEVER** use subtle shadows (`shadow-md`, `shadow-lg`, `shadow-indigo-500/10`). Always use `.shadow-brutal` or `.shadow-pop-*`.
+3. **NEVER** use subtle background gradients (`bg-gradient-to-r from-purple-500 to-indigo-500`). Use flat, solid high-contrast fills.
+4. **NEVER** place plain text on raw background without high-contrast outlines or solid bounding boxes.
+
+### Required Utility Classes
+
+- **Borders:** `.border-brutal` (3px), `.border-brutal-thick` (4px)
+- **Shadows:** `.shadow-brutal-sm` (2px), `.shadow-brutal` (4px), `.shadow-brutal-lg` (7px)
+- **Pop Shadows:** `.shadow-pop-pink`, `.shadow-pop-lime`, `.shadow-pop-coral`
+- **Buttons:** `.btn-brutal-interactive` (push-button physics: translate on hover/active)
+- **Text:** `.text-stroke-black` (2.5px), `.text-stroke-thin` (1.5px)
+
+### Typography
+
+- **Headers:** Space Grotesk (700/900), uppercase, high tracking
+- **Body:** Plus Jakarta Sans (600-800)
+- **Credentials/Code:** JetBrains Mono (700)
+
+### Component Specs
+
+**Primary Button:**
+```html
+<button class="btn btn-primary border-brutal shadow-brutal btn-brutal-interactive font-black uppercase">
+  ACTION TEXT
+</button>
+```
+
+**Product Card:**
+```html
+<div class="card bg-base-200 border-brutal-thick shadow-pop-pink rounded-md p-5">
+```
+
+**Input Field:**
+```html
+<input class="input input-bordered bg-base-100 border-brutal font-mono text-xs shadow-brutal-sm rounded-sm" />
+```
+
+**Credential Terminal:**
+```html
+<div class="bg-neutral border-brutal-thick shadow-pop-lime rounded-md p-4">
+  <pre class="font-mono text-sm text-primary font-bold bg-black/50 p-3 select-all">...</pre>
+</div>
+```

@@ -72,14 +72,24 @@ function Catalog() {
     <div className="container mx-auto px-4 py-8">
       {/* Hero */}
       <div className="text-center mb-8">
-        <h1 className="text-4xl font-bold">{brand.name}</h1>
-        <p className="text-lg text-base-content/70 mt-2">{brand.tagline}</p>
+        <h1
+          className="text-5xl font-black uppercase tracking-tight text-neutral"
+          style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+        >
+          {brand.name}
+        </h1>
+        <p
+          className="text-lg font-bold text-neutral/80 mt-2"
+          style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+        >
+          {brand.tagline}
+        </p>
       </div>
 
       {/* Category Filter */}
       <div className="flex justify-center mb-6">
         <select
-          className="select select-bordered w-full max-w-xs"
+          className="select select-bordered w-full max-w-xs border-brutal font-bold text-neutral shadow-brutal-sm rounded-sm"
           value={selectedCategory}
           onChange={(e) => setSelectedCategory(e.target.value)}
         >
@@ -94,53 +104,70 @@ function Catalog() {
       {/* Product Grid */}
       {filteredProducts.length === 0 ? (
         <div className="text-center py-12">
-          <p className="text-base-content/50">No products available</p>
+          <p className="text-neutral/50 font-bold">No products available</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredProducts.map((product) => (
-            <div key={product.id} className="card bg-base-200 shadow-sm">
-              <div className="card-body">
-                <h2 className="card-title">
-                  {product.name}
-                  {product.badge && (
-                    <div className="badge badge-secondary">{product.badge}</div>
-                  )}
-                </h2>
-                {product.description && (
-                  <p className="text-sm text-base-content/70">
-                    {product.description}
-                  </p>
-                )}
-                <div className="flex items-center gap-2 mt-2">
-                  <span className="text-2xl font-bold">
-                    Rp {product.price}
+            <div
+              key={product.id}
+              className="card bg-base-200 border-brutal-thick shadow-pop-pink rounded-md p-5 transition-all"
+            >
+              <div className="flex justify-between items-start mb-3">
+                {product.badge ? (
+                  <span className="badge bg-accent text-neutral font-black border-brutal -rotate-2 shadow-brutal-sm px-3 py-2 text-xs">
+                    {product.badge.toUpperCase()}
                   </span>
+                ) : (
+                  <span className="badge bg-accent text-neutral font-black border-brutal -rotate-2 shadow-brutal-sm px-3 py-2 text-xs">
+                    {brand.storefront.badgeTextDefault.toUpperCase()}
+                  </span>
+                )}
+                <span
+                  className="font-black text-2xl text-primary text-stroke-thin"
+                  style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                >
+                  {brand.storefront.currencySymbol}{product.price}
+                </span>
+              </div>
+              <h3
+                className="font-black text-xl uppercase tracking-tight text-neutral mb-2"
+                style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+              >
+                {product.name}
+              </h3>
+              {product.description && (
+                <p
+                  className="text-xs font-bold text-neutral/80 mb-4"
+                  style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+                >
+                  {product.description}
+                </p>
+              )}
+              <div className="flex items-center gap-2 mb-4">
+                <div
+                  className={`badge border-brutal font-mono font-bold text-xs ${
+                    product.stockCount > 0
+                      ? 'bg-success text-neutral'
+                      : 'bg-error text-neutral'
+                  }`}
+                >
+                  {product.stockCount > 0
+                    ? `${product.stockCount} AVAILABLE`
+                    : 'OUT OF STOCK'}
                 </div>
-                <div className="flex items-center gap-2">
-                  <div
-                    className={`badge ${
-                      product.stockCount > 0
-                        ? 'badge-success'
-                        : 'badge-error'
-                    }`}
-                  >
-                    {product.stockCount > 0
-                      ? `${product.stockCount} available`
-                      : 'Out of stock'}
-                  </div>
-                  <div className="badge badge-outline">{product.category}</div>
-                </div>
-                <div className="card-actions justify-end mt-4">
-                  <button
-                    className="btn btn-primary btn-sm"
-                    disabled={product.stockCount === 0}
-                    onClick={() => handleBuyNow(product.id)}
-                  >
-                    Buy Now
-                  </button>
+                <div className="badge border-brutal bg-base-300 text-neutral font-bold text-xs">
+                  {product.category.toUpperCase()}
                 </div>
               </div>
+              <button
+                className="btn btn-primary w-full border-brutal shadow-brutal btn-brutal-interactive font-black uppercase"
+                style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+                disabled={product.stockCount === 0}
+                onClick={() => handleBuyNow(product.id)}
+              >
+                Get Credentials
+              </button>
             </div>
           ))}
         </div>
