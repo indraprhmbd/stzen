@@ -1,0 +1,19 @@
+@import "tailwindcss";
+@plugin "daisyui" {
+  themes: dark --default, light --prefersdark, synthwave, nord, abyss;
+};
+
+/* Custom Brand Palette */
+@plugin "daisyui/theme" {
+  name: "custom-brand";
+  default: false;
+  color-scheme: "dark";
+  --color-primary: oklch(65% 0.24 260);
+  --color-secondary: oklch(70% 0.19 160);
+  --color-accent: oklch(75% 0.15 50);
+  --color-neutral: oklch(20% 0.02 260);
+  --color-base-100: oklch(14% 0.01 260);
+  --radius-selector: 0.5rem;
+  --radius-field: 0.375rem;
+  --radius-box: 0.75rem;
+}

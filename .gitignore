@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+package-lock.json
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Build output
+client/dist/
+*.tsbuildinfo
+
+# Server compiled output (tsx runs from .ts, these are tsc remnants)
+**/*.js
+**/*.js.map
+**/*.d.ts
+**/*.d.ts.map
+!client/src/vite-env.d.ts
+
+# Restore migration files
+!server/db/migrations/**/*.sql
+!server/db/migrations/**/*.json
+
+# Drizzle Kit
+server/db/meta/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/settings.json
+.idea/
+
+# Internal planning
+_context/
+.agents/
+skills-lock.json
