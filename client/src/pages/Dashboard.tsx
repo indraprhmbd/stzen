@@ -2,6 +2,9 @@ import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { useBrand } from '../hooks/useBrand'
 import { authedApiRequest } from '../lib/api'
+import Layout from '../components/Layout'
+import OrderCard from '../components/OrderCard'
+import CredentialViewer from '../components/CredentialViewer'
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -31,13 +34,13 @@ type FilterTab = 'ALL' | 'PENDING' | 'PAID' | 'DELIVERED' | 'REJECTED'
 
 export default function Dashboard() {
   const { user, signOut } = useAuth()
-  const { brand } = useBrand()
+  const brand = useBrand()
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<FilterTab>('ALL')
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
 
-  // Modal state
-  const [modalOpen, setModalOpen] = useState(false)
+  // Credentials state
   const [credentials, setCredentials] = useState<Credentials | null>(null)
   const [loadingCredentials, setLoadingCredentials] = useState(false)
   const [credentialsError, setCredentialsError] = useState('')
@@ -72,7 +75,9 @@ export default function Dashboard() {
   }
 
   async function handleViewCredentials(orderId: string) {
-    setModalOpen(true)
+    const order = orders.find((o) => o.id === orderId)
+    if (order) setSelectedOrder(order)
+
     setLoadingCredentials(true)
     setCredentialsError('')
     setCredentials(null)
@@ -102,45 +107,16 @@ export default function Dashboard() {
     return `https://wa.me/${number}?text=${text}`
   }
 
-  function getStatusBadge(status: Order['status']) {
-    const base = 'badge border-brutal font-bold text-xs'
-    switch (status) {
-      case 'PENDING':
-        return `${base} bg-warning text-neutral`
-      case 'PAID':
-        return `${base} bg-info text-neutral`
-      case 'DELIVERED':
-        return `${base} bg-success text-neutral`
-      case 'REJECTED':
-        return `${base} bg-error text-neutral`
-      case 'REFUNDED':
-        return `${base} bg-base-300 text-neutral`
-      default:
-        return `${base} bg-base-300 text-neutral`
-    }
-  }
-
   return (
-    <div className="container mx-auto px-4 py-8 max-w-4xl">
+    <Layout>
       {/* Header */}
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex justify-between items-center mb-6 border-b-[3px] border-neutral pb-2">
         <h1
-          className="text-3xl font-black uppercase tracking-tight text-neutral"
+          className="font-black text-3xl uppercase tracking-tight text-neutral"
           style={{ fontFamily: "'Space Grotesk', sans-serif" }}
         >
-          My Orders
+          MY ACTIVE PURCHASES
         </h1>
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-bold text-neutral/60">
-            {user?.email}
-          </span>
-          <button
-            className="btn btn-sm btn-primary border-brutal shadow-brutal-sm btn-brutal-interactive font-black uppercase text-xs"
-            onClick={() => signOut()}
-          >
-            Sign Out
-          </button>
-        </div>
       </div>
 
       {/* Filter Tabs */}
@@ -149,16 +125,19 @@ export default function Dashboard() {
           (tab) => (
             <button
               key={tab}
-              className={`btn btn-sm border-brutal shadow-brutal-sm btn-brutal-interactive font-bold uppercase text-xs ${
-                activeTab === tab
-                  ? 'btn-primary'
-                  : 'btn-ghost'
-              }`}
+              className={`
+                border-[3px] border-neutral font-bold uppercase text-xs px-3 py-1.5
+                transition-all
+                ${activeTab === tab
+                  ? 'bg-primary text-primary-content shadow-brutal'
+                  : 'bg-base-100 text-neutral shadow-brutal-sm hover:-translate-x-[1px] hover:-translate-y-[1px]'
+                }
+              `}
               onClick={() => setActiveTab(tab)}
             >
               {tab}
               {tabCounts[tab] > 0 && (
-                <span className="badge badge-sm border-brutal bg-base-300 text-neutral font-mono ml-1">
+                <span className="ml-1.5 font-mono text-[10px] opacity-70">
                   {tabCounts[tab]}
                 </span>
               )}
@@ -167,137 +146,71 @@ export default function Dashboard() {
         )}
       </div>
 
-      {/* Order List */}
-      {loading ? (
-        <div className="flex justify-center py-12">
-          <span className="loading loading-spinner loading-lg"></span>
-        </div>
-      ) : filteredOrders.length === 0 ? (
-        <div className="text-center py-12">
-          <p className="text-neutral/50 font-bold">No orders found</p>
-        </div>
-      ) : (
-        <div className="flex flex-col gap-4">
-          {filteredOrders.map((order) => (
-            <div
-              key={order.id}
-              className="card bg-base-200 border-brutal-thick shadow-pop-pink rounded-md p-5"
-            >
-              <div className="flex justify-between items-start mb-3">
-                <div>
-                  <h3
-                    className="font-black text-lg uppercase tracking-tight text-neutral"
-                    style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-                  >
-                    {order.productName}
-                  </h3>
-                  <p className="text-xs font-bold text-neutral/60">
-                    {order.productCategory}
-                  </p>
-                </div>
-                <span className={getStatusBadge(order.status)}>
-                  {order.status}
-                </span>
-              </div>
-
-              <div className="flex items-center gap-4 mb-4 text-xs font-bold text-neutral/70">
-                <span className="font-mono">
-                  ${order.amount}
-                </span>
-                <span className="font-mono">
-                  {new Date(order.createdAt).toLocaleDateString()}
-                </span>
-                <span className="font-mono text-neutral/40">
-                  #{order.id.slice(0, 8)}
-                </span>
-              </div>
-
-              <div className="flex gap-2">
-                {order.status === 'DELIVERED' && (
-                  <button
-                    className="btn btn-sm btn-primary border-brutal shadow-brutal-sm btn-brutal-interactive font-black uppercase text-xs"
-                    onClick={() => handleViewCredentials(order.id)}
-                  >
-                    View Credentials
-                  </button>
-                )}
-                <a
-                  href={getWhatsAppUrl(order.id)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="btn btn-sm btn-secondary border-brutal shadow-brutal-sm btn-brutal-interactive font-black uppercase text-xs"
-                >
-                  Report Issue
-                </a>
-              </div>
+      {/* Content */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Left: Order List */}
+        <div className={`${selectedOrder && credentials ? 'lg:col-span-5' : 'lg:col-span-12'}`}>
+          {loading ? (
+            <div className="flex justify-center py-12">
+              <span className="loading loading-spinner loading-lg"></span>
             </div>
-          ))}
+          ) : filteredOrders.length === 0 ? (
+            <div className="text-center py-12 bg-base-200 border-[3px] border-neutral shadow-brutal p-8">
+              <span className="material-symbols-outlined text-4xl text-neutral/30 mb-2">inbox</span>
+              <p className="text-neutral/50 font-bold">No orders found</p>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-4">
+              {filteredOrders.map((order) => (
+                <div
+                  key={order.id}
+                  className={`
+                    cursor-pointer transition-all
+                    ${selectedOrder?.id === order.id ? 'ring-2 ring-primary' : ''}
+                  `}
+                  onClick={() => order.status === 'DELIVERED' && handleViewCredentials(order.id)}
+                >
+                  <OrderCard
+                    order={order}
+                    onViewCredentials={order.status === 'DELIVERED' ? () => handleViewCredentials(order.id) : undefined}
+                    onReport={() => window.open(getWhatsAppUrl(order.id), '_blank')}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
         </div>
-      )}
 
-      {/* Credentials Modal */}
-      {modalOpen && (
-        <dialog className="modal modal-open">
-          <div className="modal-box border-brutal-thick shadow-brutal-lg rounded-md">
-            <h3
-              className="font-black text-lg uppercase text-neutral mb-4"
-              style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-            >
-              Credentials
-            </h3>
-
+        {/* Right: Credential Viewer */}
+        {selectedOrder && (
+          <div className="lg:col-span-7">
             {loadingCredentials ? (
-              <div className="flex justify-center py-8">
-                <span className="loading loading-spinner loading-lg"></span>
+              <div className="bg-neutral border-[4px] border-secondary shadow-pop-pink rounded-sm p-6">
+                <div className="flex justify-center py-8">
+                  <span className="loading loading-spinner loading-lg text-primary"></span>
+                </div>
               </div>
             ) : credentialsError ? (
-              <div className="alert alert-error border-brutal shadow-brutal-sm font-bold text-xs">
-                <span>{credentialsError}</span>
+              <div className="bg-neutral border-[4px] border-error shadow-brutal rounded-sm p-6">
+                <p className="font-bold text-error text-sm">{credentialsError}</p>
               </div>
             ) : credentials ? (
-              <div className="flex flex-col gap-4">
-                <div className="bg-neutral border-brutal-thick shadow-pop-lime rounded-md p-4">
-                  <pre className="font-mono text-sm text-primary font-bold bg-black/50 p-3 select-all whitespace-pre-wrap">
-                    {credentials.credentials}
-                  </pre>
-                </div>
-
-                {credentials.instructions && (
-                  <div>
-                    <p className="text-xs font-bold text-neutral/60 mb-1 uppercase">
-                      Instructions
-                    </p>
-                    <p className="text-sm font-bold text-neutral">
-                      {credentials.instructions}
-                    </p>
-                  </div>
-                )}
-
-                <button
-                  className="btn btn-primary border-brutal shadow-brutal btn-brutal-interactive font-black uppercase"
-                  onClick={() =>
-                    handleCopyCredentials(credentials.credentials)
-                  }
-                >
-                  Copy to Clipboard
-                </button>
+              <CredentialViewer
+                credentials={credentials.credentials}
+                instructions={credentials.instructions}
+                onCopy={() => handleCopyCredentials(credentials.credentials)}
+                onReport={() => window.open(getWhatsAppUrl(selectedOrder.id), '_blank')}
+              />
+            ) : (
+              <div className="bg-base-200 border-[3px] border-neutral shadow-brutal p-6">
+                <p className="text-neutral/50 font-bold text-center">
+                  Select a delivered order to view credentials
+                </p>
               </div>
-            ) : null}
-
-            <div className="modal-action">
-              <button
-                className="btn border-brutal shadow-brutal-sm btn-brutal-interactive font-bold uppercase"
-                onClick={() => setModalOpen(false)}
-              >
-                Close
-              </button>
-            </div>
+            )}
           </div>
-          <form method="dialog" className="modal-backdrop">
-            <button onClick={() => setModalOpen(false)}>close</button>
-          </form>
-        </dialog>
-      )}
-    </div>
+        )}
+      </div>
+    </Layout>
   )
 }

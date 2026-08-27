@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Customer Dashboard - STAND WITH ZEN</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&amp;family=Space+Grotesk:wght@300..700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "surface-container": "#ecefeb",
+                      "on-primary-fixed": "#151f00",
+                      "surface-tint": "#4c6700",
+                      "forest-green": "#3D785A",
+                      "on-surface-variant": "#434934",
+                      "on-tertiary-fixed-variant": "#7a3000",
+                      "on-secondary-fixed": "#3e001f",
+                      "on-tertiary-fixed": "#351000",
+                      "tertiary-fixed-dim": "#ffb693",
+                      "on-error": "#ffffff",
+                      "outline-variant": "#c3c9ae",
+                      "secondary": "#b21c66",
+                      "inverse-surface": "#2d312f",
+                      "on-secondary-fixed-variant": "#8d004e",
+                      "background": "#f7faf6",
+                      "surface-container-low": "#f1f4f0",
+                      "surface-container-high": "#e6e9e5",
+                      "surface-container-highest": "#e0e3df",
+                      "error-container": "#ffdad6",
+                      "on-secondary-container": "#650036",
+                      "tertiary-fixed": "#ffdbcc",
+                      "on-background": "#181c1a",
+                      "on-error-container": "#93000a",
+                      "tertiary-container": "#ffe6dc",
+                      "on-surface": "#181c1a",
+                      "on-primary-container": "#557300",
+                      "surface": "#f7faf6",
+                      "on-primary": "#ffffff",
+                      "primary": "#4c6700",
+                      "on-secondary": "#ffffff",
+                      "surface-bright": "#f7faf6",
+                      "inverse-primary": "#a2d800",
+                      "tertiary": "#a04100",
+                      "surface-dim": "#d8dbd7",
+                      "teal-info": "#1D6058",
+                      "inverse-on-surface": "#eef2ee",
+                      "secondary-container": "#ff5da2",
+                      "error": "#ba1a1a",
+                      "surface-container-lowest": "#ffffff",
+                      "secondary-fixed-dim": "#ffb0ca",
+                      "on-tertiary": "#ffffff",
+                      "on-primary-fixed-variant": "#384e00",
+                      "primary-fixed-dim": "#a2d800",
+                      "outline": "#737a62",
+                      "primary-fixed": "#bdf52d",
+                      "primary-container": "#c5fe37",
+                      "surface-variant": "#e0e3df",
+                      "base-sage": "#5EAA83",
+                      "secondary-fixed": "#ffd9e3",
+                      "on-tertiary-container": "#b24900",
+                      "dark-sage": "#4E9370",
+                      "onyx-black": "#0D110F"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {
+                      "stack-sm": "0.5rem",
+                      "stack-lg": "2rem",
+                      "grid-margin": "2rem",
+                      "stack-md": "1rem",
+                      "offset-3d": "12px",
+                      "gutter": "1.5rem",
+                      "offset-brutal": "4px"
+              },
+              "fontFamily": {
+                      "display-xl-mobile": [
+                              "Space Grotesk"
+                      ],
+                      "body-lg": [
+                              "Plus Jakarta Sans"
+                      ],
+                      "body-md": [
+                              "Plus Jakarta Sans"
+                      ],
+                      "label-bold": [
+                              "Space Grotesk"
+                      ],
+                      "headline-md": [
+                              "Space Grotesk"
+                      ],
+                      "display-xl": [
+                              "Space Grotesk"
+                      ],
+                      "headline-lg": [
+                              "Space Grotesk"
+                      ]
+              },
+              "fontSize": {
+                      "display-xl-mobile": [
+                              "48px",
+                              {
+                                      "lineHeight": "1.0",
+                                      "letterSpacing": "-0.04em",
+                                      "fontWeight": "900"
+                              }
+                      ],
+                      "body-lg": [
+                              "18px",
+                              {
+                                      "lineHeight": "1.5",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "body-md": [
+                              "16px",
+                              {
+                                      "lineHeight": "1.6",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "label-bold": [
+                              "14px",
+                              {
+                                      "lineHeight": "1.0",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "headline-md": [
+                              "24px",
+                              {
+                                      "lineHeight": "1.2",
+                                      "fontWeight": "800"
+                              }
+                      ],
+                      "display-xl": [
+                              "72px",
+                              {
+                                      "lineHeight": "1.0",
+                                      "letterSpacing": "-0.04em",
+                                      "fontWeight": "900"
+                              }
+                      ],
+                      "headline-lg": [
+                              "32px",
+                              {
+                                      "lineHeight": "1.2",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "800"
+                              }
+                      ]
+              },
+              boxShadow: {
+                  'brutal': '4px 4px 0px 0px rgba(0,0,0,1)',
+                  '3d-pop': '4px 4px 0px 0px rgba(0,0,0,1), 8px 8px 0px 0px rgba(255,93,162,1), 12px 12px 0px 0px rgba(255,176,202,1), 16px 16px 0px 0px rgba(0,0,0,1)',
+                  'none': '0px 0px 0px 0px rgba(0,0,0,0)',
+              }
+      },
+          },
+        }
+      </script>
+<style type="text/tailwindcss">
+        @layer utilities {
+            .brutal-border {
+                @apply border-[3px] border-black;
+            }
+        }
+      </style>
+</head>
+<body class="bg-base-sage min-h-screen flex flex-col font-body-md text-on-surface">
+<!-- TopNavBar -->
+<nav class="bg-background dark:bg-background text-primary dark:text-inverse-primary font-headline-md text-headline-md uppercase w-full top-0 sticky border-b-[3px] border-on-background dark:border-outline-variant shadow-brutal dark:shadow-none z-50">
+<div class="flex justify-between items-center px-grid-margin py-stack-md w-full max-w-7xl mx-auto">
+<div class="font-display-xl-mobile md:font-display-xl text-headline-lg font-black tracking-tighter text-on-background dark:text-inverse-on-surface">
+                STAND WITH ZEN
+            </div>
+<div class="hidden md:flex gap-stack-lg items-center">
+<a class="text-on-background dark:text-on-surface-variant hover:text-primary dark:hover:text-inverse-primary hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all active:translate-x-[4px] active:translate-y-[4px] active:shadow-none" href="#">Catalog</a>
+<a class="text-primary dark:text-inverse-primary border-b-[4px] border-primary dark:border-inverse-primary pb-1 hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all active:translate-x-[4px] active:translate-y-[4px] active:shadow-none" href="#">My Orders</a>
+<a class="text-on-background dark:text-on-surface-variant hover:text-primary dark:hover:text-inverse-primary hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all active:translate-x-[4px] active:translate-y-[4px] active:shadow-none" href="#">Admin</a>
+</div>
+<div class="flex items-center gap-stack-md">
+<button class="bg-primary-container brutal-border shadow-brutal font-label-bold text-label-bold px-4 py-2 hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none active:translate-x-[4px] active:translate-y-[4px] transition-all text-on-background">
+                    Connect Wallet
+                </button>
+</div>
+</div>
+</nav>
+<!-- Main Content -->
+<main class="flex-grow w-full max-w-7xl mx-auto px-grid-margin py-stack-lg md:py-16 flex flex-col gap-stack-lg">
+<header class="mb-stack-sm">
+<h1 class="font-display-xl-mobile md:font-display-xl text-display-xl-mobile md:text-display-xl text-on-background tracking-tighter uppercase brutal-text-shadow">
+                MY ACTIVE PURCHASES
+            </h1>
+</header>
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter">
+<!-- Order Info Column -->
+<div class="lg:col-span-5 flex flex-col gap-stack-md">
+<div class="bg-dark-sage brutal-border shadow-brutal p-stack-lg flex flex-col gap-stack-sm">
+<h2 class="font-headline-lg text-headline-lg uppercase text-on-background border-b-[3px] border-black pb-stack-sm mb-stack-sm">
+                        Premium Subscription
+                    </h2>
+<div class="flex justify-between items-center font-body-lg text-body-lg text-on-background">
+<span class="font-label-bold uppercase">Date</span>
+<span>Oct 24, 2024</span>
+</div>
+<div class="flex justify-between items-center font-body-lg text-body-lg text-on-background">
+<span class="font-label-bold uppercase">Order ID</span>
+<span class="font-mono">#ZEN-9982-A</span>
+</div>
+<div class="mt-stack-md flex flex-wrap gap-stack-sm">
+<span class="bg-primary-container brutal-border px-3 py-1 font-label-bold text-label-bold uppercase text-on-background">Active</span>
+<span class="bg-tertiary-fixed-dim brutal-border px-3 py-1 font-label-bold text-label-bold uppercase text-on-background">Auto-Renew</span>
+</div>
+</div>
+<!-- Support Action -->
+<button class="bg-surface brutal-border shadow-brutal font-label-bold text-label-bold uppercase px-stack-lg py-stack-md text-on-background hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none active:translate-x-[4px] active:translate-y-[4px] transition-all flex items-center justify-center gap-stack-sm w-full">
+<span class="material-symbols-outlined" data-icon="forum" style="font-variation-settings: 'FILL' 1;">forum</span>
+                    REPORT ISSUE
+                </button>
+</div>
+<!-- Credential Viewer Column -->
+<div class="lg:col-span-7 flex flex-col gap-stack-md">
+<div class="bg-onyx-black border-[3px] border-secondary-container shadow-3d-pop p-stack-lg md:p-8 flex flex-col justify-center items-center relative overflow-hidden min-h-[300px]">
+<div class="absolute top-4 left-4 flex gap-2">
+<div class="w-3 h-3 bg-secondary-container rounded-full border-2 border-black"></div>
+<div class="w-3 h-3 bg-primary-container rounded-full border-2 border-black"></div>
+</div>
+<h3 class="font-label-bold text-label-bold text-secondary-container uppercase mb-stack-md self-start tracking-widest">
+                        SECURE PAYLOAD
+                    </h3>
+<div class="font-mono text-[1.2rem] md:text-[1.5rem] text-primary-container break-all text-center leading-relaxed">
+                        user@email.com:pass123 | Profile 2 | PIN: 9988
+                    </div>
+</div>
+<button class="bg-primary-container brutal-border shadow-brutal font-headline-md text-headline-md uppercase px-stack-lg py-stack-md text-on-background hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none active:translate-x-[4px] active:translate-y-[4px] transition-all w-full mt-stack-sm flex items-center justify-center gap-stack-sm">
+<span class="material-symbols-outlined" data-icon="content_copy">content_copy</span>
+                    COPY CREDENTIALS
+                </button>
+</div>
+</div>
+</main>
+<!-- Footer -->
+<footer class="bg-surface-container-highest dark:bg-surface-container text-on-surface dark:text-on-surface font-label-bold text-label-bold uppercase w-full mt-auto border-t-[3px] border-on-background dark:border-outline flex flex-col md:flex-row justify-between items-center px-grid-margin py-stack-lg gap-stack-md">
+<div class="font-headline-md text-headline-md font-black text-on-surface">
+            STAND WITH ZEN
+        </div>
+<div class="flex flex-wrap justify-center gap-stack-md">
+<a class="text-on-surface-variant dark:text-on-surface-variant hover:text-primary dark:hover:text-inverse-primary underline underline-offset-4 transition-colors duration-200" href="#">Terms of Service</a>
+<a class="text-on-surface-variant dark:text-on-surface-variant hover:text-primary dark:hover:text-inverse-primary underline underline-offset-4 transition-colors duration-200" href="#">Privacy Policy</a>
+<a class="text-on-surface-variant dark:text-on-surface-variant hover:text-primary dark:hover:text-inverse-primary underline underline-offset-4 transition-colors duration-200" href="#">Refunds</a>
+<a class="text-on-surface-variant dark:text-on-surface-variant hover:text-primary dark:hover:text-inverse-primary underline underline-offset-4 transition-colors duration-200" href="#">Contact Support</a>
+</div>
+<div class="text-on-surface-variant text-center md:text-right">
+            © 2024 STAND WITH ZEN. REBEL AGAINST THE ORDINARY.
+        </div>
+</footer>
+</body></html>

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { authedApiRequest } from '../lib/api'
 import { useAuth } from '../hooks/useAuth'
 import { useNavigate } from 'react-router-dom'
+import Layout from '../components/Layout'
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -69,7 +70,6 @@ export default function AdminOrders() {
           param: { id: orderId },
         })
       )
-      // Refetch orders after action
       await fetchOrders()
     } catch (err: any) {
       console.error(`Failed to ${action} order:`, err)
@@ -78,46 +78,45 @@ export default function AdminOrders() {
     }
   }
 
-  function getStatusBadge(status: AdminOrder['status']) {
-    const base = 'badge border-brutal font-bold text-xs'
+  function getStatusConfig(status: AdminOrder['status']) {
     switch (status) {
       case 'PENDING':
-        return `${base} bg-warning text-neutral`
+        return { label: 'PENDING', className: 'bg-warning text-neutral' }
       case 'PAID':
-        return `${base} bg-info text-neutral`
+        return { label: 'PAID', className: 'bg-info text-neutral' }
       case 'DELIVERED':
-        return `${base} bg-success text-neutral`
+        return { label: 'DELIVERED', className: 'bg-success text-neutral' }
       case 'REJECTED':
-        return `${base} bg-error text-neutral`
+        return { label: 'REJECTED', className: 'bg-error text-neutral' }
       case 'REFUNDED':
-        return `${base} bg-base-300 text-neutral`
+        return { label: 'REFUNDED', className: 'bg-base-300 text-neutral' }
       default:
-        return `${base} bg-base-300 text-neutral`
+        return { label: status, className: 'bg-base-300 text-neutral' }
     }
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-6xl">
+    <Layout>
       {/* Header */}
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex justify-between items-center mb-6 border-b-[3px] border-neutral pb-2">
         <h1
-          className="text-3xl font-black uppercase tracking-tight text-neutral"
+          className="font-black text-3xl uppercase tracking-tight text-neutral"
           style={{ fontFamily: "'Space Grotesk', sans-serif" }}
         >
-          Admin Orders
+          ADMIN ORDERS
         </h1>
         <div className="flex items-center gap-2">
           <button
-            className="btn btn-sm btn-ghost border-brutal shadow-brutal-sm btn-brutal-interactive font-bold uppercase text-xs"
+            className="bg-base-100 border-[3px] border-neutral shadow-brutal-sm btn-brutal-interactive font-bold uppercase text-xs text-neutral px-3 py-1.5"
             onClick={() => navigate('/admin')}
           >
-            Products
+            PRODUCTS
           </button>
           <button
-            className="btn btn-sm btn-primary border-brutal shadow-brutal-sm btn-brutal-interactive font-black uppercase text-xs"
+            className="bg-primary border-[3px] border-neutral shadow-brutal-sm btn-brutal-interactive font-black uppercase text-xs text-neutral px-3 py-1.5"
             onClick={() => signOut()}
           >
-            Sign Out
+            SIGN OUT
           </button>
         </div>
       </div>
@@ -128,16 +127,19 @@ export default function AdminOrders() {
           (tab) => (
             <button
               key={tab}
-              className={`btn btn-sm border-brutal shadow-brutal-sm btn-brutal-interactive font-bold uppercase text-xs ${
-                activeTab === tab
-                  ? 'btn-primary'
-                  : 'btn-ghost'
-              }`}
+              className={`
+                border-[3px] border-neutral font-bold uppercase text-xs px-3 py-1.5
+                transition-all
+                ${activeTab === tab
+                  ? 'bg-primary text-primary-content shadow-brutal'
+                  : 'bg-base-100 text-neutral shadow-brutal-sm hover:-translate-x-[1px] hover:-translate-y-[1px]'
+                }
+              `}
               onClick={() => setActiveTab(tab)}
             >
               {tab}
               {tabCounts[tab] > 0 && (
-                <span className="badge badge-sm border-brutal bg-base-300 text-neutral font-mono ml-1">
+                <span className="ml-1.5 font-mono text-[10px] opacity-70">
                   {tabCounts[tab]}
                 </span>
               )}
@@ -152,96 +154,100 @@ export default function AdminOrders() {
           <span className="loading loading-spinner loading-lg"></span>
         </div>
       ) : filteredOrders.length === 0 ? (
-        <div className="text-center py-12">
+        <div className="text-center py-12 bg-base-200 border-[3px] border-neutral shadow-brutal p-8">
+          <span className="material-symbols-outlined text-4xl text-neutral/30 mb-2">inbox</span>
           <p className="text-neutral/50 font-bold">No orders found</p>
         </div>
       ) : (
         <div className="flex flex-col gap-4">
-          {filteredOrders.map((order) => (
-            <div
-              key={order.id}
-              className="card bg-base-200 border-brutal-thick shadow-pop-coral rounded-md p-5"
-            >
-              <div className="flex justify-between items-start mb-3">
-                <div>
-                  <h3
-                    className="font-black text-lg uppercase tracking-tight text-neutral"
-                    style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-                  >
-                    {order.productName}
-                  </h3>
-                  <p className="text-xs font-bold text-neutral/60 font-mono">
-                    User: {order.userId.slice(0, 8)}...
-                  </p>
-                </div>
-                <span className={getStatusBadge(order.status)}>
-                  {order.status}
-                </span>
-              </div>
-
-              <div className="flex items-center gap-4 mb-4 text-xs font-bold text-neutral/70">
-                <span className="font-mono">
-                  ${order.amount}
-                </span>
-                <span className="font-mono">
-                  {new Date(order.createdAt).toLocaleDateString()}
-                </span>
-                <span className="font-mono text-neutral/40">
-                  #{order.id.slice(0, 8)}
-                </span>
-                {order.paidAt && (
-                  <span className="font-mono text-neutral/40">
-                    Paid: {new Date(order.paidAt).toLocaleDateString()}
+          {filteredOrders.map((order) => {
+            const statusConfig = getStatusConfig(order.status)
+            return (
+              <div
+                key={order.id}
+                className="bg-base-200 border-[3px] border-neutral shadow-brutal p-5"
+              >
+                <div className="flex justify-between items-start mb-3">
+                  <div>
+                    <h3
+                      className="font-black text-lg uppercase tracking-tight text-neutral"
+                      style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                    >
+                      {order.productName}
+                    </h3>
+                    <p className="text-xs font-bold text-neutral/60 font-mono mt-0.5">
+                      User: {order.userId.slice(0, 8)}...
+                    </p>
+                  </div>
+                  <span className={`badge border-[2px] border-neutral font-bold text-[10px] ${statusConfig.className}`}>
+                    {statusConfig.label}
                   </span>
-                )}
-              </div>
+                </div>
 
-              {/* Action Buttons */}
-              <div className="flex gap-2">
-                {order.status === 'PENDING' && (
-                  <>
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mb-4 text-xs font-bold text-neutral/70">
+                  <span className="font-mono text-neutral">
+                    ${order.amount}
+                  </span>
+                  <span className="font-mono">
+                    {new Date(order.createdAt).toLocaleDateString()}
+                  </span>
+                  <span className="font-mono text-neutral/40">
+                    #{order.id.slice(0, 8)}
+                  </span>
+                  {order.paidAt && (
+                    <span className="font-mono text-neutral/40">
+                      Paid: {new Date(order.paidAt).toLocaleDateString()}
+                    </span>
+                  )}
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex gap-2">
+                  {order.status === 'PENDING' && (
+                    <>
+                      <button
+                        className="bg-success border-[3px] border-neutral shadow-brutal-sm btn-brutal-interactive font-black uppercase text-xs text-neutral px-3 py-1.5"
+                        disabled={actionLoading === order.id}
+                        onClick={() => handleAction(order.id, 'approve')}
+                      >
+                        {actionLoading === order.id ? (
+                          <span className="loading loading-spinner loading-xs"></span>
+                        ) : (
+                          'APPROVE'
+                        )}
+                      </button>
+                      <button
+                        className="bg-error border-[3px] border-neutral shadow-brutal-sm btn-brutal-interactive font-black uppercase text-xs text-neutral px-3 py-1.5"
+                        disabled={actionLoading === order.id}
+                        onClick={() => handleAction(order.id, 'reject')}
+                      >
+                        {actionLoading === order.id ? (
+                          <span className="loading loading-spinner loading-xs"></span>
+                        ) : (
+                          'REJECT'
+                        )}
+                      </button>
+                    </>
+                  )}
+                  {order.status === 'PAID' && (
                     <button
-                      className="btn btn-sm btn-success border-brutal shadow-brutal-sm btn-brutal-interactive font-black uppercase text-xs"
+                      className="bg-primary border-[3px] border-neutral shadow-brutal-sm btn-brutal-interactive font-black uppercase text-xs text-neutral px-3 py-1.5"
                       disabled={actionLoading === order.id}
-                      onClick={() => handleAction(order.id, 'approve')}
+                      onClick={() => handleAction(order.id, 'deliver')}
                     >
                       {actionLoading === order.id ? (
                         <span className="loading loading-spinner loading-xs"></span>
                       ) : (
-                        'Approve'
+                        'DELIVER'
                       )}
                     </button>
-                    <button
-                      className="btn btn-sm btn-error border-brutal shadow-brutal-sm btn-brutal-interactive font-black uppercase text-xs"
-                      disabled={actionLoading === order.id}
-                      onClick={() => handleAction(order.id, 'reject')}
-                    >
-                      {actionLoading === order.id ? (
-                        <span className="loading loading-spinner loading-xs"></span>
-                      ) : (
-                        'Reject'
-                      )}
-                    </button>
-                  </>
-                )}
-                {order.status === 'PAID' && (
-                  <button
-                    className="btn btn-sm btn-primary border-brutal shadow-brutal-sm btn-brutal-interactive font-black uppercase text-xs"
-                    disabled={actionLoading === order.id}
-                    onClick={() => handleAction(order.id, 'deliver')}
-                  >
-                    {actionLoading === order.id ? (
-                      <span className="loading loading-spinner loading-xs"></span>
-                    ) : (
-                      'Deliver'
-                    )}
-                  </button>
-                )}
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
-    </div>
+    </Layout>
   )
 }

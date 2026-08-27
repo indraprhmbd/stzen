@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { apiV1 } from '../lib/api'
+import Layout from '../components/Layout'
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -145,160 +146,165 @@ export default function Admin() {
   }
 
   return (
-    <div className="container mx-auto p-4 max-w-6xl">
+    <Layout>
       {/* Header */}
-      <div className="flex justify-between items-center mb-6">
-        <h1
-          className="text-3xl font-black uppercase tracking-tight text-neutral"
-          style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-        >
-          Admin Panel
-        </h1>
-        <button
-          className="btn btn-primary border-brutal shadow-brutal btn-brutal-interactive font-black uppercase"
-          style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
-          onClick={openCreateModal}
-        >
-          Create Product
-        </button>
+      <div className="mb-6 border-b-[3px] border-neutral pb-2">
+        <div className="flex justify-between items-center">
+          <div>
+            <h1
+              className="font-black text-3xl uppercase tracking-tighter text-neutral"
+              style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+            >
+              VAULT MANAGEMENT
+            </h1>
+            <p
+              className="font-bold text-neutral/60 mt-1 text-sm"
+              style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+            >
+              Administer products and raw credential stock.
+            </p>
+          </div>
+          <button
+            className="bg-primary border-[3px] border-neutral shadow-brutal btn-brutal-interactive font-black uppercase text-sm text-neutral px-4 py-2"
+            onClick={openCreateModal}
+          >
+            CREATE PRODUCT
+          </button>
+        </div>
       </div>
 
-      {/* Product Table */}
-      {loading ? (
-        <div className="flex justify-center py-12">
-          <span className="loading loading-spinner loading-lg"></span>
-        </div>
-      ) : products.length === 0 ? (
-        <div className="text-center py-12 text-neutral/50 font-bold">
-          No products yet. Create your first product to get started.
-        </div>
-      ) : (
-        <div className="overflow-x-auto border-brutal-thick shadow-brutal rounded-md">
-          <table className="table">
-            <thead className="bg-neutral text-primary">
-              <tr>
-                <th className="font-black uppercase text-xs">Name</th>
-                <th className="font-black uppercase text-xs">Category</th>
-                <th className="font-black uppercase text-xs">Price</th>
-                <th className="font-black uppercase text-xs">Stock</th>
-                <th className="font-black uppercase text-xs">Active</th>
-                <th className="font-black uppercase text-xs">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {products.map((p) => (
-                <tr key={p.id} className="hover:bg-base-300">
-                  <td className="font-bold">
-                    {p.name}
-                    {p.badge && (
-                      <span className="badge badge-sm bg-accent text-neutral font-black border-brutal ml-2 -rotate-1 text-xs">
-                        {p.badge}
-                      </span>
-                    )}
-                  </td>
-                  <td className="font-bold text-xs">{p.category.toUpperCase()}</td>
-                  <td className="font-black">${p.price}</td>
-                  <td>
-                    <span
-                      className={`badge border-brutal font-mono font-bold text-xs ${
-                        p.stockCount > 0 ? 'bg-success text-neutral' : 'bg-error text-neutral'
-                      }`}
-                    >
-                      {p.stockCount}
-                    </span>
-                  </td>
-                  <td>
-                    <span
-                      className={`badge border-brutal font-bold text-xs ${
-                        p.isActive ? 'bg-success text-neutral' : 'bg-base-300 text-neutral/50'
-                      }`}
-                    >
-                      {p.isActive ? 'ACTIVE' : 'INACTIVE'}
-                    </span>
-                  </td>
-                  <td className="flex gap-1">
-                    <button
-                      className="btn btn-xs btn-primary border-brutal shadow-brutal-sm btn-brutal-interactive font-bold uppercase"
-                      onClick={() => openEditModal(p)}
-                    >
-                      Edit
-                    </button>
-                    <button
-                      className="btn btn-xs btn-error border-brutal shadow-brutal-sm btn-brutal-interactive font-bold uppercase"
-                      onClick={() => handleDelete(p.id)}
-                    >
-                      Delete
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+      {/* Main Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+        {/* Left: Product Form */}
+        <div className="md:col-span-5">
+          <div className="bg-base-200 border-[3px] border-neutral shadow-brutal p-4">
+            <h2 className="font-bold uppercase text-neutral border-b-[3px] border-neutral pb-2 mb-4 text-sm">
+              Product Management
+            </h2>
 
-      {/* Bulk Stock Import */}
-      <div className="divider my-8 border-neutral/20"></div>
-      <div className="card bg-base-200 border-brutal-thick shadow-pop-coral rounded-md">
-        <div className="card-body">
-          <h2
-            className="card-title font-black uppercase text-lg text-neutral"
-            style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-          >
-            Bulk Stock Import
-          </h2>
-          <p
-            className="text-xs font-bold text-neutral/60"
-            style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
-          >
-            Paste credentials one per line. Format: email:password or profile:pin:instructions
-          </p>
-          <select
-            className="select select-bordered w-full max-w-xs border-brutal font-bold text-neutral shadow-brutal-sm rounded-sm"
-            value={stockProductId}
-            onChange={(e) => setStockProductId(e.target.value)}
-          >
-            <option value="">Select product</option>
-            {products.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
-          <textarea
-            className="textarea textarea-bordered h-40 font-mono text-xs border-brutal shadow-brutal-sm rounded-sm"
-            placeholder="user1@email.com:password123&#10;user2@email.com:password456"
-            value={stockText}
-            onChange={(e) => setStockText(e.target.value)}
-          />
-          <div className="card-actions justify-end">
-            <button
-              className="btn btn-primary border-brutal shadow-brutal btn-brutal-interactive font-black uppercase"
-              style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
-              onClick={handleBulkImport}
-              disabled={!stockProductId || !stockText.trim()}
-            >
-              Import Credentials
-            </button>
+            {loading ? (
+              <div className="flex justify-center py-8">
+                <span className="loading loading-spinner loading-lg"></span>
+              </div>
+            ) : products.length === 0 ? (
+              <div className="text-center py-8 text-neutral/50 font-bold text-sm">
+                No products yet. Create your first product.
+              </div>
+            ) : (
+              <div className="flex flex-col gap-2 max-h-[400px] overflow-y-auto">
+                {products.map((p) => (
+                  <div
+                    key={p.id}
+                    className="bg-base-100 border-[2px] border-neutral p-3 flex items-center justify-between"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-sm text-neutral truncate">{p.name}</span>
+                        {p.badge && (
+                          <span className="badge badge-sm bg-accent text-neutral font-black border-[2px] border-neutral -rotate-1 text-[10px]">
+                            {p.badge}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="font-mono text-xs text-neutral/60">${p.price}</span>
+                        <span className={`badge badge-sm border-[2px] border-neutral font-mono font-bold text-[10px] ${p.stockCount > 0 ? 'bg-success text-neutral' : 'bg-error text-neutral'}`}>
+                          {p.stockCount}
+                        </span>
+                        <span className={`badge badge-sm border-[2px] border-neutral font-bold text-[10px] ${p.isActive ? 'bg-success text-neutral' : 'bg-base-300 text-neutral/50'}`}>
+                          {p.isActive ? 'ACTIVE' : 'INACTIVE'}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex gap-1 ml-2">
+                      <button
+                        className="bg-primary border-[2px] border-neutral shadow-brutal-sm btn-brutal-interactive font-bold uppercase text-[10px] text-neutral px-2 py-1"
+                        onClick={() => openEditModal(p)}
+                      >
+                        EDIT
+                      </button>
+                      <button
+                        className="bg-error border-[2px] border-neutral shadow-brutal-sm btn-brutal-interactive font-bold uppercase text-[10px] text-neutral px-2 py-1"
+                        onClick={() => handleDelete(p.id)}
+                      >
+                        DEL
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Right: Bulk Import */}
+        <div className="md:col-span-7">
+          <div className="bg-base-100 border-[3px] border-neutral shadow-brutal p-4">
+            <h2 className="font-bold uppercase text-neutral border-b-[3px] border-neutral pb-2 mb-4 text-sm">
+              Bulk Stock Import
+            </h2>
+
+            {/* Product selector */}
+            <div className="mb-3">
+              <label className="text-[10px] font-bold text-neutral/60 uppercase mb-1 block">
+                TARGET PRODUCT
+              </label>
+              <select
+                className="w-full bg-base-200 border-[3px] border-neutral font-bold text-sm text-neutral shadow-brutal-sm px-3 py-2"
+                value={stockProductId}
+                onChange={(e) => setStockProductId(e.target.value)}
+              >
+                <option value="">Select product</option>
+                {products.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Terminal textarea */}
+            <div className="bg-neutral border-[3px] border-secondary p-3 min-h-[300px]">
+              <label className="font-mono text-xs text-primary uppercase mb-2 block">
+                RAW CREDENTIAL DATA [FORMAT: USER:PASS]
+              </label>
+              <textarea
+                className="w-full h-[260px] bg-transparent text-primary font-mono text-sm border-none focus:ring-0 resize-none placeholder:text-primary/30"
+                placeholder="user1@email.com:password123&#10;user2@email.com:password456"
+                value={stockText}
+                onChange={(e) => setStockText(e.target.value)}
+              />
+            </div>
+
+            {/* Import button */}
+            <div className="mt-4 flex justify-end">
+              <button
+                className="bg-secondary border-[3px] border-neutral px-6 py-3 shadow-pop-pink btn-brutal-interactive font-bold uppercase text-sm text-neutral"
+                onClick={handleBulkImport}
+                disabled={!stockProductId || !stockText.trim()}
+              >
+                PUSH TO VAULT
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Product Create/Edit Modal */}
       <dialog id="product_modal" className="modal">
-        <div className="modal-box border-brutal-thick shadow-brutal-lg rounded-md">
+        <div className="modal-box border-[4px] border-neutral shadow-brutal-lg rounded-sm">
           <h3
             className="font-black text-lg uppercase text-neutral"
             style={{ fontFamily: "'Space Grotesk', sans-serif" }}
           >
-            {editingId ? 'Edit Product' : 'Create Product'}
+            {editingId ? 'EDIT PRODUCT' : 'CREATE PRODUCT'}
           </h3>
           <form onSubmit={handleSubmit} className="flex flex-col gap-3 mt-4">
             <input
               type="text"
               placeholder="PRODUCT NAME"
               required
-              className="input input-bordered w-full bg-base-100 border-brutal font-mono text-xs text-neutral placeholder:text-neutral/50 focus:outline-none focus:border-primary focus:ring-2 focus:ring-neutral shadow-brutal-sm rounded-sm"
+              className="w-full bg-base-100 border-[3px] border-neutral font-mono text-xs text-neutral placeholder:text-neutral/50 focus:outline-none focus:border-primary px-3 py-2 shadow-brutal-sm"
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
             />
@@ -306,7 +312,7 @@ export default function Admin() {
               type="text"
               placeholder="CATEGORY"
               required
-              className="input input-bordered w-full bg-base-100 border-brutal font-mono text-xs text-neutral placeholder:text-neutral/50 focus:outline-none focus:border-primary focus:ring-2 focus:ring-neutral shadow-brutal-sm rounded-sm"
+              className="w-full bg-base-100 border-[3px] border-neutral font-mono text-xs text-neutral placeholder:text-neutral/50 focus:outline-none focus:border-primary px-3 py-2 shadow-brutal-sm"
               value={form.category}
               onChange={(e) => setForm({ ...form, category: e.target.value })}
             />
@@ -314,25 +320,25 @@ export default function Admin() {
               type="text"
               placeholder="PRICE (e.g. 9.99)"
               required
-              className="input input-bordered w-full bg-base-100 border-brutal font-mono text-xs text-neutral placeholder:text-neutral/50 focus:outline-none focus:border-primary focus:ring-2 focus:ring-neutral shadow-brutal-sm rounded-sm"
+              className="w-full bg-base-100 border-[3px] border-neutral font-mono text-xs text-neutral placeholder:text-neutral/50 focus:outline-none focus:border-primary px-3 py-2 shadow-brutal-sm"
               value={form.price}
               onChange={(e) => setForm({ ...form, price: e.target.value })}
             />
             <input
               type="text"
               placeholder="BADGE (optional)"
-              className="input input-bordered w-full bg-base-100 border-brutal font-mono text-xs text-neutral placeholder:text-neutral/50 focus:outline-none focus:border-primary focus:ring-2 focus:ring-neutral shadow-brutal-sm rounded-sm"
+              className="w-full bg-base-100 border-[3px] border-neutral font-mono text-xs text-neutral placeholder:text-neutral/50 focus:outline-none focus:border-primary px-3 py-2 shadow-brutal-sm"
               value={form.badge}
               onChange={(e) => setForm({ ...form, badge: e.target.value })}
             />
             <textarea
-              className="textarea textarea-bordered border-brutal font-mono text-xs shadow-brutal-sm rounded-sm"
+              className="w-full bg-base-100 border-[3px] border-neutral font-mono text-xs text-neutral placeholder:text-neutral/50 focus:outline-none focus:border-primary px-3 py-2 shadow-brutal-sm"
               placeholder="DESCRIPTION (optional)"
               value={form.description}
               onChange={(e) => setForm({ ...form, description: e.target.value })}
             />
             <textarea
-              className="textarea textarea-bordered border-brutal font-mono text-xs shadow-brutal-sm rounded-sm"
+              className="w-full bg-base-100 border-[3px] border-neutral font-mono text-xs text-neutral placeholder:text-neutral/50 focus:outline-none focus:border-primary px-3 py-2 shadow-brutal-sm"
               placeholder="USAGE INSTRUCTIONS (optional, shown to buyer after purchase)"
               value={form.instructions}
               onChange={(e) => setForm({ ...form, instructions: e.target.value })}
@@ -349,18 +355,18 @@ export default function Admin() {
             <div className="modal-action">
               <button
                 type="submit"
-                className="btn btn-primary border-brutal shadow-brutal btn-brutal-interactive font-black uppercase"
+                className="bg-primary border-[3px] border-neutral shadow-brutal btn-brutal-interactive font-black uppercase text-sm text-neutral px-4 py-2"
               >
-                {editingId ? 'Update' : 'Create'}
+                {editingId ? 'UPDATE' : 'CREATE'}
               </button>
               <button
                 type="button"
-                className="btn border-brutal shadow-brutal-sm btn-brutal-interactive font-bold uppercase"
+                className="bg-base-100 border-[3px] border-neutral shadow-brutal-sm btn-brutal-interactive font-bold uppercase text-sm text-neutral px-4 py-2"
                 onClick={() =>
                   (document.getElementById('product_modal') as HTMLDialogElement)?.close()
                 }
               >
-                Cancel
+                CANCEL
               </button>
             </div>
           </form>
@@ -374,14 +380,14 @@ export default function Admin() {
       {toast && (
         <div className="toast toast-end">
           <div
-            className={`alert border-brutal shadow-brutal-sm font-bold ${
-              toast.type === 'success' ? 'alert-success' : 'alert-error'
-            }`}
+            className={`border-[3px] border-neutral shadow-brutal-sm font-bold text-sm ${
+              toast.type === 'success' ? 'bg-success text-neutral' : 'bg-error text-neutral'
+            } px-4 py-3`}
           >
-            <span>{toast.message}</span>
+            {toast.message}
           </div>
         </div>
       )}
-    </div>
+    </Layout>
   )
 }

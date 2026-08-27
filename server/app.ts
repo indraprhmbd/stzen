@@ -3,10 +3,10 @@ import { cors } from 'hono/cors'
 import { logger } from 'hono/logger'
 import { secureHeaders } from 'hono/secure-headers'
 import { errorHandler } from './shared/errors/handler'
-import { productRoutes } from './modules/products'
-import { orderRoutes } from './modules/orders'
-import { checkoutRoutes } from './modules/checkout'
-import { adminRoutes } from './modules/admin'
+import { routes as productRoutes } from './modules/products'
+import { routes as orderRoutes } from './modules/orders'
+import { routes as checkoutRoutes } from './modules/checkout'
+import { routes as adminRoutes } from './modules/admin'
 
 // ─── App Factory ────────────────────────────────────────────────────────────
 // Creates the Hono app with all modules composed.

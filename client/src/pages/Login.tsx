@@ -9,7 +9,7 @@ export default function Login() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const { signInWithGoogle, signInWithEmail } = useAuth()
-  const { brand } = useBrand()
+  const brand = useBrand()
   const navigate = useNavigate()
 
   async function handleGoogleLogin() {
