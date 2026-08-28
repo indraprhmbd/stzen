@@ -7,7 +7,10 @@ import { ForbiddenError } from '../errors/http'
 export function requireRole(...roles: string[]) {
   return createMiddleware(async (c, next) => {
     const user = c.get('user')
-    if (!user || !roles.includes(user.role ?? '')) {
+    // Supabase JWT: top-level `role` = Postgres role ("authenticated")
+    // App role lives in `app_metadata.role`
+    const appRole = (user as any)?.app_metadata?.role ?? (user as any)?.role ?? ''
+    if (!user || !roles.includes(appRole)) {
       throw new ForbiddenError('Insufficient permissions')
     }
     await next()

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { useBrand } from '../hooks/useBrand'
+import { useCopy } from '../hooks/useCopy'
 import { authedApiRequest } from '../lib/api'
 import Layout from '../components/Layout'
 import OrderCard from '../components/OrderCard'
@@ -35,6 +36,7 @@ type FilterTab = 'ALL' | 'PENDING' | 'PAID' | 'DELIVERED' | 'REJECTED'
 export default function Dashboard() {
   const { user, signOut } = useAuth()
   const brand = useBrand()
+  const { t } = useCopy()
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<FilterTab>('ALL')
@@ -74,6 +76,9 @@ export default function Dashboard() {
     REJECTED: orders.filter((o) => o.status === 'REJECTED').length,
   }
 
+  const tabKeys: FilterTab[] = ['ALL', 'PENDING', 'PAID', 'DELIVERED', 'REJECTED']
+  const tabLabels = t.dashboard.tabs
+
   async function handleViewCredentials(orderId: string) {
     const order = orders.find((o) => o.id === orderId)
     if (order) setSelectedOrder(order)
@@ -110,32 +115,51 @@ export default function Dashboard() {
   return (
     <Layout>
       {/* Header */}
-      <div className="flex justify-between items-center mb-6 border-b-[3px] border-neutral pb-2">
-        <h1
-          className="font-black text-3xl uppercase tracking-tight text-neutral"
-          style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-        >
-          MY ACTIVE PURCHASES
-        </h1>
+      <div className="mb-6">
+        <div className="bg-surface-container border-[3px] border-on-surface shadow-3d-subtle p-5">
+          <div className="flex items-center gap-3">
+            <div className="w-1 h-10 bg-secondary-container" />
+            <div>
+              <h1
+                className="font-black text-2xl md:text-3xl uppercase tracking-tight text-on-surface"
+                style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+              >
+                {t.dashboard.title}
+              </h1>
+              <p className="text-xs font-bold text-on-surface-variant mt-0.5">
+                {t.dashboard.subtitle}
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Filter Tabs */}
       <div className="flex gap-2 mb-6 flex-wrap">
-        {(['ALL', 'PENDING', 'PAID', 'DELIVERED', 'REJECTED'] as FilterTab[]).map(
-          (tab) => (
+        {tabKeys.map((tab, i) => {
+          const tabColors: Record<string, string> = {
+            ALL: 'bg-on-surface text-primary-container',
+            PENDING: 'bg-warning text-white',
+            PAID: 'bg-info text-white',
+            DELIVERED: 'bg-primary-container text-black',
+            REJECTED: 'bg-error text-white',
+          }
+          const isActive = activeTab === tab
+          return (
             <button
               key={tab}
               className={`
-                border-[3px] border-neutral font-bold uppercase text-xs px-3 py-1.5
+                border-[3px] border-on-surface font-bold uppercase text-xs px-3 py-1.5
                 transition-all
-                ${activeTab === tab
-                  ? 'bg-primary text-primary-content shadow-brutal'
-                  : 'bg-base-100 text-neutral shadow-brutal-sm hover:-translate-x-[1px] hover:-translate-y-[1px]'
+                ${isActive
+                  ? `${tabColors[tab]} shadow-brutal translate-x-[1px] translate-y-[1px]`
+                  : 'bg-surface-container text-on-surface shadow-brutal-sm hover:-translate-x-[1px] hover:-translate-y-[1px]'
                 }
               `}
+              style={{ fontFamily: "'Space Grotesk', sans-serif" }}
               onClick={() => setActiveTab(tab)}
             >
-              {tab}
+              {tabLabels[i]}
               {tabCounts[tab] > 0 && (
                 <span className="ml-1.5 font-mono text-[10px] opacity-70">
                   {tabCounts[tab]}
@@ -143,7 +167,7 @@ export default function Dashboard() {
               )}
             </button>
           )
-        )}
+        })}
       </div>
 
       {/* Content */}
@@ -155,9 +179,9 @@ export default function Dashboard() {
               <span className="loading loading-spinner loading-lg"></span>
             </div>
           ) : filteredOrders.length === 0 ? (
-            <div className="text-center py-12 bg-base-200 border-[3px] border-neutral shadow-brutal p-8">
-              <span className="material-symbols-outlined text-4xl text-neutral/30 mb-2">inbox</span>
-              <p className="text-neutral/50 font-bold">No orders found</p>
+            <div className="text-center py-12 bg-surface-container border-[3px] border-on-surface shadow-brutal p-8">
+              <span className="material-symbols-outlined text-4xl text-on-surface-variant/30 mb-2">inbox</span>
+              <p className="text-on-surface-variant/50 font-bold">{t.dashboard.noOrders}</p>
             </div>
           ) : (
             <div className="flex flex-col gap-4">
@@ -166,7 +190,7 @@ export default function Dashboard() {
                   key={order.id}
                   className={`
                     cursor-pointer transition-all
-                    ${selectedOrder?.id === order.id ? 'ring-2 ring-primary' : ''}
+                    ${selectedOrder?.id === order.id ? 'ring-2 ring-secondary-container' : ''}
                   `}
                   onClick={() => order.status === 'DELIVERED' && handleViewCredentials(order.id)}
                 >
@@ -185,13 +209,13 @@ export default function Dashboard() {
         {selectedOrder && (
           <div className="lg:col-span-7">
             {loadingCredentials ? (
-              <div className="bg-neutral border-[4px] border-secondary shadow-pop-pink rounded-sm p-6">
+              <div className="bg-on-surface border-[4px] border-secondary-container shadow-3d-pop rounded-sm p-6">
                 <div className="flex justify-center py-8">
-                  <span className="loading loading-spinner loading-lg text-primary"></span>
+                  <span className="loading loading-spinner loading-lg text-primary-container"></span>
                 </div>
               </div>
             ) : credentialsError ? (
-              <div className="bg-neutral border-[4px] border-error shadow-brutal rounded-sm p-6">
+              <div className="bg-on-surface border-[4px] border-error shadow-brutal rounded-sm p-6">
                 <p className="font-bold text-error text-sm">{credentialsError}</p>
               </div>
             ) : credentials ? (
@@ -202,9 +226,9 @@ export default function Dashboard() {
                 onReport={() => window.open(getWhatsAppUrl(selectedOrder.id), '_blank')}
               />
             ) : (
-              <div className="bg-base-200 border-[3px] border-neutral shadow-brutal p-6">
-                <p className="text-neutral/50 font-bold text-center">
-                  Select a delivered order to view credentials
+              <div className="bg-surface-container border-[3px] border-on-surface shadow-brutal p-6">
+                <p className="text-on-surface-variant/50 font-bold text-center">
+                  {t.dashboard.selectOrder}
                 </p>
               </div>
             )}

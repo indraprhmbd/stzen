@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { apiV1 } from '../lib/api'
+import { authedApiRequest } from '../lib/api'
 import Layout from '../components/Layout'
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -50,9 +50,9 @@ export default function Admin() {
 
   const fetchProducts = useCallback(async () => {
     try {
-      const res = await apiV1.admin.products.$get()
-      const data = await res.json()
-      setProducts(data as Product[])
+      const data = await authedApiRequest((c) => c.api.v1.admin.products.$get())
+      const result = await data.json()
+      setProducts(result as Product[])
     } catch {
       showToast('Failed to load products', 'error')
     } finally {
@@ -100,12 +100,16 @@ export default function Admin() {
 
     try {
       if (editingId) {
-        await apiV1.admin.products[':id'].$put(
-          { param: { id: editingId }, json: payload },
+        await authedApiRequest((c) =>
+          c.api.v1.admin.products[':id'].$put(
+            { param: { id: editingId }, json: payload },
+          )
         )
         showToast('Product updated', 'success')
       } else {
-        await apiV1.admin.products.$post({ json: payload })
+        await authedApiRequest((c) =>
+          c.api.v1.admin.products.$post({ json: payload })
+        )
         showToast('Product created', 'success')
       }
       fetchProducts()
@@ -117,7 +121,9 @@ export default function Admin() {
   async function handleDelete(id: string) {
     if (!confirm('Delete this product? Credentials will also be deleted.')) return
     try {
-      await apiV1.admin.products[':id'].$delete({ param: { id } })
+      await authedApiRequest((c) =>
+        c.api.v1.admin.products[':id'].$delete({ param: { id } })
+      )
       showToast('Product deleted', 'success')
       fetchProducts()
     } catch {
@@ -132,10 +138,12 @@ export default function Admin() {
     }
 
     try {
-      const res = await apiV1.admin.products[':id'].stock.$post({
-        param: { id: stockProductId },
-        json: { credentials: stockText },
-      })
+      const res = await authedApiRequest((c) =>
+        c.api.v1.admin.products[':id'].stock.$post({
+          param: { id: stockProductId },
+          json: { credentials: stockText },
+        })
+      )
       const data = await res.json() as { imported: number }
       showToast(`Imported ${data.imported} credentials`, 'success')
       setStockText('')
@@ -148,28 +156,34 @@ export default function Admin() {
   return (
     <Layout>
       {/* Header */}
-      <div className="mb-6 border-b-[3px] border-neutral pb-2">
-        <div className="flex justify-between items-center">
-          <div>
-            <h1
-              className="font-black text-3xl uppercase tracking-tighter text-neutral"
+      <div className="mb-6">
+        <div className="bg-surface-container border-[3px] border-on-surface shadow-3d-subtle p-5">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-3">
+              <div className="w-1 h-10 bg-primary-container" />
+              <div>
+                <h1
+                  className="font-black text-2xl md:text-3xl uppercase tracking-tight text-on-surface"
+                  style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                >
+                  VAULT MANAGEMENT
+                </h1>
+                <p
+                  className="font-bold text-on-surface-variant mt-1 text-sm"
+                  style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+                >
+                  Administer products and raw credential stock.
+                </p>
+              </div>
+            </div>
+            <button
+              className="bg-primary-container text-black border-[3px] border-on-surface shadow-brutal btn-brutal-interactive font-black uppercase text-sm px-4 py-2"
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+              onClick={openCreateModal}
             >
-              VAULT MANAGEMENT
-            </h1>
-            <p
-              className="font-bold text-neutral/60 mt-1 text-sm"
-              style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
-            >
-              Administer products and raw credential stock.
-            </p>
+              CREATE PRODUCT
+            </button>
           </div>
-          <button
-            className="bg-primary border-[3px] border-neutral shadow-brutal btn-brutal-interactive font-black uppercase text-sm text-neutral px-4 py-2"
-            onClick={openCreateModal}
-          >
-            CREATE PRODUCT
-          </button>
         </div>
       </div>
 
@@ -177,8 +191,8 @@ export default function Admin() {
       <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
         {/* Left: Product Form */}
         <div className="md:col-span-5">
-          <div className="bg-base-200 border-[3px] border-neutral shadow-brutal p-4">
-            <h2 className="font-bold uppercase text-neutral border-b-[3px] border-neutral pb-2 mb-4 text-sm">
+          <div className="bg-surface-container border-[3px] border-on-surface shadow-brutal p-4">
+            <h2 className="font-bold uppercase text-on-surface border-b-[3px] border-on-surface pb-2 mb-4 text-sm" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
               Product Management
             </h2>
 
@@ -187,7 +201,7 @@ export default function Admin() {
                 <span className="loading loading-spinner loading-lg"></span>
               </div>
             ) : products.length === 0 ? (
-              <div className="text-center py-8 text-neutral/50 font-bold text-sm">
+              <div className="text-center py-8 text-on-surface-variant/50 font-bold text-sm">
                 No products yet. Create your first product.
               </div>
             ) : (
@@ -195,36 +209,36 @@ export default function Admin() {
                 {products.map((p) => (
                   <div
                     key={p.id}
-                    className="bg-base-100 border-[2px] border-neutral p-3 flex items-center justify-between"
+                    className="bg-surface-container-low border-[2px] border-on-surface p-3 flex items-center justify-between"
                   >
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="font-bold text-sm text-neutral truncate">{p.name}</span>
+                        <span className="font-bold text-sm text-on-surface truncate">{p.name}</span>
                         {p.badge && (
-                          <span className="badge badge-sm bg-accent text-neutral font-black border-[2px] border-neutral -rotate-1 text-[10px]">
+                          <span className="badge badge-sm bg-secondary text-white font-black border-[2px] border-on-surface -rotate-1 text-[10px]">
                             {p.badge}
                           </span>
                         )}
                       </div>
                       <div className="flex items-center gap-2 mt-1">
-                        <span className="font-mono text-xs text-neutral/60">${p.price}</span>
-                        <span className={`badge badge-sm border-[2px] border-neutral font-mono font-bold text-[10px] ${p.stockCount > 0 ? 'bg-success text-neutral' : 'bg-error text-neutral'}`}>
+                        <span className="font-mono text-xs text-on-surface-variant">${p.price}</span>
+                        <span className={`badge badge-sm border-[2px] border-on-surface font-mono font-bold text-[10px] ${p.stockCount > 0 ? 'bg-primary-container text-black' : 'bg-error text-white'}`}>
                           {p.stockCount}
                         </span>
-                        <span className={`badge badge-sm border-[2px] border-neutral font-bold text-[10px] ${p.isActive ? 'bg-success text-neutral' : 'bg-base-300 text-neutral/50'}`}>
+                        <span className={`badge badge-sm border-[2px] border-on-surface font-bold text-[10px] ${p.isActive ? 'bg-primary-container text-black' : 'bg-surface-container-highest text-on-surface-variant'}`}>
                           {p.isActive ? 'ACTIVE' : 'INACTIVE'}
                         </span>
                       </div>
                     </div>
                     <div className="flex gap-1 ml-2">
                       <button
-                        className="bg-primary border-[2px] border-neutral shadow-brutal-sm btn-brutal-interactive font-bold uppercase text-[10px] text-neutral px-2 py-1"
+                        className="bg-primary-container text-black border-[2px] border-on-surface shadow-brutal-sm btn-brutal-interactive font-bold uppercase text-[10px] px-2 py-1"
                         onClick={() => openEditModal(p)}
                       >
                         EDIT
                       </button>
                       <button
-                        className="bg-error border-[2px] border-neutral shadow-brutal-sm btn-brutal-interactive font-bold uppercase text-[10px] text-neutral px-2 py-1"
+                        className="bg-error text-white border-[2px] border-on-surface shadow-brutal-sm btn-brutal-interactive font-bold uppercase text-[10px] px-2 py-1"
                         onClick={() => handleDelete(p.id)}
                       >
                         DEL
@@ -239,18 +253,18 @@ export default function Admin() {
 
         {/* Right: Bulk Import */}
         <div className="md:col-span-7">
-          <div className="bg-base-100 border-[3px] border-neutral shadow-brutal p-4">
-            <h2 className="font-bold uppercase text-neutral border-b-[3px] border-neutral pb-2 mb-4 text-sm">
+          <div className="bg-surface-container border-[3px] border-on-surface shadow-brutal p-4">
+            <h2 className="font-bold uppercase text-on-surface border-b-[3px] border-on-surface pb-2 mb-4 text-sm" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
               Bulk Stock Import
             </h2>
 
             {/* Product selector */}
             <div className="mb-3">
-              <label className="text-[10px] font-bold text-neutral/60 uppercase mb-1 block">
+              <label className="text-[10px] font-bold text-on-surface-variant uppercase mb-1 block">
                 TARGET PRODUCT
               </label>
               <select
-                className="w-full bg-base-200 border-[3px] border-neutral font-bold text-sm text-neutral shadow-brutal-sm px-3 py-2"
+                className="w-full bg-surface-container-low border-[3px] border-on-surface font-bold text-sm text-on-surface shadow-brutal-sm px-3 py-2"
                 value={stockProductId}
                 onChange={(e) => setStockProductId(e.target.value)}
               >
@@ -264,12 +278,12 @@ export default function Admin() {
             </div>
 
             {/* Terminal textarea */}
-            <div className="bg-neutral border-[3px] border-secondary p-3 min-h-[300px]">
-              <label className="font-mono text-xs text-primary uppercase mb-2 block">
+            <div className="bg-on-surface border-[3px] border-secondary-container p-3 min-h-[300px]">
+              <label className="font-mono text-xs text-primary-container uppercase mb-2 block">
                 RAW CREDENTIAL DATA [FORMAT: USER:PASS]
               </label>
               <textarea
-                className="w-full h-[260px] bg-transparent text-primary font-mono text-sm border-none focus:ring-0 resize-none placeholder:text-primary/30"
+                className="w-full h-[260px] bg-transparent text-primary-container font-mono text-sm border-none focus:ring-0 resize-none placeholder:text-primary-container/30"
                 placeholder="user1@email.com:password123&#10;user2@email.com:password456"
                 value={stockText}
                 onChange={(e) => setStockText(e.target.value)}
@@ -279,7 +293,8 @@ export default function Admin() {
             {/* Import button */}
             <div className="mt-4 flex justify-end">
               <button
-                className="bg-secondary border-[3px] border-neutral px-6 py-3 shadow-pop-pink btn-brutal-interactive font-bold uppercase text-sm text-neutral"
+                className="bg-secondary-container text-black border-[3px] border-on-surface px-6 py-3 shadow-3d-pop btn-brutal-interactive font-bold uppercase text-sm"
+                style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                 onClick={handleBulkImport}
                 disabled={!stockProductId || !stockText.trim()}
               >
@@ -355,7 +370,7 @@ export default function Admin() {
             <div className="modal-action">
               <button
                 type="submit"
-                className="bg-primary border-[3px] border-neutral shadow-brutal btn-brutal-interactive font-black uppercase text-sm text-neutral px-4 py-2"
+                className="bg-primary-container border-[3px] border-neutral shadow-brutal btn-brutal-interactive font-black uppercase text-sm text-neutral px-4 py-2"
               >
                 {editingId ? 'UPDATE' : 'CREATE'}
               </button>

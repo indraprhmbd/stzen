@@ -1,4 +1,5 @@
 import { useBrand } from '../hooks/useBrand'
+import { useCopy } from '../hooks/useCopy'
 
 interface Product {
   id: string
@@ -13,113 +14,164 @@ interface Product {
 
 interface ProductCardProps {
   product: Product
-  featured?: boolean
+  index?: number
   onBuy: () => void
+  view?: 'grid' | 'list'
 }
 
-function getStockBadge(stockCount: number) {
-  if (stockCount === 0) {
-    return { label: 'OUT OF STOCK', className: 'bg-error text-neutral' }
-  }
-  if (stockCount <= 3) {
-    return { label: 'LOW STOCK', className: 'bg-accent text-neutral' }
-  }
-  return { label: 'INSTANT STOCK', className: 'bg-accent text-neutral' }
+const categoryAccent: Record<string, string> = {
+  streaming: 'bg-secondary',
+  'ai tools': 'bg-primary-container',
+  productivity: 'bg-tertiary-container',
 }
 
-function getBadgeRotation(index: number) {
-  const rotations = ['-rotate-2', 'rotate-1', '-rotate-1', 'rotate-2']
-  return rotations[index % rotations.length]
+function getStockConfig(count: number, t: ReturnType<typeof useCopy>['t']) {
+  if (count === 0) return { label: t.products.outOfStock, color: 'text-error', dot: 'bg-error', icon: '' }
+  if (count <= 3) return { label: `${count} LEFT`, color: 'text-warning', dot: 'bg-warning', icon: '⚡' }
+  return { label: t.products.inStock, color: 'text-success', dot: 'bg-success', icon: '' }
 }
 
-export default function ProductCard({ product, featured = false, onBuy }: ProductCardProps) {
+export default function ProductCard({ product, index = 0, onBuy, view = 'grid' }: ProductCardProps) {
   const brand = useBrand()
-  const stockBadge = getStockBadge(product.stockCount)
+  const { t } = useCopy()
+  const stock = getStockConfig(product.stockCount, t)
+  const inStock = product.stockCount > 0
+  const featured = product.badge !== null
+  const accent = categoryAccent[product.category.toLowerCase()] || 'bg-surface-container-high'
 
+  if (view === 'list') {
+    return (
+      <div
+        className="col-span-1 bg-white border-[3px] border-on-surface rounded-md shadow-brutal relative overflow-hidden group hover:-translate-y-0.5 hover:shadow-3d-subtle transition-all duration-200"
+      >
+        <div className="flex items-center gap-4 p-3">
+          {/* Left: Category + Stock */}
+          <div className="flex flex-col items-center gap-1 shrink-0">
+            <span className="bg-surface-container-high border border-on-surface/20 font-bold px-2 py-0.5 text-[8px] uppercase text-on-surface-variant rounded-sm">
+              {product.category}
+            </span>
+            <div className="flex items-center gap-1">
+              <div className={`w-1.5 h-1.5 rounded-full ${stock.dot}`} />
+              <span className={`text-[8px] font-bold ${stock.color}`}>{stock.icon} {stock.label}</span>
+            </div>
+          </div>
+          {/* Middle: Name + Desc */}
+          <div className="flex-1 min-w-0">
+            <h3
+              className="font-extrabold text-xs uppercase tracking-tight text-on-surface leading-tight"
+              style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+            >
+              {product.name}
+            </h3>
+            {product.description && (
+              <p
+                className="text-[9px] font-semibold text-on-surface-variant line-clamp-1 mt-0.5"
+                style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+              >
+                {product.description}
+              </p>
+            )}
+          </div>
+          {/* Right: Price + CTA */}
+          <div className="flex items-center gap-3 shrink-0">
+            <span className="font-extrabold text-sm text-on-surface" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+              {brand.storefront.currencySymbol}{product.price}
+            </span>
+            <button
+              className={`
+                border-[2px] border-on-surface font-extrabold text-[9px] uppercase px-3 py-1.5
+                btn-brutal-interactive shadow-brutal-sm rounded-sm
+                ${inStock
+                  ? 'bg-primary-container text-on-surface'
+                  : 'bg-surface-container-high text-on-surface-variant cursor-not-allowed'
+                }
+              `}
+              style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+              disabled={!inStock}
+              onClick={onBuy}
+            >
+              {inStock ? t.products.buy : t.products.soldOut}
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Grid view — featured or standard
   return (
     <div
       className={`
-        bg-base-200 border-[3px] border-neutral rounded-sm flex flex-col relative
-        ${featured ? 'shadow-pop-pink -translate-y-2' : 'shadow-brutal'}
-        transition-all hover:-translate-x-[2px] hover:-translate-y-[2px]
-        group
+        ${featured ? 'col-span-2' : 'col-span-1'}
+        bg-white border-[3px] border-on-surface rounded-md shadow-brutal
+        relative overflow-hidden group
+        hover:-translate-y-1 hover:shadow-3d-subtle
+        transition-all duration-200 flex flex-col
       `}
     >
-      {/* Featured ribbon */}
-      {featured && (
-        <div className="bg-secondary absolute top-3 -right-1 px-2 py-0.5 border-[2px] border-neutral -rotate-3">
-          <span className="font-black text-[10px] uppercase text-neutral tracking-wider">HOT</span>
-        </div>
-      )}
+      {/* Featured accent bar */}
+      {featured && <div className={`h-1.5 ${accent}`} />}
 
-      <div className="p-5 flex flex-col flex-grow">
-        {/* Top: Badge + Price */}
-        <div className="flex justify-between items-start mb-3">
-          <span
-            className={`
-              badge font-bold border-[2px] border-neutral shadow-brutal-sm px-3 py-2 text-[10px] uppercase
-              ${stockBadge.className}
-              ${getBadgeRotation(product.name.length)}
-            `}
-          >
-            {product.badge?.toUpperCase() || stockBadge.label}
+      <div className={`${featured ? 'p-4' : 'p-2.5'} flex flex-col h-full`}>
+        {/* Meta row */}
+        <div className="flex items-center justify-between mb-1.5">
+          <span className="bg-surface-container-high border border-on-surface/20 font-bold px-1.5 py-0.5 text-[8px] uppercase text-on-surface-variant rounded-sm">
+            {product.category}
           </span>
-          <span
-            className="font-black text-2xl text-primary text-stroke-thin"
-            style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-          >
-            {brand.storefront.currencySymbol}{product.price}
-          </span>
+          <div className="flex items-center gap-1">
+            <div className={`w-1.5 h-1.5 rounded-full ${stock.dot}`} />
+            <span className={`text-[8px] font-bold ${stock.color}`}>{stock.icon} {stock.label}</span>
+          </div>
         </div>
 
-        {/* Middle: Name + Description */}
+        {/* Badge pill */}
+        {featured && product.badge && (
+          <span className="inline-flex items-center gap-1 bg-on-surface text-primary-container font-black text-[8px] uppercase px-2 py-0.5 rounded-sm w-fit mb-1.5 tracking-wide">
+            <span className="material-symbols-outlined text-[10px]">star</span>
+            {product.badge}
+          </span>
+        )}
+
+        {/* Title */}
         <h3
-          className="font-black text-lg uppercase tracking-tight text-neutral mb-2"
+          className={`font-extrabold uppercase tracking-tight text-on-surface mb-0.5 leading-tight ${featured ? 'text-sm' : 'text-xs'}`}
           style={{ fontFamily: "'Space Grotesk', sans-serif" }}
         >
           {product.name}
         </h3>
+
+        {/* Description */}
         {product.description && (
           <p
-            className="text-xs font-bold text-neutral/70 mb-4 line-clamp-2"
+            className={`text-[9px] font-semibold text-on-surface-variant mb-2 ${featured ? 'line-clamp-2' : 'line-clamp-1'}`}
             style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
           >
             {product.description}
           </p>
         )}
 
-        {/* Spacer */}
-        <div className="flex-grow" />
-
-        {/* Bottom: Stock + Category + Buy */}
-        <div className="flex items-center gap-2 mb-4">
-          <div
+        {/* Price + CTA */}
+        <div className="mt-auto flex items-center justify-between pt-2 border-t-[2px] border-on-surface/10">
+          <span className={`font-extrabold text-on-surface ${featured ? 'text-lg' : 'text-sm'}`} style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+            {brand.storefront.currencySymbol}{product.price}
+          </span>
+          <button
             className={`
-              badge border-[2px] border-neutral font-mono font-bold text-[10px]
-              ${product.stockCount > 0 ? 'bg-success text-neutral' : 'bg-error text-neutral'}
+              border-[2px] border-on-surface font-extrabold uppercase
+              btn-brutal-interactive shadow-brutal-sm rounded-sm
+              ${featured ? 'text-xs px-4 py-1.5' : 'text-[9px] px-2.5 py-1'}
+              ${inStock
+                ? 'bg-primary-container text-on-surface'
+                : 'bg-surface-container-high text-on-surface-variant cursor-not-allowed'
+              }
             `}
+            style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+            disabled={!inStock}
+            onClick={onBuy}
           >
-            {product.stockCount > 0 ? `${product.stockCount} IN STOCK` : 'EMPTY'}
-          </div>
-          <div className="badge border-[2px] border-neutral bg-base-300 text-neutral font-bold text-[10px] uppercase">
-            {product.category}
-          </div>
+            {inStock ? t.products.buy : t.products.soldOut}
+          </button>
         </div>
-
-        <button
-          className={`
-            w-full border-[3px] border-neutral shadow-brutal btn-brutal-interactive font-black uppercase text-sm
-            ${product.stockCount > 0
-              ? 'bg-primary text-neutral'
-              : 'bg-base-300 text-neutral/40 cursor-not-allowed'
-            }
-          `}
-          style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
-          disabled={product.stockCount === 0}
-          onClick={onBuy}
-        >
-          {product.stockCount > 0 ? 'BUY NOW' : 'SOLD OUT'}
-        </button>
       </div>
     </div>
   )

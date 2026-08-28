@@ -10,6 +10,7 @@ export interface AuthEnv {
       sub: string
       email?: string
       role?: string
+      app_metadata?: Record<string, any>
     }
   }
 }

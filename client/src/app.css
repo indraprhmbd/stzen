@@ -8,35 +8,84 @@
   default: true;
   color-scheme: "light";
 
-  /* Core Brand Tokens */
-  --color-primary: #C5FE37;          /* Electric Volt Lime */
+  /* ─── Core Brand Tokens ─────────────────────────────────────────────── */
+  --color-primary: #4c6700;         /* Dark olive — visible text on light bg */
   --color-primary-content: #0D110F;  /* Deep Black */
 
-  --color-secondary: #FF5DA2;        /* Bubblegum Pink */
+  --color-secondary: #FF5DA2;        /* Bubblegum Pink (secondary-container) */
   --color-secondary-content: #0D110F;
 
-  --color-accent: #FF7E36;           /* Retro Coral */
+  --color-accent: #FF7E36;           /* Retro Coral (tertiary-container) */
   --color-accent-content: #0D110F;
 
-  --color-neutral: #0D110F;          /* Ink Black */
+  --color-neutral: #0D110F;          /* Ink Black (on-surface) */
   --color-neutral-content: #C5FE37;
 
-  /* Canvas Layers */
+  /* ─── Canvas Layers ─────────────────────────────────────────────────── */
   --color-base-100: #5EAA83;         /* Sage Green Backdrop */
   --color-base-200: #4A8C69;         /* Elevated Card Base */
   --color-base-300: #386E51;         /* Deep Inset Panels */
   --color-base-content: #0D110F;
 
-  /* State Tokens */
-  --color-success: #C5FE37;
+  /* ─── State Tokens ──────────────────────────────────────────────────── */
+  --color-success: #2F7D4E;        /* Dark green, readable on white */
   --color-warning: #FF7E36;
   --color-error: #FF3B30;
   --color-info: #1D6058;
 
-  /* Strict Neubrutalist Border Radius */
-  --radius-selector: 0.25rem; /* 4px */
-  --radius-field: 0.25rem;    /* 4px */
-  --radius-box: 0.375rem;     /* 6px */
+  /* ─── Strict Neubrutalist Border Radius ─────────────────────────────── */
+  --radius-selector: 0.125rem; /* 2px */
+  --radius-field: 0.125rem;    /* 2px */
+  --radius-box: 0.25rem;       /* 4px */
+}
+
+/* ─── MD3 Extended Color Tokens (Tailwind v4) ──────────────────────────── */
+
+@theme {
+  --color-primary: #4c6700;
+  --color-primary-container: #c5fe37;
+  --color-on-primary: #ffffff;
+  --color-on-primary-container: #557300;
+
+  --color-secondary: #b21c66;
+  --color-secondary-container: #ff5da2;
+  --color-on-secondary: #ffffff;
+  --color-on-secondary-container: #650036;
+
+  --color-tertiary: #a04100;
+  --color-tertiary-container: #ffe6dc;
+  --color-on-tertiary: #ffffff;
+  --color-on-tertiary-container: #b24900;
+
+  --color-surface: #f7faf6;
+  --color-surface-variant: #e0e3df;
+  --color-surface-container: #ecefeb;
+  --color-surface-container-low: #f1f4f0;
+  --color-surface-container-high: #e6e9e5;
+  --color-surface-container-highest: #e0e3df;
+  --color-surface-dim: #d8dbd7;
+  --color-surface-bright: #f7faf6;
+  --color-on-surface: #181c1a;
+  --color-on-surface-variant: #434934;
+
+  --color-background: #f7faf6;
+  --color-on-background: #181c1a;
+
+  --color-outline: #737a62;
+  --color-outline-variant: #c3c9ae;
+
+  --color-inverse-surface: #2d312f;
+  --color-inverse-on-surface: #eef2ee;
+  --color-inverse-primary: #a2d800;
+
+  --color-dark-sage: #4E9370;
+  --color-forest-green: #3D785A;
+  --color-base-sage: #5EAA83;
+
+  --color-error: #ba1a1a;
+  --color-error-container: #ffdad6;
+  --color-on-error: #ffffff;
+  --color-on-error-container: #93000a;
 }
 
 /* ─── Neubrutalist Utilities ─────────────────────────────────────────────── */
@@ -61,7 +110,15 @@
     box-shadow: 7px 7px 0px 0px #0D110F;
   }
 
-  /* Multi-Layered Pop Shadows */
+  /* Multi-Layered Pop Shadows (from home.html) */
+  .shadow-3d-pop {
+    box-shadow: 3px 3px 0px 0px #000, 6px 6px 0px 0px #ff5da2, 9px 9px 0px 0px #ffb693, 12px 12px 0px 0px #000;
+  }
+  .shadow-3d-subtle {
+    box-shadow: 4px 4px 0px 0px #000, 8px 8px 0px 0px #4E9370;
+  }
+
+  /* Legacy pop shadows (keep for compat) */
   .shadow-pop-pink {
     box-shadow: 3px 3px 0px 0px #0D110F, 6px 6px 0px 0px #FF5DA2;
   }
@@ -94,6 +151,13 @@
     -webkit-text-stroke: 1.5px #0D110F;
     paint-order: stroke fill;
   }
+
+  /* Rubik Mono Hero Text */
+  .rubik-mono-text {
+    font-family: 'Rubik Mono One', sans-serif;
+    text-shadow: 4px 4px 0 #000, 8px 8px 0 #ff5da2, 12px 12px 0 #c5fe37;
+    -webkit-text-stroke: 2px black;
+  }
 }
 
 /* ─── Animations ──────────────────────────────────────────────────────────── */
@@ -105,4 +169,50 @@
 
 .cursor-blink {
   animation: blink 1s step-end infinite;
+}
+
+/* Marquee infinite scroll */
+@keyframes marquee-scroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.animate-marquee {
+  animation: marquee-scroll 25s linear infinite;
+}
+
+/* Skeleton pulse */
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.animate-skeleton {
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+}
+
+/* Hero grid dot background */
+.bg-grid-dots {
+  background-image: radial-gradient(circle, rgba(255,255,255,0.08) 1px, transparent 1px);
+  background-size: 16px 16px;
+}
+
+/* Pulsing dot for status pill */
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(1.4); }
+}
+
+.animate-pulse-dot {
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+/* Toast slide up */
+@keyframes toast-in {
+  0% { transform: translateY(100%); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+.animate-toast-in {
+  animation: toast-in 0.2s ease-out;
 }
