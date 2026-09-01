@@ -2,7 +2,7 @@ import {
   pgTable,
   uuid,
   text,
-  numeric,
+  integer,
   boolean,
   timestamp,
   pgEnum,
@@ -57,10 +57,11 @@ export const products = pgTable(
   'products',
   {
     id: uuid('id').primaryKey().defaultRandom(),
+    publicId: text('public_id').notNull().unique(),
     name: text('name').notNull(),
     description: text('description'),
     category: text('category').notNull(),
-    price: numeric('price', { precision: 10, scale: 2 }).notNull(),
+    price: integer('price').notNull(),
     badge: text('badge'),
     instructions: text('instructions'),
     isActive: boolean('is_active').notNull().default(true),
@@ -74,6 +75,7 @@ export const products = pgTable(
   (table) => [
     index('products_category_idx').on(table.category),
     index('products_is_active_idx').on(table.isActive),
+    index('products_public_id_idx').on(table.publicId),
   ]
 )
 
@@ -106,6 +108,7 @@ export const orders = pgTable(
   'orders',
   {
     id: uuid('id').primaryKey().defaultRandom(),
+    publicId: text('public_id').notNull().unique(),
     userId: uuid('user_id')
       .notNull()
       .references(() => profiles.id, { onDelete: 'cascade' }),
@@ -117,7 +120,7 @@ export const orders = pgTable(
     }),
     status: orderStatusEnum('status').notNull().default('PENDING'),
     paymentRef: text('payment_ref'),
-    amount: numeric('amount', { precision: 10, scale: 2 }).notNull(),
+    amount: integer('amount').notNull(),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -127,5 +130,6 @@ export const orders = pgTable(
     index('orders_user_id_idx').on(table.userId),
     index('orders_status_idx').on(table.status),
     index('orders_payment_ref_idx').on(table.paymentRef),
+    index('orders_public_id_idx').on(table.publicId),
   ]
 )

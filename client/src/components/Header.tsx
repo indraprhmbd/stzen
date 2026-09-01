@@ -11,12 +11,9 @@ export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const { t, lang, toggle } = useCopy()
 
-  const isAdmin = user?.app_metadata?.role === 'admin'
-
   const navLinks = [
     { to: '/', label: t.nav.shop },
     { to: '/dashboard', label: t.nav.myOrders },
-    ...(isAdmin ? [{ to: '/admin', label: t.nav.admin }] : []),
   ]
 
   return (
@@ -37,18 +34,14 @@ export default function Header() {
             <nav className="hidden md:flex items-center gap-4">
               {navLinks.map((link) => {
                 const isActive = location.pathname === link.to
-                const isAdminLink = link.to === '/admin'
                 return (
                   <Link
                     key={link.to}
                     to={link.to}
                     className={`
-                      font-black text-sm uppercase transition-all
-                      ${isAdminLink ? 'text-secondary' : 'text-on-surface'}
+                      font-black text-sm uppercase transition-all text-on-surface
                       ${isActive
-                        ? isAdminLink
-                          ? 'border-b-4 border-secondary pb-1'
-                          : 'border-b-4 border-primary pb-1 text-primary'
+                        ? 'border-b-4 border-primary pb-1 text-primary'
                         : 'hover:text-primary hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none'
                       }
                     `}
@@ -75,11 +68,6 @@ export default function Header() {
             {/* Auth */}
             {user ? (
               <div className="hidden md:flex items-center gap-2">
-                {isAdmin && (
-                  <span className="bg-secondary text-white border-2 border-black font-bold text-[10px] px-2 py-0.5 uppercase -rotate-1">
-                    ADMIN
-                  </span>
-                )}
                 <span className="text-xs font-bold text-on-surface-variant max-w-[120px] truncate font-mono">
                   {user.email}
                 </span>
@@ -117,18 +105,14 @@ export default function Header() {
           <div className="md:hidden border-t-[3px] border-on-surface py-3 flex flex-col gap-2">
             {navLinks.map((link) => {
               const isActive = location.pathname === link.to
-              const isAdminLink = link.to === '/admin'
               return (
                 <Link
                   key={link.to}
                   to={link.to}
                   className={`
-                    px-3 py-2 font-black uppercase text-sm tracking-wide
-                    ${isAdminLink ? 'text-secondary' : 'text-on-surface'}
+                    px-3 py-2 font-black uppercase text-sm tracking-wide text-on-surface
                     ${isActive
-                      ? isAdminLink
-                        ? 'bg-secondary/20 border-l-[4px] border-secondary text-secondary'
-                        : 'bg-primary-container/20 border-l-[4px] border-primary text-primary'
+                      ? 'bg-primary-container/20 border-l-[4px] border-primary text-primary'
                       : ''
                     }
                   `}

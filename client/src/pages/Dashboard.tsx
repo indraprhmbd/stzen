@@ -1,13 +1,11 @@
 import { useState, useEffect, useCallback } from 'react'
+import { Link } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { useBrand } from '../hooks/useBrand'
 import { useCopy } from '../hooks/useCopy'
 import { authedApiRequest } from '../lib/api'
 import Layout from '../components/Layout'
 import OrderCard from '../components/OrderCard'
-import CredentialViewer from '../components/CredentialViewer'
-
-// ─── Types ──────────────────────────────────────────────────────────────────
 
 interface Order {
   id: string
@@ -31,21 +29,18 @@ interface Credentials {
 
 type FilterTab = 'ALL' | 'PENDING' | 'PAID' | 'DELIVERED' | 'REJECTED'
 
-// ─── Component ──────────────────────────────────────────────────────────────
-
 export default function Dashboard() {
-  const { user, signOut } = useAuth()
+  const { user, session } = useAuth()
   const brand = useBrand()
   const { t } = useCopy()
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<FilterTab>('ALL')
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
-
-  // Credentials state
   const [credentials, setCredentials] = useState<Credentials | null>(null)
   const [loadingCredentials, setLoadingCredentials] = useState(false)
   const [credentialsError, setCredentialsError] = useState('')
+  const [toast, setToast] = useState('')
 
   const fetchOrders = useCallback(async () => {
     try {
@@ -60,8 +55,12 @@ export default function Dashboard() {
   }, [])
 
   useEffect(() => {
-    fetchOrders()
-  }, [fetchOrders])
+    if (session) {
+      fetchOrders()
+    } else {
+      setLoading(false)
+    }
+  }, [session, fetchOrders])
 
   const filteredOrders =
     activeTab === 'ALL'
@@ -82,11 +81,10 @@ export default function Dashboard() {
   async function handleViewCredentials(orderId: string) {
     const order = orders.find((o) => o.id === orderId)
     if (order) setSelectedOrder(order)
-
     setLoadingCredentials(true)
     setCredentialsError('')
     setCredentials(null)
-
+    ;(document.getElementById('credentials_modal') as HTMLDialogElement)?.showModal()
     try {
       const data = await authedApiRequest((c) =>
         c.api.v1.orders[':id'].credentials.$get({
@@ -102,8 +100,10 @@ export default function Dashboard() {
     }
   }
 
-  function handleCopyCredentials(text: string) {
+  function handleCopy(text: string) {
     navigator.clipboard.writeText(text)
+    setToast('Disalin ke clipboard')
+    setTimeout(() => setToast(''), 2000)
   }
 
   function getWhatsAppUrl(orderId: string) {
@@ -114,7 +114,6 @@ export default function Dashboard() {
 
   return (
     <Layout>
-      {/* Header */}
       <div className="mb-6">
         <div className="bg-surface-container border-[3px] border-on-surface shadow-3d-subtle p-5">
           <div className="flex items-center gap-3">
@@ -134,46 +133,53 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Filter Tabs */}
-      <div className="flex gap-2 mb-6 flex-wrap">
-        {tabKeys.map((tab, i) => {
-          const tabColors: Record<string, string> = {
-            ALL: 'bg-on-surface text-primary-container',
-            PENDING: 'bg-warning text-white',
-            PAID: 'bg-info text-white',
-            DELIVERED: 'bg-primary-container text-black',
-            REJECTED: 'bg-error text-white',
-          }
-          const isActive = activeTab === tab
-          return (
-            <button
-              key={tab}
-              className={`
-                border-[3px] border-on-surface font-bold uppercase text-xs px-3 py-1.5
-                transition-all
-                ${isActive
-                  ? `${tabColors[tab]} shadow-brutal translate-x-[1px] translate-y-[1px]`
-                  : 'bg-surface-container text-on-surface shadow-brutal-sm hover:-translate-x-[1px] hover:-translate-y-[1px]'
-                }
-              `}
+      {!session && (
+        <div className="text-center py-12 bg-surface-container border-[3px] border-on-surface shadow-brutal p-8">
+          <span className="material-symbols-outlined text-5xl text-on-surface-variant/30 mb-3">lock</span>
+          <p className="font-bold text-on-surface mb-1">
+            {user ? 'Loading your orders...' : 'Sign in to view your orders'}
+          </p>
+          <p className="text-xs text-on-surface-variant/60 mb-4">
+            Access your purchase history, track deliveries, and view credentials.
+          </p>
+          {!user && (
+            <Link
+              to="/login"
+              className="inline-block bg-primary-container text-black font-black text-xs uppercase border-[3px] border-black px-6 py-2.5 shadow-brutal-sm btn-brutal-interactive"
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-              onClick={() => setActiveTab(tab)}
             >
-              {tabLabels[i]}
-              {tabCounts[tab] > 0 && (
-                <span className="ml-1.5 font-mono text-[10px] opacity-70">
-                  {tabCounts[tab]}
-                </span>
-              )}
-            </button>
-          )
-        })}
-      </div>
+              {t.auth.signIn}
+            </Link>
+          )}
+        </div>
+      )}
 
-      {/* Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left: Order List */}
-        <div className={`${selectedOrder && credentials ? 'lg:col-span-5' : 'lg:col-span-12'}`}>
+      {session && (
+        <>
+          <div className="flex gap-2 mb-6 flex-wrap">
+            {tabKeys.map((tab, i) => {
+              const tabColors: Record<string, string> = {
+                ALL: 'bg-on-surface text-primary-container',
+                PENDING: 'bg-warning text-white',
+                PAID: 'bg-info text-white',
+                DELIVERED: 'bg-primary-container text-black',
+                REJECTED: 'bg-error text-white',
+              }
+              const isActive = activeTab === tab
+              return (
+                <button
+                  key={tab}
+                  className={`border-[3px] border-on-surface font-bold uppercase text-xs px-3 py-1.5 transition-all ${isActive ? `${tabColors[tab]} shadow-brutal translate-x-[1px] translate-y-[1px]` : 'bg-surface-container text-on-surface shadow-brutal-sm hover:-translate-x-[1px] hover:-translate-y-[1px]'}`}
+                  style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                  onClick={() => setActiveTab(tab)}
+                >
+                  {tabLabels[i]}
+                  {tabCounts[tab] > 0 && <span className="ml-1.5 font-mono text-[10px] opacity-70">{tabCounts[tab]}</span>}
+                </button>
+              )
+            })}
+          </div>
+
           {loading ? (
             <div className="flex justify-center py-12">
               <span className="loading loading-spinner loading-lg"></span>
@@ -184,57 +190,71 @@ export default function Dashboard() {
               <p className="text-on-surface-variant/50 font-bold">{t.dashboard.noOrders}</p>
             </div>
           ) : (
-            <div className="flex flex-col gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {filteredOrders.map((order) => (
-                <div
+                <OrderCard
                   key={order.id}
-                  className={`
-                    cursor-pointer transition-all
-                    ${selectedOrder?.id === order.id ? 'ring-2 ring-secondary-container' : ''}
-                  `}
-                  onClick={() => order.status === 'DELIVERED' && handleViewCredentials(order.id)}
-                >
-                  <OrderCard
-                    order={order}
-                    onViewCredentials={order.status === 'DELIVERED' ? () => handleViewCredentials(order.id) : undefined}
-                    onReport={() => window.open(getWhatsAppUrl(order.id), '_blank')}
-                  />
-                </div>
+                  order={order}
+                  onViewCredentials={order.status === 'DELIVERED' ? () => handleViewCredentials(order.id) : undefined}
+                  onReport={() => window.open(getWhatsAppUrl(order.id), '_blank')}
+                />
               ))}
             </div>
           )}
-        </div>
+        </>
+      )}
 
-        {/* Right: Credential Viewer */}
-        {selectedOrder && (
-          <div className="lg:col-span-7">
+      {/* Credentials Popup */}
+      <dialog id="credentials_modal" className="modal">
+        <div className="modal-box max-w-xl bg-neutral border-[3px] border-black shadow-brutal rounded-sm p-0 overflow-hidden">
+          <div className="bg-zinc-900 text-white px-5 py-3 flex items-center justify-between border-b border-zinc-800">
+            <div>
+              <div className="text-xs font-bold tracking-widest uppercase text-zinc-400">Vault Payload</div>
+              <div className="text-sm font-bold">{selectedOrder?.productName ?? 'Kredensial'}</div>
+            </div>
+            <form method="dialog">
+              <button className="btn btn-sm btn-ghost text-white">Tutup</button>
+            </form>
+          </div>
+
+          <div className="p-5">
             {loadingCredentials ? (
-              <div className="bg-on-surface border-[4px] border-secondary-container shadow-3d-pop rounded-sm p-6">
-                <div className="flex justify-center py-8">
-                  <span className="loading loading-spinner loading-lg text-primary-container"></span>
-                </div>
+              <div className="flex justify-center py-10">
+                <span className="loading loading-spinner loading-lg text-primary"></span>
               </div>
             ) : credentialsError ? (
-              <div className="bg-on-surface border-[4px] border-error shadow-brutal rounded-sm p-6">
-                <p className="font-bold text-error text-sm">{credentialsError}</p>
-              </div>
+              <div className="bg-red-50 border border-red-200 p-4 text-sm text-red-700">{credentialsError}</div>
             ) : credentials ? (
-              <CredentialViewer
-                credentials={credentials.credentials}
-                instructions={credentials.instructions}
-                onCopy={() => handleCopyCredentials(credentials.credentials)}
-                onReport={() => window.open(getWhatsAppUrl(selectedOrder.id), '_blank')}
-              />
+              <>
+                <div className="bg-black border border-zinc-800 p-3">
+                  <div className="text-[10px] font-bold tracking-widest uppercase text-zinc-500 mb-2">Decrypted Payload</div>
+                  <pre className="font-mono text-sm text-lime-300 whitespace-pre-wrap break-all select-all bg-black/0 p-0">{credentials.credentials}</pre>
+                </div>
+                {credentials.instructions && (
+                  <div className="mt-3 bg-zinc-800 border border-zinc-700 p-3 text-sm text-zinc-200 whitespace-pre-wrap">
+                    {credentials.instructions}
+                  </div>
+                )}
+                <div className="flex gap-2 mt-4">
+                  <button onClick={() => handleCopy(credentials.credentials)} className="flex-1 bg-primary-container text-black font-bold text-xs uppercase border-2 border-black py-2.5">
+                    Salin
+                  </button>
+                  <button onClick={() => selectedOrder && window.open(getWhatsAppUrl(selectedOrder.id), '_blank')} className="flex-1 bg-white text-black font-bold text-xs uppercase border-2 border-black py-2.5">
+                    Lapor
+                  </button>
+                </div>
+              </>
             ) : (
-              <div className="bg-surface-container border-[3px] border-on-surface shadow-brutal p-6">
-                <p className="text-on-surface-variant/50 font-bold text-center">
-                  {t.dashboard.selectOrder}
-                </p>
-              </div>
+              <div className="text-sm text-zinc-400 text-center py-6">Tidak ada data.</div>
             )}
           </div>
-        )}
-      </div>
+        </div>
+        <form method="dialog" className="modal-backdrop">
+          <button>close</button>
+        </form>
+      </dialog>
+
+      {toast && <div className="toast toast-end"><div className="alert bg-zinc-900 text-white text-sm border border-zinc-700">{toast}</div></div>}
     </Layout>
   )
 }

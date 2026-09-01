@@ -6,7 +6,7 @@ export const ProductCreateSchema = z.object({
   name: z.string().min(1, 'Name is required').max(200),
   description: z.string().optional(),
   category: z.string().min(1, 'Category is required').max(100),
-  price: z.string().regex(/^\d+(\.\d{1,2})?$/, 'Price must be a valid number (e.g. 9.99)'),
+  price: z.string().regex(/^\d+$/, 'Price must be integer rupiah (e.g. 25000)'),
   badge: z.string().max(50).optional(),
   instructions: z.string().optional(),
   isActive: z.boolean().optional().default(true),

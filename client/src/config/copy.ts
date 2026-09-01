@@ -11,6 +11,12 @@ export interface Copy {
   filter: { all: string }
   dashboard: { title: string; subtitle: string; tabs: string[]; noOrders: string; selectOrder: string }
   common: { noProducts: string; copiedToClipboard: string }
+  admin: {
+    sidebar: { overview: string; products: string; orders: string }
+    overview: { title: string; totalProducts: string; totalStock: string; pendingOrders: string; revenue: string; recentOrders: string; lowStock: string; noData: string }
+    products: { title: string; searchPlaceholder: string; categoryAll: string; addProduct: string; editProduct: string; createProduct: string; updateProduct: string; deleteConfirm: string; name: string; category: string; price: string; badge: string; description: string; instructions: string; status: string; stock: string; actions: string; edit: string; delete: string; active: string; inactive: string; stockImport: string; targetProduct: string; selectProduct: string; rawDataLabel: string; rawDataPlaceholder: string; importButton: string; cancel: string }
+    orders: { title: string; searchPlaceholder: string; statusAll: string; approve: string; reject: string; deliver: string; id: string; date: string; product: string; customer: string; amount: string; status: string; actions: string; noOrders: string }
+  }
 }
 
 const id: Copy = {
@@ -75,6 +81,12 @@ const id: Copy = {
   filter: { all: 'Semua' },
   dashboard: { title: 'PEMBELIAN AKTIF', subtitle: 'Lihat dan kelola pesanan kredensialmu', tabs: ['Semua', 'Menunggu', 'Dibayar', 'Dikirim', 'Ditolak'], noOrders: 'Belum ada pesanan', selectOrder: 'Pilih pesanan yang sudah dikirim untuk melihat kredensial' },
   common: { noProducts: 'Belum ada produk tersedia', copiedToClipboard: 'Disalin ke clipboard!' },
+  admin: {
+    sidebar: { overview: 'Ringkasan', products: 'Produk', orders: 'Pesanan' },
+    overview: { title: 'RINGKASAN', totalProducts: 'Total Produk', totalStock: 'Total Stok', pendingOrders: 'Pesanan Pending', revenue: 'Pendapatan', recentOrders: 'Pesanan Terbaru', lowStock: 'Stok Menipis', noData: 'Belum ada data' },
+    products: { title: 'PRODUK', searchPlaceholder: 'Cari produk...', categoryAll: 'Semua Kategori', addProduct: 'TAMBAH PRODUK', editProduct: 'EDIT PRODUK', createProduct: 'BUAT PRODUK', updateProduct: 'PERBARUI', deleteConfirm: 'Hapus produk ini? Kredensial juga akan terhapus.', name: 'Nama', category: 'Kategori', price: 'Harga', badge: 'Badge', description: 'Deskripsi', instructions: 'Instruksi', status: 'Status', stock: 'Stok', actions: 'Aksi', edit: 'EDIT', delete: 'HAPUS', active: 'AKTIF', inactive: 'NONAKTIF', stockImport: 'Impor Stok', targetProduct: 'PRODUK TARGET', selectProduct: 'Pilih produk', rawDataLabel: 'DATA KREDENSIAL [FORMAT: USER:PASS]', rawDataPlaceholder: 'user@email.com:password123', importButton: 'IMPOR KE VAULT', cancel: 'BATAL' },
+    orders: { title: 'PESANAN', searchPlaceholder: 'Cari produk / pelanggan...', statusAll: 'Semua Status', approve: 'SETUJUI', reject: 'TOLAK', deliver: 'KIRIM', id: 'ID', date: 'Tanggal', product: 'Produk', customer: 'Pelanggan', amount: 'Jumlah', status: 'Status', actions: 'Aksi', noOrders: 'Belum ada pesanan' },
+  },
 }
 
 const en: Copy = {
@@ -139,6 +151,12 @@ const en: Copy = {
   filter: { all: 'All' },
   dashboard: { title: 'MY ACTIVE PURCHASES', subtitle: 'View and manage your credential orders', tabs: ['All', 'Pending', 'Paid', 'Delivered', 'Rejected'], noOrders: 'No orders found', selectOrder: 'Select a delivered order to view credentials' },
   common: { noProducts: 'No products available', copiedToClipboard: 'Copied to clipboard!' },
+  admin: {
+    sidebar: { overview: 'Overview', products: 'Products', orders: 'Orders' },
+    overview: { title: 'OVERVIEW', totalProducts: 'Total Products', totalStock: 'Total Stock', pendingOrders: 'Pending Orders', revenue: 'Revenue', recentOrders: 'Recent Orders', lowStock: 'Low Stock', noData: 'No data' },
+    products: { title: 'PRODUCTS', searchPlaceholder: 'Search products...', categoryAll: 'All Categories', addProduct: 'ADD PRODUCT', editProduct: 'EDIT PRODUCT', createProduct: 'CREATE PRODUCT', updateProduct: 'UPDATE', deleteConfirm: 'Delete this product? Credentials will also be deleted.', name: 'Name', category: 'Category', price: 'Price', badge: 'Badge', description: 'Description', instructions: 'Instructions', status: 'Status', stock: 'Stock', actions: 'Actions', edit: 'EDIT', delete: 'DELETE', active: 'ACTIVE', inactive: 'INACTIVE', stockImport: 'Stock Import', targetProduct: 'TARGET PRODUCT', selectProduct: 'Select product', rawDataLabel: 'CREDENTIAL DATA [FORMAT: USER:PASS]', rawDataPlaceholder: 'user@email.com:password123', importButton: 'IMPORT TO VAULT', cancel: 'CANCEL' },
+    orders: { title: 'ORDERS', searchPlaceholder: 'Search product / customer...', statusAll: 'All Statuses', approve: 'APPROVE', reject: 'REJECT', deliver: 'DELIVER', id: 'ID', date: 'Date', product: 'Product', customer: 'Customer', amount: 'Amount', status: 'Status', actions: 'Actions', noOrders: 'No orders' },
+  },
 }
 
 export const copy: Record<'id' | 'en', Copy> = { id, en }

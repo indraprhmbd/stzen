@@ -8,11 +8,20 @@ export function useAuth() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    let cancelled = false
+    const timeout = setTimeout(() => {
+      if (!cancelled) setLoading(false)
+    }, 6000)
+
     // Get initial session from localStorage
     supabase.auth.getSession().then(({ data: { session } }) => {
+      if (cancelled) return
       setSession(session)
       setUser(session?.user ?? null)
       setLoading(false)
+      clearTimeout(timeout)
+    }).catch(() => {
+      if (!cancelled) setLoading(false)
     })
 
     // Listen for auth changes
@@ -22,9 +31,14 @@ export function useAuth() {
       setSession(session)
       setUser(session?.user ?? null)
       setLoading(false)
+      clearTimeout(timeout)
     })
 
-    return () => subscription.unsubscribe()
+    return () => {
+      cancelled = true
+      clearTimeout(timeout)
+      subscription.unsubscribe()
+    }
   }, [])
 
   const signInWithGoogle = async () => {

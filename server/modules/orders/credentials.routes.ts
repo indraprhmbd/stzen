@@ -21,18 +21,19 @@ credentialsRoutes.get('/', async (c) => {
   const user = c.get('user')
   const orderId = c.req.param('id')
 
-  // 1. Get order + verify ownership
+  // 1. Get order + verify ownership (orderId is public_id)
   const [order] = await db
     .select({
-      id: orders.id,
+      id: orders.publicId,
       userId: orders.userId,
       status: orders.status,
       vaultItemId: orders.vaultItemId,
       productName: products.name,
+      productId: orders.productId,
     })
     .from(orders)
     .innerJoin(products, eq(orders.productId, products.id))
-    .where(eq(orders.id, orderId))
+    .where(eq(orders.publicId, orderId))
 
   if (!order) {
     throw new NotFoundError('Order not found')

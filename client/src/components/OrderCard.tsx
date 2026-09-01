@@ -15,6 +15,18 @@ interface OrderCardProps {
   onReport?: () => void
 }
 
+function formatIdDate(iso: string) {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return iso
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des']
+  const dd = String(d.getDate()).padStart(2, '0')
+  const mon = months[d.getMonth()]
+  const yyyy = d.getFullYear()
+  const hh = String(d.getHours()).padStart(2, '0')
+  const mm = String(d.getMinutes()).padStart(2, '0')
+  return `${dd} ${mon} ${yyyy} ${hh}:${mm}`
+}
+
 function getStatusConfig(status: Order['status']) {
   switch (status) {
     case 'PENDING':
@@ -66,9 +78,7 @@ export default function OrderCard({ order, onViewCredentials, onReport }: OrderC
         <span className="bg-surface-container-high px-2 py-0.5 font-mono text-on-surface border border-on-surface/20">
           {brand.storefront.currencySymbol}{order.amount}
         </span>
-        <span className="font-mono">
-          {new Date(order.createdAt).toLocaleDateString()}
-        </span>
+        <span className="font-mono text-[11px]">{formatIdDate(order.createdAt)}</span>
         <span className="font-mono text-on-surface-variant/40 text-[10px]">
           #{order.id.slice(0, 8)}
         </span>

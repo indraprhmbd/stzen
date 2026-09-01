@@ -94,8 +94,9 @@ function Catalog() {
         c.api.v1.checkout.$post({ json: { productId: selectedProduct.id } })
       )
       if (res.ok) {
-        const data = await res.json()
-        setToastMsg(`Order #${(data as any).orderId} created!`)
+        const data = await res.json() as any
+        const oid = typeof data.orderId === 'string' ? data.orderId : data.orderId?.id ?? JSON.stringify(data.orderId)
+        setToastMsg(`Order #${oid} dibuat!`)
         setSelectedProduct(null)
         fetchProducts()
       } else {

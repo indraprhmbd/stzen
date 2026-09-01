@@ -16,7 +16,8 @@ export const productsService = {
 
     const rows = await db
       .select({
-        id: products.id,
+        internalId: products.id,
+        id: products.publicId,
         name: products.name,
         description: products.description,
         category: products.category,
@@ -31,33 +32,39 @@ export const productsService = {
       .where(whereClause)
       .orderBy(products.category, products.name)
 
-    // Attach stock counts
+    // Attach stock counts using internal id
     const withStock: ProductWithStock[] = await Promise.all(
-      rows.map(async (row) => ({
-        ...row,
-        stockCount: await getStockCount(row.id),
-      }))
+      rows.map(async (row) => {
+        const { internalId, ...rest } = row as any
+        return { ...rest, stockCount: await getStockCount(internalId) }
+      })
     )
 
     return withStock
   },
 
-  async getById(id: string): Promise<ProductWithStock> {
+  async getById(publicId: string): Promise<ProductWithStock> {
     const [product] = await db
       .select()
       .from(products)
-      .where(eq(products.id, id))
+      .where(eq(products.publicId, publicId))
 
     if (!product) {
       throw new NotFoundError('Product not found')
     }
 
-    const stockCount = await getStockCount(id)
+    const stockCount = await getStockCount(product.id)
 
-    return { ...product, stockCount }
+    // expose publicId as id externally
+    const { publicId: pid, ...rest } = product as any
+    return { ...rest, id: pid, stockCount }
   },
 
   async listAll() {
-    return db.select().from(products).orderBy(products.createdAt)
+    const rows = await db.select().from(products).orderBy(products.createdAt)
+    return rows.map((r: any) => {
+      const { publicId, ...rest } = r
+      return { ...rest, id: publicId }
+    })
   },
 }

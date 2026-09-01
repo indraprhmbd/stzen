@@ -1,53 +1,52 @@
+import { lazy, Suspense } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import { BrandProvider } from './hooks/useBrand'
-import Catalog from './pages/Catalog'
-import Login from './pages/Login'
-import Dashboard from './pages/Dashboard'
-import Admin from './pages/Admin'
-import AdminOrders from './pages/AdminOrders'
 import { RequireAuth } from './components/RequireAuth'
 import { RequireAdmin } from './components/RequireAdmin'
+import AdminLayout from './layouts/AdminLayout'
+
+const Catalog = lazy(() => import('./pages/Catalog'))
+const Login = lazy(() => import('./pages/Login'))
+const Dashboard = lazy(() => import('./pages/Dashboard'))
+const Overview = lazy(() => import('./pages/admin/Overview'))
+const AdminProducts = lazy(() => import('./pages/admin/Products'))
+const AdminOrders = lazy(() => import('./pages/admin/Orders'))
+
+function PageLoader() {
+  return (
+    <div className="flex items-center justify-center min-h-[60vh]">
+      <span className="loading loading-spinner loading-lg"></span>
+    </div>
+  )
+}
 
 function App() {
   return (
     <BrandProvider>
-      <Routes>
-        {/* Public */}
-        <Route path="/" element={<Catalog />} />
-        <Route path="/login" element={<Login />} />
+      <Suspense fallback={<PageLoader />}>
+        <Routes>
+          {/* Public */}
+          <Route path="/" element={<Catalog />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/dashboard" element={<Dashboard />} />
 
-        {/* Protected (any authenticated user) */}
-        <Route
-          path="/dashboard"
-          element={
-            <RequireAuth>
-              <Dashboard />
-            </RequireAuth>
-          }
-        />
-
-        {/* Protected (admin only) */}
-        <Route
-          path="/admin"
-          element={
-            <RequireAuth>
-              <RequireAdmin>
-                <Admin />
-              </RequireAdmin>
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/admin/orders"
-          element={
-            <RequireAuth>
-              <RequireAdmin>
-                <AdminOrders />
-              </RequireAdmin>
-            </RequireAuth>
-          }
-        />
-      </Routes>
+          {/* Admin — POS shell */}
+          <Route
+            path="/admin"
+            element={
+              <RequireAuth>
+                <RequireAdmin>
+                  <AdminLayout />
+                </RequireAdmin>
+              </RequireAuth>
+            }
+          >
+            <Route index element={<Overview />} />
+            <Route path="products" element={<AdminProducts />} />
+            <Route path="orders" element={<AdminOrders />} />
+          </Route>
+        </Routes>
+      </Suspense>
     </BrandProvider>
   )
 }

@@ -75,7 +75,7 @@ export default function ProductCard({ product, index = 0, onBuy, view = 'grid' }
           {/* Right: Price + CTA */}
           <div className="flex items-center gap-3 shrink-0">
             <span className="font-extrabold text-sm text-on-surface" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-              {brand.storefront.currencySymbol}{product.price}
+              {brand.storefront.currencySymbol} {Number(product.price).toLocaleString('id-ID')}
             </span>
             <button
               className={`
