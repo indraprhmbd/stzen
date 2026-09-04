@@ -1,6 +1,11 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState } from 'react'
 import { authedApiRequest } from '../../lib/api'
 import { supabase } from '../../lib/supabase'
+import { useAdminQuery } from '../../hooks/useAdminQuery'
+import StatCard from '../../components/admin/StatCard'
+import DataTable from '../../components/admin/DataTable'
+import StatusChip from '../../components/admin/StatusChip'
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell } from 'recharts'
 
 interface Stats {
   totalProducts: number
@@ -30,56 +35,51 @@ const statDefs = [
   { key: 'revenue' as const, label: 'Pendapatan', sub: 'paid + delivered' },
 ]
 
-export default function Overview() {
-  const [stats, setStats] = useState<Stats | null>(null)
-  const [orders, setOrders] = useState<Order[]>([])
-  const [lowStock, setLowStock] = useState<Product[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+const pieColors: Record<string, string> = { PENDING: '#f59e0b', PAID: '#3b82f6', DELIVERED: '#10b981', REJECTED: '#ef4444' }
 
-  const fetchAll = useCallback(async () => {
+export default function Overview() {
+  const [range, setRange] = useState<'7d' | '30d' | '90d'>('30d')
+  const rangeLabel = range === '7d' ? '7 hari' : range === '90d' ? '90 hari' : '30 hari'
+  const { data, loading, error, refetch: fetchAll } = useAdminQuery(async () => {
     const API_BASE = import.meta.env.VITE_API_BASE_URL || ''
-    const safeJson = async <T>(res: Response | null, fallback: T): Promise<T> => {
+    const safeJson = async <T,>(res: Response | null, fallback: T): Promise<T> => {
       if (!res) return fallback
       if (res.status === 204) return fallback
       const text = await res.text().catch(() => '')
       if (!text) return fallback
       try { return JSON.parse(text) as T } catch { return fallback }
     }
-    try {
-      const { data: { session } } = await supabase.auth.getSession()
-      const headers: Record<string, string> = session ? { Authorization: `Bearer ${session.access_token}` } : {}
+    const { data: { session } } = await supabase.auth.getSession()
+    const headers: Record<string, string> = session ? { Authorization: `Bearer ${session.access_token}` } : {}
 
-      const statsUrl = API_BASE ? `${API_BASE}/api/v1/admin/stats` : '/api/v1/admin/stats'
-      const statsP = fetch(statsUrl, { headers }).catch(() => null as unknown as Response)
-      const ordersP = authedApiRequest((c) => c.api.v1.admin.orders.$get({ query: {} } as any)).catch(() => null as unknown as Response)
-      const productsP = authedApiRequest((c) => c.api.v1.admin.products.$get()).catch(() => null as unknown as Response)
+    const statsUrl = API_BASE ? `${API_BASE}/api/v1/admin/stats` : '/api/v1/admin/stats'
+    const analyticsUrl = API_BASE ? `${API_BASE}/api/v1/admin/analytics?range=${range}` : `/api/v1/admin/analytics?range=${range}`
+    const statsP = fetch(statsUrl, { headers }).catch(() => null as unknown as Response)
+    const analyticsP = fetch(analyticsUrl, { headers }).catch(() => null as unknown as Response)
+    const ordersP = authedApiRequest((c) => c.api.v1.admin.orders.$get({ query: {} })).catch(() => null as unknown as Response)
+    const productsP = authedApiRequest((c) => c.api.v1.admin.products.$get()).catch(() => null as unknown as Response)
 
-      const [statsRes, ordersRes, productsRes] = await Promise.all([statsP, ordersP, productsP])
+    const [statsRes, analyticsRes, ordersRes, productsRes] = await Promise.all([statsP, analyticsP, ordersP, productsP])
 
-      const s = await safeJson<Stats>(statsRes as unknown as Response, { totalProducts: 0, totalStock: 0, pendingOrders: 0, revenue: '0' })
-      const o = await safeJson<Order[]>(ordersRes as unknown as Response, [])
-      const p = await safeJson<Product[]>(productsRes as unknown as Response, [])
+    const s = await safeJson<Stats>(statsRes as unknown as Response, { totalProducts: 0, totalStock: 0, pendingOrders: 0, revenue: '0' })
+    const a = await safeJson<{ dailySales: unknown[]; byStatus: unknown[]; byCategory: unknown[]; topProducts: unknown[] }>(analyticsRes as unknown as Response, { dailySales: [], byStatus: [], byCategory: [], topProducts: [] })
+    const o = await safeJson<Order[]>(ordersRes as unknown as Response, [])
+    const p = await safeJson<Product[]>(productsRes as unknown as Response, [])
 
-      setStats(s)
-      setOrders((Array.isArray(o) ? o : []).slice(0, 5))
-      setLowStock((Array.isArray(p) ? p.filter((x) => x.stockCount < 5) : []).slice(0, 5))
-    } catch (e: any) {
-      setError(e?.message || 'Gagal memuat ringkasan')
-      console.error('Overview fetchAll failed', e)
-    } finally {
-      setLoading(false)
+    return {
+      stats: s,
+      analytics: a,
+      orders: (Array.isArray(o) ? o : []).slice(0, 5),
+      lowStock: (Array.isArray(p) ? p.filter((x) => x.stockCount < 5) : []).slice(0, 5),
     }
-  }, [])
+  }, [range])
+  const stats = data?.stats ?? null
+  const analytics = data?.analytics ?? null
+  const orders = data?.orders ?? []
+  const lowStock = data?.lowStock ?? []
 
-  useEffect(() => { fetchAll() }, [fetchAll])
-
-  if (loading) {
-    return <div className="flex justify-center py-16"><span className="loading loading-spinner loading-lg"></span></div>
-  }
-  if (error) {
-    return <div className="bg-white border border-red-200 p-8 text-center"><div className="text-sm font-bold text-red-600">Gagal memuat ringkasan</div><div className="text-xs text-zinc-500 mt-1">{error}</div><button onClick={fetchAll} className="btn btn-sm bg-zinc-900 text-white rounded-sm mt-4">Coba lagi</button></div>
-  }
+  if (loading) return <div className="flex justify-center py-16"><span className="loading loading-spinner loading-lg"></span></div>
+  if (error) return <div className="bg-white border border-red-200 p-8 text-center"><div className="text-sm font-bold text-red-600">Gagal memuat ringkasan</div><div className="text-xs text-zinc-500 mt-1">{error}</div><button onClick={fetchAll} className="btn btn-sm bg-zinc-900 text-white rounded-sm mt-4">Coba lagi</button></div>
 
   const values: Record<string, string> = {
     totalProducts: String(stats?.totalProducts ?? 0),
@@ -89,93 +89,171 @@ export default function Overview() {
   }
 
   return (
-    <div className="flex flex-col gap-8">
-      <div className="border-b border-zinc-200 pb-5">
-        <div className="flex items-baseline gap-3">
+    <div className="flex flex-col gap-4">
+      <div className="border-b border-zinc-200 pb-4 flex flex-wrap items-end justify-between gap-3">
+        <div className="flex items-baseline gap-2">
           <h1 className="text-[22px] font-black tracking-tight" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>Ringkasan</h1>
           <span className="text-xs font-mono text-zinc-400">: {new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
         </div>
+        <select value={range} onChange={(e) => setRange(e.target.value as '7d' | '30d' | '90d')} className="border border-zinc-200 bg-white px-3 py-1.5 text-xs font-mono">
+          <option value="7d">7 hari</option>
+          <option value="30d">30 hari</option>
+          <option value="90d">90 hari</option>
+        </select>
       </div>
 
-      {/* Stats: personal, flat, no accent color */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {statDefs.map((c) => (
-          <div key={c.key} className="bg-white border border-zinc-200 p-5">
-            <div className="flex items-start justify-between">
-              <div className="text-[10px] font-bold tracking-[0.14em] text-zinc-500 uppercase">{c.label}</div>
-              <span className="text-[10px] font-mono text-zinc-400 border border-zinc-200 px-1.5 py-0.5">{c.sub}</span>
-            </div>
-            <div className="text-[28px] font-black tracking-tight leading-none mt-4" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{values[c.key]}</div>
-            <div className="h-px bg-zinc-100 mt-4" />
-          </div>
+          <StatCard key={c.key} value={values[c.key]} label={c.label} sub={c.sub} />
         ))}
       </div>
 
-      {/* Two panels: clean tables, no AI gloss */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Dense diagrams, no wasted space */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         <div className="bg-white border border-zinc-200">
-          <div className="px-5 py-3 border-b border-zinc-200 flex items-center justify-between">
-            <div className="text-xs font-bold tracking-[0.12em] uppercase">Pesanan Terbaru</div>
-            <span className="text-[11px] font-mono text-zinc-500">{orders.length} entri</span>
+          <div className="px-4 py-2 border-b border-zinc-200 flex items-center justify-between">
+            <div className="text-[11px] font-bold tracking-[0.12em] uppercase">Penjualan {rangeLabel}</div>
+            <span className="text-[10px] font-mono text-zinc-500">pesanan</span>
+          </div>
+          <div className="h-[180px] p-2">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={analytics?.dailySales ?? []} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
+                <CartesianGrid stroke="#f4f4f5" vertical={false} />
+                <XAxis dataKey="label" tick={{ fontSize: 10, fontFamily: 'JetBrains Mono' }} axisLine={false} tickLine={false} interval={4} />
+                <YAxis tick={{ fontSize: 10, fontFamily: 'JetBrains Mono' }} axisLine={false} tickLine={false} width={30} allowDecimals={false} />
+                <Tooltip contentStyle={{ fontSize: 11, fontFamily: 'JetBrains Mono', border: '1px solid #e4e4e7' }} />
+                <Line type="monotone" dataKey="count" stroke="#18181b" strokeWidth={1.5} dot={false} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        <div className="bg-white border border-zinc-200">
+          <div className="px-4 py-2 border-b border-zinc-200 flex items-center justify-between">
+            <div className="text-[11px] font-bold tracking-[0.12em] uppercase">Pendapatan {rangeLabel}</div>
+            <span className="text-[10px] font-mono text-zinc-500">Rp</span>
+          </div>
+          <div className="h-[180px] p-2">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={analytics?.dailySales ?? []} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
+                <CartesianGrid stroke="#f4f4f5" vertical={false} />
+                <XAxis dataKey="label" tick={{ fontSize: 10, fontFamily: 'JetBrains Mono' }} axisLine={false} tickLine={false} interval={4} />
+                <YAxis tick={{ fontSize: 10, fontFamily: 'JetBrains Mono' }} axisLine={false} tickLine={false} width={40} tickFormatter={(v) => `${v / 1000}k`} />
+                <Tooltip contentStyle={{ fontSize: 11, fontFamily: 'JetBrains Mono', border: '1px solid #e4e4e7' }} formatter={(v: any) => [`Rp ${Number(v).toLocaleString('id-ID')}`, 'revenue']} />
+                <Line type="monotone" dataKey="revenue" stroke="#18181b" strokeWidth={1.5} dot={false} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        <div className="bg-white border border-zinc-200">
+          <div className="px-4 py-2 border-b border-zinc-200 flex items-center justify-between">
+            <div className="text-[11px] font-bold tracking-[0.12em] uppercase">Stok per kategori</div>
+            <span className="text-[10px] font-mono text-zinc-500">vault</span>
+          </div>
+          <div className="h-[180px] p-2">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={analytics?.byCategory ?? []} layout="vertical" margin={{ left: 10, right: 10 }}>
+                <CartesianGrid stroke="#f4f4f5" horizontal={false} />
+                <XAxis type="number" tick={{ fontSize: 10, fontFamily: 'JetBrains Mono' }} axisLine={false} tickLine={false} allowDecimals={false} />
+                <YAxis type="category" dataKey="category" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} width={90} />
+                <Tooltip contentStyle={{ fontSize: 11, fontFamily: 'JetBrains Mono', border: '1px solid #e4e4e7' }} />
+                <Bar dataKey="stock" fill="#18181b" radius={[2, 2, 2, 2]} barSize={10} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        <div className="bg-white border border-zinc-200">
+          <div className="px-4 py-2 border-b border-zinc-200 flex items-center justify-between">
+            <div className="text-[11px] font-bold tracking-[0.12em] uppercase">Top 5 produk {rangeLabel}</div>
+            <span className="text-[10px] font-mono text-zinc-500">terlaris</span>
+          </div>
+          <div className="h-[180px] p-2">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={analytics?.topProducts ?? []} layout="vertical" margin={{ left: 10, right: 10 }}>
+                <CartesianGrid stroke="#f4f4f5" horizontal={false} />
+                <XAxis type="number" tick={{ fontSize: 10, fontFamily: 'JetBrains Mono' }} axisLine={false} tickLine={false} allowDecimals={false} />
+                <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} width={110} />
+                <Tooltip contentStyle={{ fontSize: 11, fontFamily: 'JetBrains Mono', border: '1px solid #e4e4e7' }} />
+                <Bar dataKey="count" fill="#18181b" radius={[2, 2, 2, 2]} barSize={10} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
+
+      {/* Status donut compact */}
+      {analytics?.byStatus?.length ? (
+        <div className="bg-white border border-zinc-200">
+          <div className="px-4 py-2 border-b border-zinc-200">
+            <div className="text-[11px] font-bold tracking-[0.12em] uppercase">Pesanan per status</div>
+          </div>
+          <div className="h-[160px] flex items-center gap-4 px-4">
+            <div className="h-[140px] w-[140px] shrink-0">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={analytics.byStatus} dataKey="count" nameKey="status" innerRadius={45} outerRadius={65} paddingAngle={2}>
+                    {analytics.byStatus.map((e: any, i: number) => (
+                      <Cell key={i} fill={pieColors[e.status] ?? '#71717a'} />
+                    ))}
+                  </Pie>
+                  <Tooltip contentStyle={{ fontSize: 11, fontFamily: 'JetBrains Mono', border: '1px solid #e4e4e7' }} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="flex flex-wrap gap-2 text-xs font-mono">
+              {analytics.byStatus.map((s: any) => (
+                <span key={s.status} className="border border-zinc-200 px-2 py-1 text-[11px]"><span className="inline-block w-2 h-2 mr-1.5" style={{ background: pieColors[s.status] ?? '#71717a' }}></span>{s.status} {s.count}</span>
+              ))}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+        <div className="bg-white border border-zinc-200">
+          <div className="px-4 py-2 border-b border-zinc-200 flex items-center justify-between">
+            <div className="text-[11px] font-bold tracking-[0.12em] uppercase">Pesanan Terbaru</div>
+            <span className="text-[10px] font-mono text-zinc-500">{orders.length} entri</span>
           </div>
           {orders.length === 0 ? (
-            <div className="p-10 text-center">
+            <div className="p-8 text-center">
               <div className="text-sm font-medium">Belum ada pesanan</div>
               <div className="text-xs text-zinc-500 mt-1">Transaksi terbaru akan tercatat di sini.</div>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="table table-sm">
-                <thead>
-                  <tr className="border-b border-zinc-200">
-                    <th className="text-[11px] tracking-widest font-semibold text-zinc-500 bg-zinc-50">PRODUK</th>
-                    <th className="text-[11px] tracking-widest font-semibold text-zinc-500 bg-zinc-50">JUMLAH</th>
-                    <th className="text-[11px] tracking-widest font-semibold text-zinc-500 bg-zinc-50">STATUS</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {orders.map((o) => (
-                    <tr key={o.id} className="border-b border-zinc-100 last:border-0 hover:bg-zinc-50/50">
-                      <td className="text-[13px] font-medium py-3">{o.productName}</td>
-                      <td className="text-[13px] font-mono">Rp {Number(o.amount).toLocaleString('id-ID')}</td>
-                      <td><span className="text-[11px] font-mono font-semibold tracking-wide px-2 py-1 border border-zinc-200 bg-white">{o.status}</span></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <DataTable columns={[{ label: 'PRODUK' }, { label: 'JUMLAH' }, { label: 'STATUS' }]} empty={false}>
+              {orders.map((o) => (
+                <tr key={o.id} className="border-b border-zinc-100 last:border-0 hover:bg-zinc-50/50">
+                  <td className="text-[13px] font-medium py-2.5">{o.productName}</td>
+                  <td className="text-[13px] font-mono">Rp {Number(o.amount).toLocaleString('id-ID')}</td>
+                  <td><StatusChip status={o.status}>{o.status}</StatusChip></td>
+                </tr>
+              ))}
+            </DataTable>
           )}
         </div>
 
         <div className="bg-white border border-zinc-200">
-          <div className="px-5 py-3 border-b border-zinc-200 flex items-center justify-between">
-            <div className="text-xs font-bold tracking-[0.12em] uppercase">Stok Menipis</div>
-            <span className="text-[11px] font-mono text-zinc-500">ambang &lt; 5</span>
+          <div className="px-4 py-2 border-b border-zinc-200 flex items-center justify-between">
+            <div className="text-[11px] font-bold tracking-[0.12em] uppercase">Stok Menipis</div>
+            <span className="text-[10px] font-mono text-zinc-500">ambang &lt; 5</span>
           </div>
           {lowStock.length === 0 ? (
-            <div className="p-10 text-center">
+            <div className="p-8 text-center">
               <div className="text-sm font-medium">Stok aman</div>
               <div className="text-xs text-zinc-500 mt-1">Tidak ada produk di bawah ambang.</div>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="table table-sm">
-                <thead>
-                  <tr className="border-b border-zinc-200">
-                    <th className="text-[11px] tracking-widest font-semibold text-zinc-500 bg-zinc-50">PRODUK</th>
-                    <th className="text-[11px] tracking-widest font-semibold text-zinc-500 bg-zinc-50">SISA</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {lowStock.map((p) => (
-                    <tr key={p.id} className="border-b border-zinc-100 last:border-0 hover:bg-zinc-50/50">
-                      <td className="text-[13px] font-medium py-3">{p.name}</td>
-                      <td><span className={`text-[11px] font-mono font-semibold px-2 py-1 border ${p.stockCount === 0 ? 'bg-zinc-900 text-white border-zinc-900' : 'bg-white border-zinc-300 text-zinc-700'}`}>{p.stockCount}</span></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <DataTable columns={[{ label: 'PRODUK' }, { label: 'SISA' }]} empty={false}>
+              {lowStock.map((p) => (
+                <tr key={p.id} className="border-b border-zinc-100 last:border-0 hover:bg-zinc-50/50">
+                  <td className="text-[13px] font-medium py-2.5">{p.name}</td>
+                  <td><StatusChip tone={p.stockCount === 0 ? 'dark' : 'zinc'}>{p.stockCount}</StatusChip></td>
+                </tr>
+              ))}
+            </DataTable>
           )}
         </div>
       </div>

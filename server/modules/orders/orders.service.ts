@@ -1,6 +1,7 @@
-import { eq, desc } from 'drizzle-orm'
+import { eq, desc, sql, ilike, or, and } from 'drizzle-orm'
 import { db } from '../../shared/db'
-import { orders, products } from '../../shared/db/schema'
+import { orders, products, productVariants, vaultItems } from '../../shared/db/schema'
+import type { PayableOrder } from './orders.types'
 import { NotFoundError, ConflictError } from '../../shared/errors/http'
 import { generatePublicId } from '../../shared/lib/publicId'
 import {
@@ -15,24 +16,33 @@ import {
 
 export const ordersService = {
   async listByUser(userId: string): Promise<OrderWithProduct[]> {
-    return db
+    const rows = await db
       .select({
         id: orders.publicId,
         userId: orders.userId,
         productId: orders.productId,
+        variantId: orders.variantId,
         vaultItemId: orders.vaultItemId,
         status: orders.status,
         paymentRef: orders.paymentRef,
+        paymentProvider: orders.paymentProvider,
         amount: orders.amount,
         createdAt: orders.createdAt,
         paidAt: orders.paidAt,
         productName: products.name,
         productCategory: products.category,
+        variantNameSnapshot: orders.variantNameSnapshot,
+        baseNameSnapshot: orders.baseNameSnapshot,
       })
       .from(orders)
-      .innerJoin(products, eq(orders.productId, products.id))
+      .leftJoin(products, eq(orders.productId, products.id))
       .where(eq(orders.userId, userId))
       .orderBy(desc(orders.createdAt))
+    return rows.map((r: any) => ({
+      ...r,
+      productName: r.variantNameSnapshot ?? r.baseNameSnapshot ?? r.productName ?? 'Produk',
+      productCategory: r.productCategory ?? '',
+    }))
   },
 
   async getById(publicId: string, userId?: string): Promise<OrderWithProduct> {
@@ -41,17 +51,21 @@ export const ordersService = {
         id: orders.publicId,
         userId: orders.userId,
         productId: orders.productId,
+        variantId: orders.variantId,
         vaultItemId: orders.vaultItemId,
         status: orders.status,
         paymentRef: orders.paymentRef,
+        paymentProvider: orders.paymentProvider,
         amount: orders.amount,
         createdAt: orders.createdAt,
         paidAt: orders.paidAt,
         productName: products.name,
         productCategory: products.category,
+        variantNameSnapshot: orders.variantNameSnapshot,
+        baseNameSnapshot: orders.baseNameSnapshot,
       })
       .from(orders)
-      .innerJoin(products, eq(orders.productId, products.id))
+      .leftJoin(products, eq(orders.productId, products.id))
       .where(eq(orders.publicId, publicId))
 
     if (!order) {
@@ -62,21 +76,34 @@ export const ordersService = {
       throw new NotFoundError('Order not found')
     }
 
-    return order
+    return {
+      ...order,
+      productName: (order as any).variantNameSnapshot ?? (order as any).baseNameSnapshot ?? (order as any).productName ?? 'Produk',
+      productCategory: (order as any).productCategory ?? '',
+    } as any
   },
 
-  async create(data: { userId: string; productId: string; amount: string | number }) {
+  async create(data: { userId: string; productId?: string | null; variantId?: string; amount: string | number; variantSnapshot?: any }) {
     const publicId = generatePublicId()
     const amountInt = typeof data.amount === 'string' ? parseInt(data.amount, 10) : data.amount
+    const vs: any = data.variantSnapshot
     const [order] = await db
       .insert(orders)
       .values({
         publicId,
         userId: data.userId,
-        productId: data.productId,
+        productId: data.productId ?? null,
+        variantId: (data as any).variantId ?? null,
         status: 'PENDING',
         amount: amountInt,
-      })
+        variantNameSnapshot: vs?.name ?? null,
+        variantSkuSnapshot: vs?.sku ?? null,
+        priceAtPurchase: amountInt,
+        durationSnapshot: vs?.durationMonths ?? null,
+        accountTypeSnapshot: vs?.accountType ?? null,
+        conditionsSnapshot: vs?.conditions ?? null,
+        baseNameSnapshot: vs?.baseName ?? (vs?.name ?? null),
+      } as any)
       .returning()
 
     return { ...order, id: publicId }
@@ -96,6 +123,13 @@ export const ordersService = {
     if (targetStatus === 'PAID') {
       updateData.paidAt = new Date()
     }
+    if (targetStatus === 'REFUNDED' && (order as any).vaultItemId) {
+      await db
+        .update(vaultItems)
+        .set({ status: 'AVAILABLE', allocatedAt: null })
+        .where(eq(vaultItems.id, (order as any).vaultItemId))
+      updateData.vaultItemId = null
+    }
 
     const [updated] = await db
       .update(orders)
@@ -106,24 +140,126 @@ export const ordersService = {
     return { ...updated, id: (updated as any).publicId }
   },
 
-  async listAll(status?: string) {
-    const whereClause = status ? eq(orders.status, status as any) : undefined
+  // ─── Payment gateway helpers ────────────────────────────────────────────
+  // Internal-id-bearing lookups used by the payments module. Kept separate
+  // from getById/listByUser (which expose the public API shape) because
+  // payments.service needs the internal uuid + fulfillment type for the
+  // allocate_credential RPC and webhook lookups.
 
-    return db
+  async getPayableDetails(publicId: string): Promise<PayableOrder> {
+    const [row] = await db
+      .select({
+        id: orders.id,
+        publicId: orders.publicId,
+        userId: orders.userId,
+        status: orders.status,
+        amount: orders.amount,
+        variantId: orders.variantId,
+        paymentRef: orders.paymentRef,
+        paymentProvider: orders.paymentProvider,
+        fulfillmentType: productVariants.fulfillmentType,
+      })
+      .from(orders)
+      .leftJoin(productVariants, eq(orders.variantId, productVariants.id))
+      .where(eq(orders.publicId, publicId))
+
+    if (!row) throw new NotFoundError('Order not found')
+    return row as PayableOrder
+  },
+
+  async findPayableByProviderRef(providerRef: string): Promise<PayableOrder | null> {
+    const [row] = await db
+      .select({
+        id: orders.id,
+        publicId: orders.publicId,
+        userId: orders.userId,
+        status: orders.status,
+        amount: orders.amount,
+        variantId: orders.variantId,
+        paymentRef: orders.paymentRef,
+        paymentProvider: orders.paymentProvider,
+        fulfillmentType: productVariants.fulfillmentType,
+      })
+      .from(orders)
+      .leftJoin(productVariants, eq(orders.variantId, productVariants.id))
+      .where(eq(orders.paymentRef, providerRef))
+
+    return (row as PayableOrder) ?? null
+  },
+
+  async setProviderRef(publicId: string, provider: string, providerRef: string) {
+    await db
+      .update(orders)
+      .set({ paymentProvider: provider, paymentRef: providerRef })
+      .where(eq(orders.publicId, publicId))
+  },
+
+  async setVaultItem(internalOrderId: string, vaultItemId: string) {
+    await db
+      .update(orders)
+      .set({ vaultItemId })
+      .where(eq(orders.id, internalOrderId))
+  },
+
+  async listAll(params: { status?: string; q?: string; limit?: number; offset?: number } = {}) {
+    const { status, q, limit = 50, offset = 0 } = params
+    const conditions = []
+    if (status) conditions.push(eq(orders.status, status as any))
+    if (q) {
+      const like = `%${q}%`
+      conditions.push(
+        or(
+          ilike(orders.variantNameSnapshot, like),
+          ilike(orders.baseNameSnapshot, like),
+          ilike(orders.paymentRef, like),
+          ilike(products.name, like)
+        )
+      )
+    }
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined
+
+    const rows = await db
       .select({
         id: orders.publicId,
         userId: orders.userId,
         productId: orders.productId,
+        variantId: orders.variantId,
         status: orders.status,
         amount: orders.amount,
         paymentRef: orders.paymentRef,
         createdAt: orders.createdAt,
         paidAt: orders.paidAt,
         productName: products.name,
+        variantNameSnapshot: orders.variantNameSnapshot,
+        baseNameSnapshot: orders.baseNameSnapshot,
       })
       .from(orders)
-      .innerJoin(products, eq(orders.productId, products.id))
+      .leftJoin(products, eq(orders.productId, products.id))
       .where(whereClause)
       .orderBy(desc(orders.createdAt))
+      .limit(limit)
+      .offset(offset)
+
+    const [{ count: total }] = await db
+      .select({ count: sql<number>`cast(count(*) as int)` })
+      .from(orders)
+      .leftJoin(products, eq(orders.productId, products.id))
+      .where(whereClause)
+
+    const statusCounts = await db
+      .select({ status: orders.status, count: sql<number>`cast(count(*) as int)` })
+      .from(orders)
+      .groupBy(orders.status)
+    const counts: Record<string, number> = { ALL: total }
+    for (const r of statusCounts) counts[r.status] = r.count
+
+    return {
+      orders: rows.map((r: any) => ({
+        ...r,
+        productName: r.variantNameSnapshot ?? r.baseNameSnapshot ?? r.productName ?? 'Produk',
+      })),
+      total,
+      counts,
+    }
   },
 }

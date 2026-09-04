@@ -2,12 +2,13 @@ import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import { eq } from 'drizzle-orm'
 import { db } from '../../shared/db'
-import { products } from '../../shared/db/schema'
-import { authMiddleware, type AuthEnv } from '../../shared/middleware/auth'
+import { products, productVariants } from '../../shared/db/schema'
+import { type AuthEnv } from '../../shared/middleware/auth'
 import { requireRole } from '../../shared/middleware/require-role'
 import { productsService } from '../products/products.service'
 import { vaultService } from '../vault/vault.service'
 import { generatePublicId } from '../../shared/lib/publicId'
+import { appendAudit } from '../../shared/lib/audit'
 import {
   ProductCreateSchema,
   ProductUpdateSchema,
@@ -20,7 +21,7 @@ type AdminProductEnv = AuthEnv
 
 export const adminProductRoutes = new Hono<AdminProductEnv>()
 
-adminProductRoutes.use('*', authMiddleware)
+// Auth is enforced globally in app.ts; this only adds the role check.
 adminProductRoutes.use('*', requireRole('admin'))
 
 // GET / — List all products with stock counts (exposes public_id as id)
@@ -59,7 +60,7 @@ adminProductRoutes.get('/', async (c) => {
   return c.json(productsWithStock)
 })
 
-// POST / — Create product
+// POST / — Create product (induk, price optional, defaults 0)
 adminProductRoutes.post(
   '/',
   zValidator('json', ProductCreateSchema),
@@ -67,9 +68,20 @@ adminProductRoutes.post(
     const data = c.req.valid('json') as any
     const publicId = generatePublicId()
     const dbData: any = { ...data, publicId }
-    if (dbData.price !== undefined) dbData.price = parseInt(dbData.price, 10)
+    if (dbData.price !== undefined && dbData.price !== '') dbData.price = parseInt(dbData.price, 10)
+    else dbData.price = 0
     const [created] = await db.insert(products).values(dbData).returning()
     const { publicId: pid, ...rest } = created as any
+    const user = c.get('user')
+    await appendAudit({
+      action: 'product:create',
+      resourceType: 'product',
+      resourcePublicId: pid,
+      resourceName: (created as any).name ?? '',
+      snapshotText: `Produk ${(created as any).name} dibuat oleh ${user.email ?? user.sub} ${new Date().toLocaleString('id-ID')}`,
+      actorId: user.sub,
+      actorEmail: user.email ?? null,
+    }).catch(() => {})
     return c.json({ ...rest, id: pid }, 201)
   }
 )
@@ -93,6 +105,16 @@ adminProductRoutes.put(
       return c.json({ error: 'Product not found' }, 404)
     }
     const { publicId: pid, ...rest } = updated as any
+    const user = c.get('user')
+    await appendAudit({
+      action: 'product:update',
+      resourceType: 'product',
+      resourcePublicId: pid,
+      resourceName: (updated as any).name ?? '',
+      snapshotText: `Produk ${(updated as any).name} diperbarui oleh ${user.email ?? user.sub} ${new Date().toLocaleString('id-ID')}`,
+      actorId: user.sub,
+      actorEmail: user.email ?? null,
+    }).catch(() => {})
     return c.json({ ...rest, id: pid })
   }
 )
@@ -108,6 +130,16 @@ adminProductRoutes.delete('/:id', async (c) => {
   if (!deleted) {
     return c.json({ error: 'Product not found' }, 404)
   }
+  const user = c.get('user')
+  await appendAudit({
+    action: 'product:delete',
+    resourceType: 'product',
+    resourcePublicId: publicId,
+    resourceName: (deleted as any).name ?? '',
+    snapshotText: `Produk ${(deleted as any).name} dihapus oleh ${user.email ?? user.sub} ${new Date().toLocaleString('id-ID')}`,
+    actorId: user.sub,
+    actorEmail: user.email ?? null,
+  }).catch(() => {})
   return c.json({ success: true })
 })
 
@@ -128,10 +160,35 @@ adminProductRoutes.post(
       return c.json({ error: 'No valid credential lines found' }, 400)
     }
 
-    const [product] = await db.select({ id: products.id }).from(products).where(eq(products.publicId, publicId))
+    // try variant first (new flow), fallback legacy product
+    const [variant] = await db.select({ id: productVariants.id, name: productVariants.name }).from(productVariants).where(eq(productVariants.publicId, publicId))
+    if (variant) {
+      const result = await vaultService.importCredentials(variant.id, lines)
+      const user = c.get('user')
+      await appendAudit({
+        action: 'stock:import',
+        resourceType: 'stock',
+        resourcePublicId: publicId,
+        resourceName: variant.name,
+        snapshotText: `Stok ${result.imported} ditambah ke ${variant.name} (${publicId}) oleh ${user.email ?? user.sub} ${new Date().toLocaleString('id-ID')}`,
+        actorId: user.sub,
+        actorEmail: user.email ?? null,
+      }).catch(() => {})
+      return c.json(result)
+    }
+    const [product] = await db.select({ id: products.id, name: products.name }).from(products).where(eq(products.publicId, publicId))
     if (!product) return c.json({ error: 'Product not found' }, 404)
-
     const result = await vaultService.importCredentials(product.id, lines)
+    const user = c.get('user')
+    await appendAudit({
+      action: 'stock:import',
+      resourceType: 'stock',
+      resourcePublicId: publicId,
+      resourceName: product.name,
+      snapshotText: `Stok ${result.imported} ditambah ke ${product.name} (${publicId}) oleh ${user.email ?? user.sub} ${new Date().toLocaleString('id-ID')}`,
+      actorId: user.sub,
+      actorEmail: user.email ?? null,
+    }).catch(() => {})
     return c.json(result)
   }
 )

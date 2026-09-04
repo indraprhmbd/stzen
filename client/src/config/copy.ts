@@ -1,9 +1,9 @@
 export interface Copy {
-  nav: { shop: string; myOrders: string; admin: string }
+  nav: { home: string; shop: string; myOrders: string; admin: string }
   auth: { signIn: string; signOut: string; signInWithGoogle: string; email: string; password: string; or: string; backToStore: string }
   hero: { title1: string; title2: string; tagline: string; cta: string; statusPill: string; searchPlaceholder: string; searchHint: string }
   marquee: string[]
-  products: { title: string; buy: string; soldOut: string; inStock: string; onlyXLeft: string; outOfStock: string; sortNewest: string; sortPrice: string; sortStock: string; viewGrid: string; viewList: string; verifiedBuyer: string; features: string[] }
+  products: { title: string; buy: string; soldOut: string; inStock: string; onlyXLeft: string; outOfStock: string; sortNewest: string; sortPrice: string; sortStock: string; sortOutOfStock: string; viewGrid: string; viewList: string; verifiedBuyer: string; loginForMore: string; features: string[] }
   howItWorks: { title: string; steps: { num: string; title: string; desc: string }[] }
   whyUs: { title: string; items: { title: string; desc: string }[] }
   testimonials: { title: string; items: { quote: string; name: string; product: string }[] }
@@ -11,6 +11,11 @@ export interface Copy {
   filter: { all: string }
   dashboard: { title: string; subtitle: string; tabs: string[]; noOrders: string; selectOrder: string }
   common: { noProducts: string; copiedToClipboard: string }
+  info: {
+    howToOrder: { title: string; desc: string; steps: { num: string; title: string; desc: string }[] }
+    paymentMethods: { title: string; desc: string; methods: { name: string; detail: string; badge: string }[] }
+    faq: { title: string; desc: string; items: { q: string; a: string }[] }
+  }
   admin: {
     sidebar: { overview: string; products: string; orders: string }
     overview: { title: string; totalProducts: string; totalStock: string; pendingOrders: string; revenue: string; recentOrders: string; lowStock: string; noData: string }
@@ -20,7 +25,7 @@ export interface Copy {
 }
 
 const id: Copy = {
-  nav: { shop: 'Belanja', myOrders: 'Pesanan Saya', admin: 'Admin' },
+  nav: { home: 'Beranda', shop: 'Belanja', myOrders: 'Pesanan Saya', admin: 'Admin' },
   auth: { signIn: 'Masuk', signOut: 'Keluar', signInWithGoogle: 'Masuk dengan Google', email: 'EMAIL', password: 'PASSWORD', or: 'ATAU', backToStore: 'Kembali ke toko' },
   hero: {
     title1: 'AKSES INSTAN',
@@ -47,9 +52,11 @@ const id: Copy = {
     sortNewest: 'Terbaru',
     sortPrice: 'Termurah',
     sortStock: 'Stok Ada',
+    sortOutOfStock: 'Stok Habis',
     viewGrid: 'Grid',
     viewList: 'List',
     verifiedBuyer: 'PEMBELI TERVERIFIKASI',
+    loginForMore: 'Login untuk melihat semua produk',
     features: ['Akses Langsung', 'Garansi 30 Hari', 'PIN Pribadi', 'Support Chat'],
   },
   howItWorks: {
@@ -81,6 +88,41 @@ const id: Copy = {
   filter: { all: 'Semua' },
   dashboard: { title: 'PEMBELIAN AKTIF', subtitle: 'Lihat dan kelola pesanan kredensialmu', tabs: ['Semua', 'Menunggu', 'Dibayar', 'Dikirim', 'Ditolak'], noOrders: 'Belum ada pesanan', selectOrder: 'Pilih pesanan yang sudah dikirim untuk melihat kredensial' },
   common: { noProducts: 'Belum ada produk tersedia', copiedToClipboard: 'Disalin ke clipboard!' },
+  info: {
+    howToOrder: {
+      title: 'CARA PESAN',
+      desc: 'Beli akun digital premium dalam 4 langkah mudah.',
+      steps: [
+        { num: '1', title: 'PILIH PRODUK', desc: 'Browse katalog, pilih akun yang kamu inginkan. Lihat detail harga dan stok.' },
+        { num: '2', title: 'CHECKOUT', desc: 'Klik Belanja pada produk, masuk ke halaman detail. Klik GET ACCESS untuk melanjutkan.' },
+        { num: '3', title: 'BAYAR', desc: 'Transfer ke rekening SeaBank atau scan QRIS. Pembayaran diverifikasi otomatis.' },
+        { num: '4', title: 'TERIMA AKUN', desc: 'Kredensial dikirim instan ke dashboard kamu. Bisa langsung dipakai.' },
+      ],
+    },
+    paymentMethods: {
+      title: 'METODE PEMBAYARAN',
+      desc: 'Kami menerima berbagai metode pembayaran untuk kemudahanmu.',
+      methods: [
+        { name: 'SeaBank', detail: 'Transfer langsung ke rekening SeaBank. Proses cepat, bebas admin.', badge: 'INSTAN' },
+        { name: 'QRIS', detail: 'Scan kode QRIS via Pakasir. Support semua e-wallet dan mobile banking.', badge: 'UNIVERSAL' },
+        { name: 'Manual Transfer', detail: 'Transfer ke bank mana saja. Konfirmasi manual via WhatsApp.', badge: 'SEMUA BANK' },
+      ],
+    },
+    faq: {
+      title: 'PERTANYAAN UMUM',
+      desc: 'Jawaban atas pertanyaan yang sering ditanyakan.',
+      items: [
+        { q: 'Berapa lama proses pengiriman?', a: 'Instan. Setelah pembayaran dikonfirmasi, kredensial langsung dikirim ke dashboard kamu. Tanpa tunggu.' },
+        { q: 'Metode pembayaran apa yang diterima?', a: 'SeaBank (transfer langsung), QRIS (semua e-wallet), dan manual transfer ke bank apa saja.' },
+        { q: 'Bagaimana jika akun tidak work?', a: 'Hubungi support via WhatsApp. Kami akan ganti atau refund dalam 24 jam.' },
+        { q: 'Apakah ada garansi?', a: 'Ya, garansi 30 hari. Jika akun bermasalah dalam 30 hari, kami ganti gratis.' },
+        { q: 'Bagaimana cara menghubungi support?', a: 'WhatsApp: 0882-0034-57148. Telegram: @stzen_bot. Email: akieera.store@gmail.com.' },
+        { q: 'Apakah data saya aman?', a: 'Semua kredensial terenkripsi AES-256. Data kamu tidak pernah disimpan dalam bentuk plain text.' },
+        { q: 'Bisa beli untuk orang lain?', a: 'Bisa. Setelah checkout, kredensial bisa kamu bagikan ke orang lain. Tapi akun tetap atas nama kamu.' },
+        { q: 'Bagaimana cara cek status pesanan?', a: 'Login ke Dashboard, lihat tab Pesanan Saya. Status update secara real-time.' },
+      ],
+    },
+  },
   admin: {
     sidebar: { overview: 'Ringkasan', products: 'Produk', orders: 'Pesanan' },
     overview: { title: 'RINGKASAN', totalProducts: 'Total Produk', totalStock: 'Total Stok', pendingOrders: 'Pesanan Pending', revenue: 'Pendapatan', recentOrders: 'Pesanan Terbaru', lowStock: 'Stok Menipis', noData: 'Belum ada data' },
@@ -90,7 +132,7 @@ const id: Copy = {
 }
 
 const en: Copy = {
-  nav: { shop: 'Shop', myOrders: 'My Orders', admin: 'Admin' },
+  nav: { home: 'Home', shop: 'Shop', myOrders: 'My Orders', admin: 'Admin' },
   auth: { signIn: 'Sign In', signOut: 'Sign Out', signInWithGoogle: 'Sign in with Google', email: 'EMAIL', password: 'PASSWORD', or: 'OR', backToStore: 'Back to store' },
   hero: {
     title1: 'INSTANT ACCESS',
@@ -117,9 +159,11 @@ const en: Copy = {
     sortNewest: 'Newest',
     sortPrice: 'Lowest Price',
     sortStock: 'In Stock Only',
+    sortOutOfStock: 'Out of Stock',
     viewGrid: 'Grid',
     viewList: 'List',
     verifiedBuyer: 'VERIFIED BUYER',
+    loginForMore: 'Log in to see all products',
     features: ['Instant Access', '30-Day Warranty', 'Private PIN', 'Chat Support'],
   },
   howItWorks: {
@@ -151,6 +195,41 @@ const en: Copy = {
   filter: { all: 'All' },
   dashboard: { title: 'MY ACTIVE PURCHASES', subtitle: 'View and manage your credential orders', tabs: ['All', 'Pending', 'Paid', 'Delivered', 'Rejected'], noOrders: 'No orders found', selectOrder: 'Select a delivered order to view credentials' },
   common: { noProducts: 'No products available', copiedToClipboard: 'Copied to clipboard!' },
+  info: {
+    howToOrder: {
+      title: 'HOW TO ORDER',
+      desc: 'Buy premium digital accounts in 4 easy steps.',
+      steps: [
+        { num: '1', title: 'BROWSE', desc: 'Browse the catalog, pick the account you want. Check price and stock details.' },
+        { num: '2', title: 'CHECKOUT', desc: 'Click Shop on a product, go to the detail page. Click GET ACCESS to proceed.' },
+        { num: '3', title: 'PAY', desc: 'Transfer to SeaBank or scan QRIS. Payment is verified automatically.' },
+        { num: '4', title: 'GET ACCESS', desc: 'Credentials are delivered instantly to your dashboard. Ready to use.' },
+      ],
+    },
+    paymentMethods: {
+      title: 'PAYMENT METHODS',
+      desc: 'We accept various payment methods for your convenience.',
+      methods: [
+        { name: 'SeaBank', detail: 'Direct transfer to SeaBank account. Fast process, zero fees.', badge: 'INSTANT' },
+        { name: 'QRIS', detail: 'Scan QRIS code via Pakasir. Supports all e-wallets and mobile banking.', badge: 'UNIVERSAL' },
+        { name: 'Manual Transfer', detail: 'Transfer to any bank. Manual confirmation via WhatsApp.', badge: 'ALL BANKS' },
+      ],
+    },
+    faq: {
+      title: 'FAQ',
+      desc: 'Answers to frequently asked questions.',
+      items: [
+        { q: 'How long does delivery take?', a: 'Instant. Once payment is confirmed, credentials are sent to your dashboard immediately. No waiting.' },
+        { q: 'What payment methods are accepted?', a: 'SeaBank (direct transfer), QRIS (all e-wallets), and manual transfer to any bank.' },
+        { q: 'What if the account does not work?', a: 'Contact support via WhatsApp. We will replace or refund within 24 hours.' },
+        { q: 'Is there a warranty?', a: 'Yes, 30-day warranty. If the account has issues within 30 days, we replace it for free.' },
+        { q: 'How do I contact support?', a: 'WhatsApp: 0882-0034-57148. Telegram: @stzen_bot. Email: akieera.store@gmail.com.' },
+        { q: 'Is my data safe?', a: 'All credentials are AES-256 encrypted. Your data is never stored in plain text.' },
+        { q: 'Can I buy for someone else?', a: 'Yes. After checkout, you can share the credentials. But the account remains under your name.' },
+        { q: 'How do I check my order status?', a: 'Log in to Dashboard, check the My Orders tab. Status updates in real-time.' },
+      ],
+    },
+  },
   admin: {
     sidebar: { overview: 'Overview', products: 'Products', orders: 'Orders' },
     overview: { title: 'OVERVIEW', totalProducts: 'Total Products', totalStock: 'Total Stock', pendingOrders: 'Pending Orders', revenue: 'Revenue', recentOrders: 'Recent Orders', lowStock: 'Low Stock', noData: 'No data' },

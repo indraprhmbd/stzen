@@ -26,7 +26,8 @@ function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
 }
 
 export async function authedApiRequest<T>(
-  fn: (client: ReturnType<typeof hc<AppType>>) => Promise<T>
+  fn: (client: ReturnType<typeof hc<AppType>>) => Promise<T>,
+  opts?: { headers?: Record<string, string> }
 ): Promise<T> {
   const { data: { session } } = await withTimeout(supabase.auth.getSession(), 8000, 'getSession')
 
@@ -37,6 +38,7 @@ export async function authedApiRequest<T>(
   const client = hc<AppType>(API_BASE, {
     headers: {
       Authorization: `Bearer ${session.access_token}`,
+      ...opts?.headers,
     },
   })
 

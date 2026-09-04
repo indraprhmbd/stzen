@@ -4,6 +4,7 @@
 export {
   profiles,
   products,
+  productVariants,
   vaultItems,
   orders,
   userRoleEnum,

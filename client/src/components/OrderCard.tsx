@@ -13,6 +13,7 @@ interface OrderCardProps {
   order: Order
   onViewCredentials?: () => void
   onReport?: () => void
+  onReceipt?: () => void
 }
 
 function formatIdDate(iso: string) {
@@ -44,7 +45,7 @@ function getStatusConfig(status: Order['status']) {
   }
 }
 
-export default function OrderCard({ order, onViewCredentials, onReport }: OrderCardProps) {
+export default function OrderCard({ order, onViewCredentials, onReport, onReceipt }: OrderCardProps) {
   const brand = useBrand()
   const statusConfig = getStatusConfig(order.status)
 
@@ -92,6 +93,14 @@ export default function OrderCard({ order, onViewCredentials, onReport }: OrderC
             onClick={onViewCredentials}
           >
             VIEW CREDENTIALS
+          </button>
+        )}
+        {onReceipt && (
+          <button
+            className="bg-white text-black border-[3px] border-on-surface shadow-brutal-sm btn-brutal-interactive font-black uppercase text-[11px] px-3 py-1.5"
+            onClick={onReceipt}
+          >
+            STRUK
           </button>
         )}
         {onReport && (

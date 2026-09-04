@@ -11,7 +11,11 @@
 1. **Never Store Plaintext Credentials:** All raw account strings (`email:pass | Profile PIN | Instructions`) MUST be encrypted at rest using AES-256-GCM before database insertion (`vault_items`). Decrypt ONLY inside authenticated Hono handlers for the verified order owner.
 2. **Atomic Inventory Allocation:** NEVER query available stock and allocate in JavaScript memory. Always execute the database-level RPC function `allocate_credential(product_id, order_id)` utilizing `FOR UPDATE SKIP LOCKED` to prevent double-selling race conditions.
 3. **Database Connection Pooling:** Connect Drizzle through Supabase's Transaction Pooler (Port 6543 / PgBouncer) for serverless compatibility and connection safety.
-4. **Row Level Security (RLS):** Enforce strict database policies so profiles and orders are queryable only by `auth.uid() = user_id`.
+4. **Row Level Security (RLS):** Enforce strict database policies. Server connects as `postgres` superuser (bypasses RLS); RLS protects direct client access via anon/authenticated keys.
+   - **profiles:** `authenticated` can SELECT/UPDATE own row (`auth.uid() = id`). anon blocked.
+   - **products / product_variants:** `anon` + `authenticated` can SELECT `is_active = true` (public catalog).
+   - **orders:** `authenticated` can SELECT/INSERT own orders (`user_id = auth.uid()`). anon blocked.
+   - **vault_items / audit_logs:** NO policies — completely blocked for anon/authenticated. Server superuser only.
 5. **UI Styling:** Use native DaisyUI utility components (`btn`, `btn-primary`, `badge`, `card`, `table`, `modal`). Do NOT write custom CSS overrides or unneeded Tailwind abstractions.
 6. **End-to-End Type Safety:** Export Hono API router types (`AppType`) and consume them on the React client via `hono/client` (`hc<AppType>`).
 

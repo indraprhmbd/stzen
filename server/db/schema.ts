@@ -79,6 +79,36 @@ export const products = pgTable(
   ]
 )
 
+// ─── Product Variants ───────────────────────────────────────────────────────
+// Purchasable SKU, variant behaves like product, 30+ rows, 5-6 parents
+export const productVariants = pgTable(
+  'product_variants',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    publicId: text('public_id').notNull().unique(),
+    productId: uuid('product_id').references(() => products.id, { onDelete: 'set null' }),
+    sku: text('sku').notNull().unique(),
+    name: text('name').notNull(),
+    price: integer('price').notNull(),
+    compareAtPrice: integer('compare_at_price'),
+    badge: text('badge'),
+    durationMonths: integer('duration_months'),
+    accountType: text('account_type'),
+    conditions: text('conditions'),
+    fulfillmentType: text('fulfillment_type').notNull().default('vault'),
+    isActive: boolean('is_active').notNull().default(true),
+    deletedAt: timestamp('deleted_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index('product_variants_product_id_idx').on(table.productId),
+    index('product_variants_public_id_idx').on(table.publicId),
+    index('product_variants_sku_idx').on(table.sku),
+    index('product_variants_fulfillment_type_idx').on(table.fulfillmentType),
+  ]
+)
+
 // ─── Vault Items ────────────────────────────────────────────────────────────
 // Encrypted credential payloads — AES-256-GCM at rest
 
@@ -86,9 +116,8 @@ export const vaultItems = pgTable(
   'vault_items',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    productId: uuid('product_id')
-      .notNull()
-      .references(() => products.id, { onDelete: 'cascade' }),
+    productId: uuid('product_id').references(() => products.id, { onDelete: 'cascade' }),
+    variantId: uuid('variant_id').references(() => productVariants.id, { onDelete: 'set null' }),
     credentialPayload: text('credential_payload').notNull(), // AES-256-GCM encrypted
     status: vaultStatusEnum('status').notNull().default('AVAILABLE'),
     createdAt: timestamp('created_at', { withTimezone: true })
@@ -98,6 +127,7 @@ export const vaultItems = pgTable(
   },
   (table) => [
     index('vault_items_product_id_idx').on(table.productId),
+    index('vault_items_variant_id_idx').on(table.variantId),
     index('vault_items_status_idx').on(table.status),
   ]
 )
@@ -112,15 +142,23 @@ export const orders = pgTable(
     userId: uuid('user_id')
       .notNull()
       .references(() => profiles.id, { onDelete: 'cascade' }),
-    productId: uuid('product_id')
-      .notNull()
-      .references(() => products.id, { onDelete: 'cascade' }),
+    productId: uuid('product_id').references(() => products.id, { onDelete: 'set null' }),
+    variantId: uuid('variant_id').references(() => productVariants.id, { onDelete: 'set null' }),
     vaultItemId: uuid('vault_item_id').references(() => vaultItems.id, {
       onDelete: 'set null',
     }),
     status: orderStatusEnum('status').notNull().default('PENDING'),
     paymentRef: text('payment_ref'),
+    paymentProvider: text('payment_provider'),
     amount: integer('amount').notNull(),
+    // snapshots for immutable history
+    variantNameSnapshot: text('variant_name_snapshot'),
+    variantSkuSnapshot: text('variant_sku_snapshot'),
+    priceAtPurchase: integer('price_at_purchase'),
+    durationSnapshot: integer('duration_snapshot'),
+    accountTypeSnapshot: text('account_type_snapshot'),
+    conditionsSnapshot: text('conditions_snapshot'),
+    baseNameSnapshot: text('base_name_snapshot'),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -131,5 +169,7 @@ export const orders = pgTable(
     index('orders_status_idx').on(table.status),
     index('orders_payment_ref_idx').on(table.paymentRef),
     index('orders_public_id_idx').on(table.publicId),
+    index('orders_variant_id_idx').on(table.variantId),
+    index('orders_payment_provider_idx').on(table.paymentProvider),
   ]
 )

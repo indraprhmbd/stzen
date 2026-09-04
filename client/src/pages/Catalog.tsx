@@ -1,355 +1,133 @@
-import { Fragment, useState, useEffect, useRef, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { apiV1, authedApiRequest } from '../lib/api'
-import { useBrand } from '../hooks/useBrand'
+import { Link } from 'react-router-dom'
 import { useCopy } from '../hooks/useCopy'
 import Layout from '../components/Layout'
-import FilterBar from '../components/FilterBar'
-import ProductCard from '../components/ProductCard'
-import ProductModal from '../components/ProductModal'
 import Marquee from '../components/Marquee'
-import SkeletonCard from '../components/SkeletonCard'
-import CopyToast from '../components/CopyToast'
-
-type Product = {
-  id: string
-  name: string
-  description: string | null
-  category: string
-  price: string
-  badge: string | null
-  isActive: boolean
-  stockCount: number
-}
+import ShopCtaCardSlim from '../components/ShopCtaCardSlim'
 
 function Catalog() {
-  const [products, setProducts] = useState<Product[]>([])
-  const [loading, setLoading] = useState(true)
-  const [selectedCategory, setSelectedCategory] = useState<string>('all')
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
-  const [purchasing, setPurchasing] = useState(false)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [sort, setSort] = useState('newest')
-  const [view, setView] = useState<'grid' | 'list'>('list')
-  const [toastMsg, setToastMsg] = useState('')
-  const brand = useBrand()
-  const navigate = useNavigate()
   const { t } = useCopy()
-  const searchRef = useRef<HTMLInputElement>(null)
-
-  useEffect(() => {
-    fetchProducts()
-  }, [])
-
-  // Ctrl+K shortcut
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault()
-        searchRef.current?.focus()
-      }
-    }
-    window.addEventListener('keydown', handler)
-    return () => window.removeEventListener('keydown', handler)
-  }, [])
-
-  const fetchProducts = async () => {
-    try {
-      const res = await apiV1.products.$get()
-      const data = await res.json()
-      setProducts(data as Product[])
-    } catch (error) {
-      console.error('Failed to fetch products:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const categories = ['all', ...new Set(products.map((p) => p.category))]
-
-  const categoryCounts: Record<string, number> = { all: products.length }
-  products.forEach((p) => {
-    categoryCounts[p.category] = (categoryCounts[p.category] || 0) + 1
-  })
-
-  // Filter + search + sort
-  const filteredProducts = products
-    .filter((p) => selectedCategory === 'all' || p.category === selectedCategory)
-    .filter((p) => {
-      if (!searchQuery) return true
-      const q = searchQuery.toLowerCase()
-      return p.name.toLowerCase().includes(q) || p.description?.toLowerCase().includes(q)
-    })
-    .sort((a, b) => {
-      if (sort === 'price') return parseFloat(a.price) - parseFloat(b.price)
-      if (sort === 'stock') return b.stockCount - a.stockCount
-      return 0 // newest = default order from API
-    })
-
-  const handleConfirmOrder = async () => {
-    if (!selectedProduct) return
-    setPurchasing(true)
-    try {
-      const res = await authedApiRequest((c) =>
-        c.api.v1.checkout.$post({ json: { productId: selectedProduct.id } })
-      )
-      if (res.ok) {
-        const data = await res.json() as any
-        const oid = typeof data.orderId === 'string' ? data.orderId : data.orderId?.id ?? JSON.stringify(data.orderId)
-        setToastMsg(`Order #${oid} dibuat!`)
-        setSelectedProduct(null)
-        fetchProducts()
-      } else {
-        const err = await res.json()
-        alert((err as any).error || 'Checkout failed')
-      }
-    } catch {
-      alert('Please sign in to checkout')
-      navigate('/login')
-    } finally {
-      setPurchasing(false)
-    }
-  }
-
-  const handleCopy = useCallback((text: string) => {
-    navigator.clipboard.writeText(text)
-    setToastMsg(t.common.copiedToClipboard)
-  }, [t])
-
-  if (loading) {
-    return (
-      <Layout>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <SkeletonCard key={i} />
-          ))}
-        </div>
-      </Layout>
-    )
-  }
 
   return (
     <Layout>
-      {/* ═══ HERO — Massive Display ═══ */}
-      <section className="relative overflow-hidden border-b-[3px] border-on-surface mb-0">
-        {/* Background */}
-        <div className="absolute inset-0 bg-gradient-to-br from-dark-sage via-forest-green to-dark-sage bg-grid-dots" />
-        {/* Logo — massive, overflowing the hero */}
-        <img
-          src="/logo.svg"
-          alt=""
-          aria-hidden="true"
-          className="absolute -right-16 md:-right-8 -top-16 md:-top-12 w-[260px] md:w-[400px] h-auto opacity-[0.07] invert pointer-events-none select-none"
-        />
+      {/* ═══ HERO 2/3 + FEATURED CARD 1/3 ═══ */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+        {/* Hero — 2/3 */}
+        <section className="md:col-span-2 relative overflow-hidden bg-secondary border-comic shadow-comic p-4 md:p-6 bg-halftone">
+          <div className="absolute inset-0 bg-white/10 pointer-events-none" />
+          <div className="relative z-10 flex flex-col md:flex-row items-center justify-center gap-4 md:gap-6 text-center md:text-left">
+            <img
+              src="/logo.svg"
+              alt="ST.ZEN VAULT"
+              className="w-[120px] md:w-[180px] h-auto drop-shadow-[3px_3px_0_#0D110F] -rotate-1 shrink-0 select-none"
+            />
+            <div className="flex flex-col items-center md:items-start gap-2">
+              <span className="inline-block bg-primary text-neutral font-black border-2 border-black px-3 py-0.5 text-[10px] uppercase -rotate-1 shadow-comic-sm">
+                {t.hero.statusPill}
+              </span>
+              <p className="font-black text-neutral text-xs uppercase tracking-wide bg-primary border-2 border-black inline-block px-2 py-1 rotate-1 leading-tight">
+                {t.hero.title1} {t.hero.title2}
+              </p>
+            </div>
+          </div>
+        </section>
 
-        <div className="relative z-10 px-4 md:px-8 py-8 md:py-12">
-          {/* Status pill */}
-          <div className="inline-flex items-center gap-2 bg-black/40 border-[2px] border-primary-container/30 rounded-sm px-3 py-1.5 mb-4">
-            <span className="w-2 h-2 rounded-full bg-success animate-pulse-dot" />
-            <span
-              className="font-black text-[9px] md:text-[10px] uppercase tracking-widest text-primary-container"
+        {/* Shop CTA card — 1/3 */}
+        <ShopCtaCardSlim />
+        <Link
+          to="/products"
+          className="hidden md:flex bg-white border-comic shadow-comic p-3 md:p-4 flex-col justify-between hover:-translate-y-1 transition-all group"
+        >
+          <div className="flex flex-col gap-1 md:gap-1.5">
+            <span className="bg-secondary text-white font-black text-[9px] uppercase px-2 py-0.5 border-2 border-black w-fit -rotate-2 shadow-comic-sm">
+              {t.nav.shop.toUpperCase()}
+            </span>
+            <h3
+              className="font-black text-lg md:text-2xl uppercase text-neutral leading-none"
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
             >
-              {t.hero.statusPill}
+              {t.hero.cta.split(' ')[0]}
+            </h3>
+            <h3
+              className="font-black text-lg md:text-2xl uppercase text-primary leading-none text-shadow-comic"
+              style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+            >
+              {t.hero.cta.split(' ').slice(1).join(' ')}
+            </h3>
+            <p
+              className="text-[10px] font-bold text-neutral/60 leading-tight mt-1"
+              style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+            >
+              {t.hero.tagline}
+            </p>
+          </div>
+          <div className="mt-2 md:mt-3 border-t-4 border-black pt-1.5 md:pt-2 flex items-center justify-between">
+            <span className="font-black text-xs uppercase text-neutral" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+              {t.products.title}
+            </span>
+            <span className="bg-neutral text-primary font-black text-[9px] uppercase px-2 py-0.5 border-2 border-black -rotate-1 group-hover:rotate-0 transition-all">
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="square" strokeLinejoin="miter"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
             </span>
           </div>
-
-          {/* Giant title */}
-          <h1
-            className="rubik-mono-text text-3xl sm:text-4xl md:text-5xl lg:text-6xl text-white uppercase leading-[0.85] mb-6 max-w-3xl origin-left"
-            style={{ transform: 'scaleX(1.08)', wordSpacing: '-0.575em', letterSpacing: '-0.06em' }}
-          >
-            {t.hero.title1}
-            <span className="text-primary-container block mt-1">{t.hero.title2}</span>
-          </h1>
-        </div>
-      </section>
-
-      {/* ═══ MARQUEE TICKER ═══ */}
-      <Marquee items={t.marquee} />
-
-      {/* ═══ HOW IT WORKS — pipeline ═══ */}
-      <section className="mb-8">
-        <h2
-          className="font-black text-base uppercase tracking-tighter text-on-surface mb-4"
-          style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-        >
-          {t.howItWorks.title}
-        </h2>
-        {/* Desktop: horizontal pipeline */}
-        <div className="hidden md:grid grid-cols-[1fr_auto_1fr_auto_1fr_auto_1fr] gap-0 items-start">
-          {t.howItWorks.steps.map((step, i) => {
-            const badgeColors = ['bg-secondary text-white', 'bg-primary-container text-black', 'bg-tertiary-container text-black', 'bg-dark-sage text-white']
-            const borderColors = ['border-secondary', 'border-primary-container', 'border-tertiary-container', 'border-dark-sage']
-            return (
-              <Fragment key={step.num}>
-                <div className={`border-[3px] ${borderColors[i]} rounded-md p-3 shadow-brutal-sm bg-on-surface`}>
-                  <div className="flex items-center gap-2">
-                    <span className={`inline-flex items-center justify-center w-9 h-9 rounded-full ${badgeColors[i]} border-2 border-white font-black text-sm shrink-0`}>
-                      {step.num}
-                    </span>
-                    <div>
-                      <h3
-                        className="font-extrabold text-sm uppercase tracking-tight text-white leading-none"
-                        style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-                      >
-                        {step.title}
-                      </h3>
-                      <p
-                        className="text-[10px] font-semibold text-inverse-on-surface/70 leading-snug mt-0.5"
-                        style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
-                      >
-                        {step.desc}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-                {i < 3 && (
-                  <div className="flex items-center justify-center px-1 pt-6">
-                    <span className="material-symbols-outlined text-white/30 text-xl">arrow_forward</span>
-                  </div>
-                )}
-              </Fragment>
-            )
-          })}
-        </div>
-        {/* Mobile: stacked */}
-        <div className="md:hidden flex flex-col gap-0">
-          {t.howItWorks.steps.map((step, i) => {
-            const badgeColors = ['bg-secondary text-white', 'bg-primary-container text-black', 'bg-tertiary-container text-black', 'bg-dark-sage text-white']
-            const borderColors = ['border-secondary', 'border-primary-container', 'border-tertiary-container', 'border-dark-sage']
-            return (
-              <Fragment key={step.num}>
-                <div className={`flex items-start gap-3 border-[3px] ${borderColors[i]} rounded-md p-2.5 shadow-brutal-sm bg-on-surface`}>
-                  <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full shrink-0 ${badgeColors[i]} border-2 border-white font-black text-xs`}>
-                    {step.num}
-                  </span>
-                  <div className="flex-1">
-                    <h3
-                      className="font-extrabold text-sm uppercase tracking-tight text-white leading-none"
-                      style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-                    >
-                      {step.title}
-                    </h3>
-                    <p
-                      className="text-[10px] font-semibold text-inverse-on-surface/70 leading-snug mt-0.5"
-                      style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
-                    >
-                      {step.desc}
-                    </p>
-                  </div>
-                </div>
-                {i < 3 && (
-                  <div className="flex justify-center py-1">
-                    <span className="material-symbols-outlined text-white/30 text-base">arrow_downward</span>
-                  </div>
-                )}
-              </Fragment>
-            )
-          })}
-        </div>
-      </section>
-
-      {/* ═══ CATALOG ═══ */}
-      {/* Section Header */}
-      <div className="mb-4">
-        <h2
-          className="font-black text-base uppercase tracking-tighter text-on-surface"
-          style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-        >
-          {t.products.title}
-          {searchQuery && (
-            <span className="ml-2 text-sm text-on-surface-variant font-normal">
-              — &ldquo;{searchQuery}&rdquo;
-            </span>
-          )}
-        </h2>
+        </Link>
       </div>
 
-      {/* Sticky Filter Bar */}
-      <FilterBar
-        categories={categories}
-        active={selectedCategory}
-        onChange={setSelectedCategory}
-        counts={categoryCounts}
-        sort={sort}
-        onSortChange={setSort}
-        view={view}
-        onViewChange={setView}
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-        searchRef={searchRef}
-      />
+      <Marquee items={t.marquee} />
 
-      {/* Product Grid */}
-      {filteredProducts.length === 0 ? (
-        <div className="text-center py-12 bg-surface-container border-[3px] border-on-surface shadow-brutal p-8 rounded-md">
-          <span className="material-symbols-outlined text-4xl text-on-surface-variant/30 mb-2">inventory_2</span>
-          <p className="text-on-surface-variant/50 font-bold">{t.common.noProducts}</p>
+      {/* ═══ HOW IT WORKS — comic strip ═══ */}
+      <section className="mb-3">
+        <div className="flex items-center gap-2 mb-2">
+          <h2 className="font-black text-xs uppercase tracking-widest text-neutral bg-primary border-2 border-black px-2 py-0.5 -rotate-1" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+            {t.howItWorks.title}
+          </h2>
+          <div className="flex-1 h-[3px] bg-black" />
         </div>
-      ) : view === 'grid' ? (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-          {filteredProducts.map((product, index) => (
-            <ProductCard
-              key={product.id}
-              product={product}
-              index={index}
-              view="grid"
-              onBuy={() => setSelectedProduct(product)}
-            />
-          ))}
+          {t.howItWorks.steps.map((step, i) => {
+            const badgeColors = ['bg-secondary text-white', 'bg-primary text-neutral', 'bg-accent text-neutral', 'bg-neutral text-primary']
+            return (
+              <div key={step.num} className="bg-white border-comic shadow-comic p-2.5 flex gap-2 items-start">
+                <span className={`inline-flex items-center justify-center w-7 h-7 ${badgeColors[i]} border-2 border-black font-black text-xs shrink-0 -rotate-2`}>
+                  {step.num}
+                </span>
+                <div className="min-w-0">
+                  <h3 className="font-black text-[11px] uppercase tracking-tight text-neutral leading-none" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                    {step.title}
+                  </h3>
+                  <p className="text-[10px] font-bold text-neutral leading-tight mt-1" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+                    {step.desc}
+                  </p>
+                </div>
+              </div>
+            )
+          })}
         </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-          {filteredProducts.map((product, index) => (
-            <ProductCard
-              key={product.id}
-              product={product}
-              index={index}
-              view="list"
-              onBuy={() => setSelectedProduct(product)}
-            />
-          ))}
-        </div>
-      )}
+      </section>
 
-      {/* ═══ WHY ST.ZEN ═══ */}
-      <section className="mt-10 mb-8 bg-on-surface border-[3px] border-on-surface rounded-md p-5 shadow-brutal-sm">
-        <h2
-          className="font-black text-base uppercase tracking-tighter text-white mb-5"
-          style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-        >
-          {t.whyUs.title}
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+      {/* ═══ WHY ST.ZEN — comic panels ═══ */}
+      <section className="mb-3">
+        <div className="flex items-center gap-2 mb-2">
+          <h2 className="font-black text-xs uppercase tracking-widest bg-accent text-neutral border-2 border-black px-2 py-0.5 -rotate-1" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+            {t.whyUs.title}
+          </h2>
+          <div className="flex-1 h-[3px] bg-black" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
           {[
-            { icon: 'bolt', accent: 'bg-secondary', text: 'text-white', subtext: 'text-white/80', bar: 'bg-white/30', border: 'border-white/20' },
-            { icon: 'lock', accent: 'bg-primary-container', text: 'text-black', subtext: 'text-black/70', bar: 'bg-black/20', border: 'border-black/15' },
-            { icon: 'verified', accent: 'bg-tertiary-container', text: 'text-black', subtext: 'text-black/70', bar: 'bg-black/20', border: 'border-black/15' },
+            { icon: 'bolt', accent: 'bg-secondary border-secondary', text: 'text-white', iconColor: 'text-neutral' },
+            { icon: 'lock', accent: 'bg-primary border-black', text: 'text-neutral', iconColor: 'text-neutral' },
+            { icon: 'verified', accent: 'bg-accent border-black', text: 'text-neutral', iconColor: 'text-neutral' },
           ].map((cfg, i) => {
             const item = t.whyUs.items[i]
             return (
-              <div
-                key={item.title}
-                className={`relative ${cfg.accent} rounded-md p-4 pl-5 border-2 ${cfg.border}`}
-              >
-                <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${cfg.bar} rounded-l-md`} />
-                <div className="flex items-start gap-3">
-                  <span className={`material-symbols-outlined text-2xl ${cfg.text} shrink-0 mt-0.5`}>{cfg.icon}</span>
-                  <div>
-                    <h3
-                      className={`font-extrabold text-sm uppercase tracking-tight ${cfg.text} mb-1`}
-                      style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-                    >
-                      {item.title}
-                    </h3>
-                    <p
-                      className={`text-[10px] font-semibold ${cfg.subtext} leading-snug`}
-                      style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
-                    >
-                      {item.desc}
-                    </p>
-                  </div>
+              <div key={item.title} className={`${cfg.accent} border-comic shadow-comic p-3 flex gap-2.5 items-start`}>
+                <span className={`material-symbols-outlined text-lg ${(cfg as any).iconColor || cfg.text} bg-white border-2 border-black w-8 h-8 grid place-items-center shrink-0 -rotate-2`}>{cfg.icon}</span>
+                <div>
+                  <h3 className={`font-black text-xs uppercase tracking-tight ${cfg.text === 'text-white' ? 'text-white' : 'text-neutral'}`} style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                    {item.title}
+                  </h3>
+                  <p className={`text-[10px] font-bold leading-tight mt-1 ${cfg.text === 'text-white' ? 'text-white/80' : 'text-neutral/70'}`} style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+                    {item.desc}
+                  </p>
                 </div>
               </div>
             )
@@ -357,46 +135,31 @@ function Catalog() {
         </div>
       </section>
 
-      {/* ═══ TESTIMONIALS ═══ */}
-      <section className="mb-10">
-        <h2
-          className="font-black text-base uppercase tracking-tighter text-on-surface mb-4"
-          style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-        >
-          {t.testimonials.title}
-        </h2>
+      {/* ═══ TESTIMONIALS — comic ═══ */}
+      <section className="mb-4">
+        <div className="flex items-center gap-2 mb-2">
+          <h2 className="font-black text-xs uppercase tracking-widest bg-neutral text-primary border-2 border-black px-2 py-0.5 rotate-1" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+            {t.testimonials.title}
+          </h2>
+          <div className="flex-1 h-[3px] bg-black" />
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
           {t.testimonials.items.map((item) => (
-            <div
-              key={item.name}
-              className="bg-surface-container border-[3px] border-on-surface rounded-md p-4 shadow-brutal-sm"
-            >
-              {/* Stars */}
-              <div className="flex gap-0.5 mb-2">
+            <div key={item.name} className="bg-white border-comic shadow-comic p-3">
+              <div className="flex gap-0.5 mb-1.5">
                 {Array.from({ length: 5 }).map((_, i) => (
-                  <span key={i} className="material-symbols-outlined text-xs text-warning">star</span>
+                  <span key={i} className="material-symbols-outlined text-[10px] text-accent">star</span>
                 ))}
               </div>
-              {/* Quote */}
-              <p
-                className="text-[10px] font-semibold text-on-surface leading-snug mb-3"
-                style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
-              >
-                &ldquo;{item.quote}&rdquo;
+              <p className="text-[11px] font-bold text-neutral leading-snug mb-2" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+                "{item.quote}"
               </p>
-              {/* Author + badge */}
-              <div className="border-t-[2px] border-on-surface/10 pt-2 flex items-center justify-between">
+              <div className="border-t-2 border-black/10 pt-2 flex items-center justify-between">
                 <div>
-                  <p
-                    className="font-extrabold text-[10px] uppercase text-on-surface"
-                    style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-                  >
-                    {item.name}
-                  </p>
-                  <p className="text-[8px] font-bold text-on-surface-variant">{item.product}</p>
+                  <p className="font-black text-[10px] uppercase text-neutral" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{item.name}</p>
+                  <p className="text-[8px] font-bold text-neutral/60">{item.product}</p>
                 </div>
-                <span className="inline-flex items-center gap-0.5 bg-success/10 text-success font-black text-[7px] uppercase px-1.5 py-0.5 rounded-sm border border-success/20">
-                  <span className="material-symbols-outlined text-[8px]">verified</span>
+                <span className="bg-primary text-neutral font-black text-[7px] uppercase px-1.5 py-0.5 border-2 border-black -rotate-1">
                   {t.products.verifiedBuyer}
                 </span>
               </div>
@@ -405,18 +168,33 @@ function Catalog() {
         </div>
       </section>
 
-      {/* ═══ PRODUCT MODAL ═══ */}
-      {selectedProduct && (
-        <ProductModal
-          product={selectedProduct}
-          purchasing={purchasing}
-          onClose={() => setSelectedProduct(null)}
-          onConfirm={handleConfirmOrder}
-        />
-      )}
-
-      {/* ═══ TOAST ═══ */}
-      {toastMsg && <CopyToast message={toastMsg} onDone={() => setToastMsg('')} />}
+      {/* ═══ BOTTOM CTA — full-width comic panel ═══ */}
+      <section className="mb-4">
+        <Link
+          to="/products"
+          className="block bg-neutral border-comic shadow-comic p-6 md:p-8 relative overflow-hidden hover:-translate-y-1 transition-all group"
+        >
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="flex flex-col items-center md:items-start gap-1">
+              <span className="bg-primary text-neutral font-black text-[9px] uppercase px-2 py-0.5 border-2 border-black -rotate-2 shadow-comic-sm">
+                SHOP
+              </span>
+              <h2
+                className="font-black text-2xl md:text-3xl uppercase text-primary leading-none text-shadow-comic"
+                style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+              >
+                {t.products.title}
+              </h2>
+              <p className="text-xs font-bold text-white/70" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+                {t.hero.tagline}
+              </p>
+            </div>
+            <span className="bg-primary text-neutral font-black text-sm uppercase px-5 py-2 border-2 border-black -rotate-1 group-hover:rotate-1 transition-all shadow-comic-sm shrink-0">
+              {t.nav.shop.toUpperCase()} <svg className="w-4 h-4 inline-block" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="square" strokeLinejoin="miter"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+            </span>
+          </div>
+        </Link>
+      </section>
     </Layout>
   )
 }

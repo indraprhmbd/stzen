@@ -1,48 +1,39 @@
 @import "tailwindcss";
 @plugin "daisyui" {
-  themes: zenith --default, dark;
+  themes: zenith-arcade --default, dark;
 }
 
 @plugin "daisyui/theme" {
-  name: "zenith";
+  name: "zenith-arcade";
   default: true;
   color-scheme: "light";
 
-  /* ─── Core Brand Tokens ─────────────────────────────────────────────── */
-  --color-primary: #4c6700;         /* Dark olive — visible text on light bg */
-  --color-primary-content: #0D110F;  /* Deep Black */
+  --color-primary: #C5FE37;
+  --color-primary-content: #0D110F;
 
-  --color-secondary: #FF5DA2;        /* Bubblegum Pink (secondary-container) */
+  --color-secondary: #FF5DA2;
   --color-secondary-content: #0D110F;
 
-  --color-accent: #FF7E36;           /* Retro Coral (tertiary-container) */
+  --color-accent: #FF7E36;
   --color-accent-content: #0D110F;
 
-  --color-neutral: #0D110F;          /* Ink Black (on-surface) */
+  --color-neutral: #0D110F;
   --color-neutral-content: #C5FE37;
 
-  /* ─── Canvas Layers ─────────────────────────────────────────────────── */
-  --color-base-100: #5EAA83;         /* Sage Green Backdrop */
-  --color-base-200: #4A8C69;         /* Elevated Card Base */
-  --color-base-300: #386E51;         /* Deep Inset Panels */
+  --color-base-100: #5EAA83;
+  --color-base-200: #4E9370;
+  --color-base-300: #386E51;
   --color-base-content: #0D110F;
 
-  /* ─── State Tokens ──────────────────────────────────────────────────── */
-  --color-success: #2F7D4E;        /* Dark green, readable on white */
-  --color-warning: #FF7E36;
-  --color-error: #FF3B30;
-  --color-info: #1D6058;
-
-  /* ─── Strict Neubrutalist Border Radius ─────────────────────────────── */
-  --radius-selector: 0.125rem; /* 2px */
-  --radius-field: 0.125rem;    /* 2px */
-  --radius-box: 0.25rem;       /* 4px */
+  --radius-selector: 0px;
+  --radius-field: 2px;
+  --radius-box: 4px;
 }
 
-/* ─── MD3 Extended Color Tokens (Tailwind v4) ──────────────────────────── */
+/* ─── MD3 Extended (keep primary-container for brutal compat) ─────────── */
 
 @theme {
-  --color-primary: #4c6700;
+  --color-primary: #C5FE37;
   --color-primary-container: #c5fe37;
   --color-on-primary: #ffffff;
   --color-on-primary-container: #557300;
@@ -191,10 +182,42 @@
   animation: skeleton-pulse 1.5s ease-in-out infinite;
 }
 
-/* Hero grid dot background */
+/* Hero grid dot background — legacy */
 .bg-grid-dots {
   background-image: radial-gradient(circle, rgba(255,255,255,0.08) 1px, transparent 1px);
   background-size: 16px 16px;
+}
+
+/* ─── ZENITH ARCADE Comic Utilities (PIVOT) ───────────────────────────── */
+.border-comic {
+  border: 4px solid #0D110F;
+}
+.shadow-comic-sm {
+  box-shadow: 3px 3px 0px 0px #0D110F;
+}
+.shadow-comic {
+  box-shadow: 5px 5px 0px 0px #0D110F;
+}
+.shadow-comic-lg {
+  box-shadow: 8px 8px 0px 0px #0D110F;
+}
+.text-shadow-comic {
+  text-shadow: 3px 3px 0px #0D110F, -1px -1px 0px #0D110F, 1px -1px 0px #0D110F, -1px 1px 0px #0D110F;
+}
+.bg-halftone {
+  background-image: radial-gradient(#0D110F 18%, transparent 19%);
+  background-size: 10px 10px;
+}
+.btn-comic-interactive {
+  transition: transform 60ms ease-out, box-shadow 60ms ease-out;
+}
+.btn-comic-interactive:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 7px 7px 0px 0px #0D110F;
+}
+.btn-comic-interactive:active {
+  transform: translate(3px, 3px);
+  box-shadow: 1px 1px 0px 0px #0D110F;
 }
 
 /* Pulsing dot for status pill */
@@ -215,4 +238,69 @@
 
 .animate-toast-in {
   animation: toast-in 0.2s ease-out;
+}
+
+/* Hides scrollbar on horizontally-scrollable strips (admin bottom nav) while
+   keeping the element scrollable — cross-browser, no JS. */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* ─── Admin DataTable — responsive card view below sm ──────────────────
+   Zero JS, zero per-page markup: DataTable.tsx stamps data-label on each
+   <td> at render time, this pure-CSS block turns rows into labeled cards
+   on narrow viewports. Colspan cells (group/section headers) are left as
+   full-width blocks since withMobileLabels() skips them. */
+@media (max-width: 639px) {
+  .admin-table thead {
+    display: none;
+  }
+  .admin-table,
+  .admin-table tbody,
+  .admin-table tr {
+    display: block;
+    width: 100%;
+  }
+  .admin-table tbody tr {
+    border: 1px solid #e4e4e7; /* zinc-200 */
+    border-radius: 2px;
+    margin-bottom: 0.5rem;
+    padding: 0.25rem 0.75rem;
+  }
+  .admin-table tbody tr:last-child {
+    margin-bottom: 0;
+  }
+  .admin-table td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.5rem 0 !important;
+    border: none !important;
+    text-align: right;
+    width: 100%;
+  }
+  .admin-table td:not(:last-child) {
+    border-bottom: 1px solid #f4f4f5 !important; /* zinc-100 */
+  }
+  .admin-table td[data-label]::before {
+    content: attr(data-label);
+    flex-shrink: 0;
+    margin-right: auto;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #a1a1aa; /* zinc-400 */
+    text-align: left;
+  }
+  /* Cells without a label (colSpan group headers) render as plain full-width blocks */
+  .admin-table td:not([data-label]) {
+    justify-content: flex-start;
+    text-align: left;
+  }
 }

@@ -6,11 +6,18 @@ import { RequireAdmin } from './components/RequireAdmin'
 import AdminLayout from './layouts/AdminLayout'
 
 const Catalog = lazy(() => import('./pages/Catalog'))
+const ProductList = lazy(() => import('./pages/ProductList'))
+const ProductDetail = lazy(() => import('./pages/ProductDetail'))
+const HowToOrder = lazy(() => import('./pages/HowToOrder'))
+const PaymentMethods = lazy(() => import('./pages/PaymentMethods'))
+const FAQ = lazy(() => import('./pages/FAQ'))
 const Login = lazy(() => import('./pages/Login'))
 const Dashboard = lazy(() => import('./pages/Dashboard'))
 const Overview = lazy(() => import('./pages/admin/Overview'))
 const AdminProducts = lazy(() => import('./pages/admin/Products'))
 const AdminOrders = lazy(() => import('./pages/admin/Orders'))
+const History = lazy(() => import('./pages/admin/History'))
+const Settings = lazy(() => import('./pages/admin/Settings'))
 
 function PageLoader() {
   return (
@@ -27,6 +34,11 @@ function App() {
         <Routes>
           {/* Public */}
           <Route path="/" element={<Catalog />} />
+          <Route path="/products" element={<ProductList />} />
+          <Route path="/products/:id" element={<ProductDetail />} />
+          <Route path="/how-to-order" element={<HowToOrder />} />
+          <Route path="/payment-methods" element={<PaymentMethods />} />
+          <Route path="/faq" element={<FAQ />} />
           <Route path="/login" element={<Login />} />
           <Route path="/dashboard" element={<Dashboard />} />
 
@@ -44,6 +56,8 @@ function App() {
             <Route index element={<Overview />} />
             <Route path="products" element={<AdminProducts />} />
             <Route path="orders" element={<AdminOrders />} />
+            <Route path="history" element={<History />} />
+            <Route path="settings" element={<Settings />} />
           </Route>
         </Routes>
       </Suspense>

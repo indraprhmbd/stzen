@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm'
 import { db } from '../../shared/db'
-import { vaultItems, products } from '../../shared/db/schema'
+import { vaultItems, products, productVariants } from '../../shared/db/schema'
 import { NotFoundError } from '../../shared/errors/http'
 import {
   importKeyFromBase64,
@@ -13,15 +13,15 @@ import {
 // Credential import and decryption. Used by admin routes.
 
 export const vaultService = {
-  async importCredentials(productId: string, credentialLines: string[]) {
-    // Verify product exists
-    const [product] = await db
-      .select()
-      .from(products)
-      .where(eq(products.id, productId))
-
-    if (!product) {
-      throw new NotFoundError('Product not found')
+  async importCredentials(variantOrProductId: string, credentialLines: string[]) {
+    // Try variant first
+    const [variant] = await db.select().from(productVariants).where(eq(productVariants.id, variantOrProductId))
+    let product: any = variant
+    let isVariant = !!variant
+    if (!variant) {
+      const [p] = await db.select().from(products).where(eq(products.id, variantOrProductId))
+      if (!p) throw new NotFoundError('Product not found')
+      product = p
     }
 
     // Load encryption key
@@ -32,19 +32,24 @@ export const vaultService = {
     const key = await importKeyFromBase64(aesSecret)
 
     // Encrypt each credential
-    const encryptedItems: Array<{
-      productId: string
-      credentialPayload: string
-      status: 'AVAILABLE'
-    }> = []
+    const encryptedItems: Array<any> = []
 
     for (const line of credentialLines) {
       const payload: EncryptedPayload = await encrypt(key, line)
-      encryptedItems.push({
-        productId,
-        credentialPayload: JSON.stringify(payload),
-        status: 'AVAILABLE',
-      })
+      if (isVariant) {
+        encryptedItems.push({
+          variantId: variantOrProductId,
+          productId: (product as any).productId ?? null,
+          credentialPayload: JSON.stringify(payload),
+          status: 'AVAILABLE',
+        })
+      } else {
+        encryptedItems.push({
+          productId: variantOrProductId,
+          credentialPayload: JSON.stringify(payload),
+          status: 'AVAILABLE',
+        })
+      }
     }
 
     // Bulk insert
@@ -53,7 +58,7 @@ export const vaultService = {
       .values(encryptedItems)
       .returning()
 
-    return { imported: inserted.length, productId }
+    return { imported: inserted.length, productId: variantOrProductId }
   },
 
   async decryptCredential(encryptedPayload: string): Promise<string> {

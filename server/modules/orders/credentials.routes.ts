@@ -2,7 +2,7 @@ import { Hono } from 'hono'
 import { eq, and } from 'drizzle-orm'
 import { db } from '../../shared/db'
 import { orders, vaultItems, products } from '../../shared/db/schema'
-import { authMiddleware, type AuthEnv } from '../../shared/middleware/auth'
+import { type AuthEnv } from '../../shared/middleware/auth'
 import { vaultService } from '../vault/vault.service'
 import { NotFoundError, ConflictError } from '../../shared/errors/http'
 
@@ -14,7 +14,7 @@ type CredentialsEnv = AuthEnv
 
 const credentialsRoutes = new Hono<CredentialsEnv>()
 
-credentialsRoutes.use('*', authMiddleware)
+// Auth is enforced globally in app.ts.
 
 // GET /:id/credentials — Decrypt vault item for this order
 credentialsRoutes.get('/', async (c) => {

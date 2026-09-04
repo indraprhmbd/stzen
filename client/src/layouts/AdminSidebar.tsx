@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { House, Package, Receipt, Storefront } from '@phosphor-icons/react'
+import { House, Package, Receipt, Storefront, ClockCounterClockwise, GearSix } from '@phosphor-icons/react'
 
 export default function AdminSidebar({ collapsed }: { collapsed: boolean }) {
   const width = collapsed ? 'w-16' : 'w-56'
@@ -34,6 +34,14 @@ export default function AdminSidebar({ collapsed }: { collapsed: boolean }) {
         <NavLink to="/admin/orders" title={collapsed ? 'Pesanan' : undefined} className={({ isActive }) => `${linkBase} ${isActive ? active : inactive} rounded-sm`}>
           <Receipt size={18} weight="regular" />
           {!collapsed && 'Pesanan'}
+        </NavLink>
+        <NavLink to="/admin/history" title={collapsed ? 'Riwayat' : undefined} className={({ isActive }) => `${linkBase} ${isActive ? active : inactive} rounded-sm`}>
+          <ClockCounterClockwise size={18} weight="regular" />
+          {!collapsed && 'Riwayat'}
+        </NavLink>
+        <NavLink to="/admin/settings" title={collapsed ? 'Pengaturan' : undefined} className={({ isActive }) => `${linkBase} ${isActive ? active : inactive} rounded-sm`}>
+          <GearSix size={18} weight="regular" />
+          {!collapsed && 'Pengaturan'}
         </NavLink>
       </nav>
 

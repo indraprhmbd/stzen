@@ -1,14 +1,14 @@
 import { Hono } from 'hono'
 import { sql } from 'drizzle-orm'
 import { db } from '../../shared/db'
-import { authMiddleware, type AuthEnv } from '../../shared/middleware/auth'
+import { type AuthEnv } from '../../shared/middleware/auth'
 import { requireRole } from '../../shared/middleware/require-role'
 
 type AdminStatsEnv = AuthEnv
 
 export const adminStatsRoutes = new Hono<AdminStatsEnv>()
 
-adminStatsRoutes.use('*', authMiddleware)
+// Auth is enforced globally in app.ts; this only adds the role check.
 adminStatsRoutes.use('*', requireRole('admin'))
 
 // GET / — Single roundtrip to avoid max:1 pool contention (was 4 parallel selects)

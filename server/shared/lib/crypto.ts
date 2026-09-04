@@ -18,7 +18,16 @@ function base64Encode(buffer: ArrayBuffer | Uint8Array): string {
 }
 
 function base64Decode(base64: string): Uint8Array {
-  const binary = atob(base64)
+  let clean = base64.trim().replace(/\s+/g, '').replace(/-/g, '+').replace(/_/g, '/')
+  const pad = clean.length % 4
+  if (pad === 2) clean += '=='
+  else if (pad === 3) clean += '='
+  let binary: string
+  try {
+    binary = atob(clean)
+  } catch {
+    throw new Error('AES_SECRET_KEY is not valid base64. Provide a 32-byte key encoded as base64.')
+  }
   const bytes = new Uint8Array(binary.length)
   for (let i = 0; i < binary.length; i++) {
     bytes[i] = binary.charCodeAt(i)

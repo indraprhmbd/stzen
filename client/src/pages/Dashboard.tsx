@@ -4,6 +4,7 @@ import { useAuth } from '../hooks/useAuth'
 import { useBrand } from '../hooks/useBrand'
 import { useCopy } from '../hooks/useCopy'
 import { authedApiRequest } from '../lib/api'
+import { printReceipt } from '../lib/receipt'
 import Layout from '../components/Layout'
 import OrderCard from '../components/OrderCard'
 
@@ -197,6 +198,7 @@ export default function Dashboard() {
                   order={order}
                   onViewCredentials={order.status === 'DELIVERED' ? () => handleViewCredentials(order.id) : undefined}
                   onReport={() => window.open(getWhatsAppUrl(order.id), '_blank')}
+                  onReceipt={() => printReceipt(order)}
                 />
               ))}
             </div>

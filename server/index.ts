@@ -1,6 +1,5 @@
 import 'dotenv/config'
 import { serve } from '@hono/node-server'
-import { serve } from '@hono/node-server'
 import { createApp } from './app'
 
 // ─── Entrypoint ─────────────────────────────────────────────────────────────
@@ -8,10 +7,12 @@ import { createApp } from './app'
 
 const app = createApp()
 const port = Number(process.env.PORT) || 3000
+const hostname = process.env.HOST || '0.0.0.0'
 
 serve({
   fetch: app.fetch,
   port,
+  hostname,
 })
 
 console.log(`[server] running on http://localhost:${port}`)

@@ -37,3 +37,5 @@ Thumbs.db
 _context/
 .agents/
 skills-lock.json
+
+_temp/

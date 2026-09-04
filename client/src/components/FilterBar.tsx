@@ -54,12 +54,12 @@ export default function FilterBar({ categories, active, onChange, counts = {}, s
               placeholder={t.hero.searchPlaceholder}
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
-              className="w-full bg-surface-container border-[2px] border-on-surface font-black text-[10px] uppercase pl-6 pr-1.5 py-1.5 shadow-brutal-sm rounded-sm text-on-surface placeholder:text-on-surface/40 focus:outline-none focus:ring-2 focus:ring-primary-container"
+              className="w-full bg-surface-container border-comic font-black text-[10px] uppercase pl-6 pr-1.5 py-1.5 shadow-comic-sm text-on-surface placeholder:text-on-surface/40 focus:outline-none focus:ring-2 focus:ring-primary-container"
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
             />
           </div>
           <select
-            className="bg-surface-container border-[2px] border-on-surface font-black text-[10px] uppercase px-1.5 py-1.5 shadow-brutal-sm rounded-sm text-on-surface cursor-pointer shrink-0"
+            className="bg-surface-container border-comic font-black text-[10px] uppercase px-1.5 py-1.5 shadow-comic-sm text-on-surface cursor-pointer shrink-0"
             style={{ fontFamily: "'Space Grotesk', sans-serif" }}
             value={sort}
             onChange={(e) => onSortChange(e.target.value)}
@@ -67,8 +67,9 @@ export default function FilterBar({ categories, active, onChange, counts = {}, s
             <option value="newest">{t.products.sortNewest}</option>
             <option value="price">{t.products.sortPrice}</option>
             <option value="stock">{t.products.sortStock}</option>
+            <option value="out_of_stock">{t.products.sortOutOfStock}</option>
           </select>
-          <div className="flex border-[2px] border-on-surface shadow-brutal-sm rounded-sm overflow-hidden shrink-0">
+          <div className="flex border-comic shadow-comic-sm overflow-hidden shrink-0">
             <button
               className={`p-1.5 transition-colors ${view === 'grid' ? 'bg-on-surface text-primary-container' : 'bg-surface-container text-on-surface'}`}
               onClick={() => onViewChange('grid')}
@@ -95,11 +96,11 @@ export default function FilterBar({ categories, active, onChange, counts = {}, s
               <button
                 key={cat}
                 className={`
-                  border-[2px] border-on-surface font-black uppercase text-[9px] tracking-wide px-2.5 py-1 shrink-0
+                  border-2 border-black font-black uppercase text-[9px] tracking-wide px-2.5 py-1 shrink-0
                   transition-all
                   ${isActive
-                    ? `${colors.active} shadow-brutal translate-x-[1px] translate-y-[1px]`
-                    : `bg-surface-container text-on-surface shadow-brutal-sm ${colors.hover}`
+                    ? `${colors.active} shadow-comic translate-x-[1px] translate-y-[1px]`
+                    : `bg-surface-container text-on-surface shadow-comic-sm ${colors.hover}`
                   }
                 `}
                 style={{ fontFamily: "'Space Grotesk', sans-serif" }}
@@ -128,7 +129,7 @@ export default function FilterBar({ categories, active, onChange, counts = {}, s
             placeholder={t.hero.searchPlaceholder}
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="bg-surface-container border-[3px] border-on-surface font-black text-xs uppercase pl-7 pr-12 py-2 shadow-brutal-sm rounded-sm text-on-surface placeholder:text-on-surface/40 focus:outline-none focus:ring-2 focus:ring-primary-container w-52"
+            className="bg-surface-container border-comic font-black text-xs uppercase pl-7 pr-12 py-2 shadow-comic-sm text-on-surface placeholder:text-on-surface/40 focus:outline-none focus:ring-2 focus:ring-primary-container w-52"
             style={{ fontFamily: "'Space Grotesk', sans-serif" }}
           />
           <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[8px] font-bold text-on-surface/30 border border-on-surface/20 px-1 py-0.5 rounded-sm">
@@ -146,11 +147,11 @@ export default function FilterBar({ categories, active, onChange, counts = {}, s
               <button
                 key={cat}
                 className={`
-                  border-[3px] border-on-surface font-black uppercase text-xs tracking-wide px-4 py-2
+                  border-comic font-black uppercase text-xs tracking-wide px-4 py-2
                   transition-all
                   ${isActive
-                    ? `${colors.active} shadow-brutal translate-x-[1px] translate-y-[1px]`
-                    : `bg-surface-container text-on-surface shadow-brutal-sm hover:-translate-x-[1px] hover:-translate-y-[1px] hover:shadow-brutal ${colors.hover}`
+                    ? `${colors.active} shadow-comic translate-x-[1px] translate-y-[1px]`
+                    : `bg-surface-container text-on-surface shadow-comic-sm hover:-translate-x-[1px] hover:-translate-y-[1px] hover:shadow-comic ${colors.hover}`
                   }
                 `}
                 style={{ fontFamily: "'Space Grotesk', sans-serif" }}
@@ -168,7 +169,7 @@ export default function FilterBar({ categories, active, onChange, counts = {}, s
         {/* Sort + View controls */}
         <div className="flex items-center gap-2">
           <select
-            className="bg-surface-container border-[3px] border-on-surface font-black text-xs uppercase px-3 py-2 shadow-brutal-sm rounded-sm text-on-surface cursor-pointer"
+            className="bg-surface-container border-comic font-black text-xs uppercase px-3 py-2 shadow-comic-sm text-on-surface cursor-pointer"
             style={{ fontFamily: "'Space Grotesk', sans-serif" }}
             value={sort}
             onChange={(e) => onSortChange(e.target.value)}
@@ -176,8 +177,9 @@ export default function FilterBar({ categories, active, onChange, counts = {}, s
             <option value="newest">{t.products.sortNewest}</option>
             <option value="price">{t.products.sortPrice}</option>
             <option value="stock">{t.products.sortStock}</option>
+            <option value="out_of_stock">{t.products.sortOutOfStock}</option>
           </select>
-          <div className="flex border-[3px] border-on-surface shadow-brutal-sm rounded-sm overflow-hidden">
+          <div className="flex border-comic shadow-comic-sm overflow-hidden">
             <button
               className={`p-2 transition-colors ${view === 'grid' ? 'bg-on-surface text-primary-container' : 'bg-surface-container text-on-surface hover:bg-surface-container-high'}`}
               onClick={() => onViewChange('grid')}

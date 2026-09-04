@@ -1,5 +1,5 @@
 import { Hono } from 'hono'
-import { authMiddleware, type AuthEnv } from '../../shared/middleware/auth'
+import { type AuthEnv } from '../../shared/middleware/auth'
 import { ordersService } from './orders.service'
 import { credentialsRoutes } from './credentials.routes'
 
@@ -9,7 +9,7 @@ type OrderEnv = AuthEnv
 
 export const orderRoutes = new Hono<OrderEnv>()
 
-orderRoutes.use('*', authMiddleware)
+// Auth is enforced globally in app.ts.
 
 // GET / — List current user's orders
 orderRoutes.get('/', async (c) => {
