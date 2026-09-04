@@ -39,9 +39,9 @@ export default function ProductDetail() {
       if (res.ok) {
         const data = (await res.json()) as Product
         setProduct(data)
-        // Fetch related products (same category)
-        const params = new URLSearchParams({ category: data.category, limit: '4' })
-        apiV1.products.$get({ query: params }).then(async (relRes) => {
+        // Fetch related products (same category). Plain object: hono/client
+        // serializes query via Object.entries, which drops URLSearchParams.
+        apiV1.products.$get({ query: { category: data.category, limit: '4' } }).then(async (relRes) => {
           if (relRes.ok) {
             const relData = await relRes.json()
             const products = Array.isArray(relData) ? relData : relData.products || []

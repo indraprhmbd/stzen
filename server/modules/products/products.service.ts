@@ -1,4 +1,4 @@
-import { eq, and, asc, desc, ilike, sql } from 'drizzle-orm'
+import { eq, and, asc, desc, ilike, sql, or, ne, not, exists } from 'drizzle-orm'
 import { db } from '../../shared/db'
 import { products, productVariants, vaultItems } from '../../shared/db/schema'
 import { NotFoundError } from '../../shared/errors/http'
@@ -60,6 +60,20 @@ export const productsService = {
     const conditions = sort === 'out_of_stock' ? [] : [eq(productVariants.isActive, true)]
     if (category) conditions.push(eq(products.category, category))
     if (search) conditions.push(ilike(productVariants.name, `%${search}%`))
+
+    // Stock filter in SQL so LIMIT applies to sellable rows, not pre-filter rows.
+    // on_demand variants are always sellable; vault variants need an AVAILABLE item.
+    const hasStock = exists(
+      db.select({ one: sql`1` }).from(vaultItems).where(
+        and(eq(vaultItems.variantId, productVariants.id), eq(vaultItems.status, 'AVAILABLE'))
+      )
+    )
+    if (sort === 'out_of_stock') {
+      conditions.push(ne(productVariants.fulfillmentType, 'on_demand'))
+      conditions.push(not(hasStock))
+    } else {
+      conditions.push(or(eq(productVariants.fulfillmentType, 'on_demand'), hasStock)!)
+    }
     const whereClause = and(...conditions)
 
     // Sort
@@ -73,7 +87,14 @@ export const productsService = {
     }
     const orderBy = sortMap[sort] || sortMap.newest
 
-    // Fetch ALL matching variants (not paginated yet)
+    // Exact total for pagination (cheap count, same filter)
+    const [{ count: total }] = await db
+      .select({ count: sql<number>`cast(count(*) as int)` })
+      .from(productVariants)
+      .innerJoin(products, eq(productVariants.productId, products.id))
+      .where(whereClause)
+
+    // Page rows only — LIMIT now applies to sellable rows, not pre-filter rows
     const rows = await db
       .select({
         internalId: productVariants.id,
@@ -99,27 +120,15 @@ export const productsService = {
       .innerJoin(products, eq(productVariants.productId, products.id))
       .where(whereClause)
       .orderBy(orderBy)
+      .limit(limit)
+      .offset(offset)
 
-    // Compute stock for all variants (single batched query)
+    // Stock counts for the page only (single batched query over ≤limit ids)
     const stock = await getStockCounts(rows.map((r) => (r as any).internalId))
-    const allWithStock: ProductWithStock[] = rows.map((row) => {
+    const paginatedProducts: ProductWithStock[] = rows.map((row) => {
       const { internalId, ...rest } = row as any
       return { ...rest, stockCount: stock.get(internalId) ?? 0 }
     })
-
-    // Filter based on sort mode
-    let filteredProducts: ProductWithStock[]
-    if (sort === 'out_of_stock') {
-      // Show ONLY out-of-stock variants
-      filteredProducts = allWithStock.filter(item => item.stockCount === 0)
-    } else {
-      // Default: filter out out-of-stock variants
-      filteredProducts = allWithStock.filter(item => item.stockCount > 0)
-    }
-    const total = filteredProducts.length
-
-    // Paginate in JavaScript
-    const paginatedProducts = filteredProducts.slice(offset, offset + limit)
 
     return {
       products: paginatedProducts,
@@ -155,16 +164,17 @@ export const productsService = {
 
     if (variant) {
       const stockCount = await getStockCount(variant.id)
-      const [base] = variant.productId ? await db.select({ category: products.category, description: products.description, instructions: products.instructions }).from(products).where(eq(products.id, variant.productId)) : [{} as any]
-      const { publicId: pid, ...rest } = variant as any
-      return { ...rest, id: pid, category: (base as any)?.category ?? '', description: (base as any)?.description ?? null, instructions: (base as any)?.instructions ?? null, stockCount }
+      const [base] = variant.productId ? await db.select({ category: products.category, description: products.description }).from(products).where(eq(products.id, variant.productId)) : [{} as any]
+      // Strip internal productId; instructions are post-delivery only (credentials endpoint).
+      const { publicId: pid, productId: _internalBase, ...rest } = variant as any
+      return { ...rest, id: pid, category: (base as any)?.category ?? '', description: (base as any)?.description ?? null, stockCount }
     }
 
     // fallback legacy product id
     const [product] = await db.select().from(products).where(eq(products.publicId, publicId))
     if (!product) throw new NotFoundError('Product not found')
     const stockCount = await getStockCount(product.id)
-    const { publicId: pid, ...rest } = product as any
+    const { publicId: pid, instructions: _gated, ...rest } = product as any
     return { ...rest, id: pid, stockCount }
   },
 

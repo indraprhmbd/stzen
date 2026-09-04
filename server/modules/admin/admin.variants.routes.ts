@@ -120,7 +120,7 @@ adminVariantRoutes.post('/', zValidator('json', VariantCreateSchema), async (c) 
     snapshotText: `Varian ${sku} dibuat oleh ${user.email ?? user.sub} ${new Date().toLocaleString('id-ID')}`,
     actorId: user.sub,
     actorEmail: user.email ?? null,
-  }).catch(() => {})
+  }).catch((e) => console.error('[audit] admin variant action failed', e))
   return c.json({ ...rest, id: pid, sku, name }, 201)
 })
 
@@ -145,15 +145,16 @@ adminVariantRoutes.put('/:id', zValidator('json', VariantUpdateSchema), async (c
     const [p] = await db.select({ id: products.id }).from(products).where(eq(products.publicId, data.productId))
     data.productId = p?.id ?? null
   }
-  // recompose name if relevant fields changed
-  if (data.durationMonths !== undefined || data.accountType !== undefined || data.conditions !== undefined) {
+  // recompose name if relevant fields changed (including a move to another induk)
+  if (data.durationMonths !== undefined || data.accountType !== undefined || data.conditions !== undefined || data.productId) {
     const [cur] = await db.select().from(productVariants).where(eq(productVariants.publicId, publicId))
     if (cur) {
-      const [base] = cur.productId ? await db.select({ name: products.name }).from(products).where(eq(products.id, cur.productId)) : [{ name: cur.name }]
+      const targetBaseId = (data.productId as string | undefined) ?? (cur as any).productId
+      const [base] = targetBaseId ? await db.select({ name: products.name }).from(products).where(eq(products.id, targetBaseId)) : [{ name: cur.name }]
       const baseName = base?.name ?? cur.name
       const newName = composeVariantName(baseName, data.durationMonths ?? (cur as any).durationMonths, data.accountType ?? (cur as any).accountType, data.conditions ?? (cur as any).conditions)
       data.name = newName
-      if (data.durationMonths !== undefined || data.accountType !== undefined) {
+      if (data.durationMonths !== undefined || data.accountType !== undefined || data.productId) {
         data.sku = generateSku(baseName, data.durationMonths ?? (cur as any).durationMonths, data.accountType ?? (cur as any).accountType)
       }
     }
@@ -170,7 +171,7 @@ adminVariantRoutes.put('/:id', zValidator('json', VariantUpdateSchema), async (c
     snapshotText: `Varian ${(updated as any).name} diperbarui oleh ${user.email ?? user.sub} ${new Date().toLocaleString('id-ID')}`,
     actorId: user.sub,
     actorEmail: user.email ?? null,
-  }).catch(() => {})
+  }).catch((e) => console.error('[audit] admin variant action failed', e))
   return c.json({ ...rest, id: pid })
 })
 
@@ -188,7 +189,7 @@ adminVariantRoutes.delete('/:id', async (c) => {
     snapshotText: `Varian ${(deleted as any).name} dihapus oleh ${user.email ?? user.sub} ${new Date().toLocaleString('id-ID')}`,
     actorId: user.sub,
     actorEmail: user.email ?? null,
-  }).catch(() => {})
+  }).catch((e) => console.error('[audit] admin variant action failed', e))
   return c.json({ success: true })
 })
 
@@ -212,6 +213,6 @@ adminVariantRoutes.post('/:id/stock', async (c) => {
     snapshotText: `Stok ${result.imported} ditambah ke ${variant.name} (${publicId}) oleh ${user.email ?? user.sub} ${new Date().toLocaleString('id-ID')}`,
     actorId: user.sub,
     actorEmail: user.email ?? null,
-  }).catch(() => {})
+  }).catch((e) => console.error('[audit] admin variant action failed', e))
   return c.json(result)
 })

@@ -120,9 +120,20 @@ adminProductRoutes.put(
   }
 )
 
-// DELETE /:id — Delete product (id is public_id)
+// DELETE /:id — Delete product (id is public_id). Refuses when variants
+// still reference the base (FK would 500) — move or delete variants first.
 adminProductRoutes.delete('/:id', async (c) => {
   const publicId = c.req.param('id')
+  const [base] = await db.select({ id: products.id }).from(products).where(eq(products.publicId, publicId))
+  if (!base) return c.json({ error: 'Product not found' }, 404)
+  const { sql: drizzleSql } = await import('drizzle-orm')
+  const [{ count: variantCount }] = await db
+    .select({ count: drizzleSql<number>`cast(count(*) as int)` })
+    .from(productVariants)
+    .where(eq(productVariants.productId, base.id))
+  if (variantCount > 0) {
+    return c.json({ error: `Induk masih memiliki ${variantCount} varian. Pindahkan atau hapus varian dulu.` }, 409)
+  }
   const [deleted] = await db
     .delete(products)
     .where(eq(products.publicId, publicId))

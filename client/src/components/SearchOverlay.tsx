@@ -57,8 +57,8 @@ export default function SearchOverlay({ open, onClose }: SearchOverlayProps) {
     setLoading(true)
     const timer = setTimeout(async () => {
       try {
-        const params = new URLSearchParams({ search: query })
-        const res = await apiV1.products.$get({ query: params })
+        // Plain object: hono/client drops URLSearchParams instances in query.
+        const res = await apiV1.products.$get({ query: { search: query } })
         if (res.ok) {
           const data = await res.json()
           const products = Array.isArray(data) ? data : data.products || []

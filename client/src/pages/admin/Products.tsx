@@ -92,6 +92,7 @@ export default function Products() {
   const [vConditions, setVConditions] = useState('')
   const [vBadge, setVBadge] = useState('')
   const [vFulfillmentType, setVFulfillmentType] = useState<'vault' | 'on_demand'>('vault')
+  const [vIsActive, setVIsActive] = useState(true)
   const [editingVariantId, setEditingVariantId] = useState<string | null>(null)
   const [editingVariantSku, setEditingVariantSku] = useState<string | null>(null)
 
@@ -213,23 +214,26 @@ export default function Products() {
     const { kind, id } = pendingDelete
     setPendingDelete(null)
     try {
-      if (kind === 'product') {
-        await authedApiRequest((c) => c.api.v1.admin.products[':id'].$delete({ param: { id } }))
-        showToast('Produk dihapus', 'success')
-      } else {
-        await authedApiRequest((c) => c.api.v1.admin.variants[':id'].$delete({ param: { id } }))
-        showToast('Varian dihapus', 'success')
+      const res = kind === 'product'
+        ? await authedApiRequest((c) => c.api.v1.admin.products[':id'].$delete({ param: { id } }))
+        : await authedApiRequest((c) => c.api.v1.admin.variants[':id'].$delete({ param: { id } }))
+      if (!res.ok) {
+        const err = (await res.json().catch(() => ({}))) as { error?: string }
+        throw new Error(err.error || 'Gagal menghapus')
       }
+      showToast(kind === 'product' ? 'Induk dihapus' : 'Varian dihapus', 'success')
       fetchAll()
-    } catch { showToast('Gagal menghapus', 'error') }
+    } catch (e: unknown) {
+      showToast(e instanceof Error ? e.message : 'Gagal menghapus', 'error')
+    }
   }
 
   function openCreateVariant(presetProductId?: string) {
-    setEditingVariantId(null); setEditingVariantSku(null); setVProductId(presetProductId ?? products[0]?.id ?? ''); setVPrice(''); setVCompareAt(''); setVDuration(''); setVAccountType(''); setVConditions(''); setVBadge(''); setVFulfillmentType('vault')
+    setEditingVariantId(null); setEditingVariantSku(null); setVProductId(presetProductId ?? products[0]?.id ?? ''); setVPrice(''); setVCompareAt(''); setVDuration(''); setVAccountType(''); setVConditions(''); setVBadge(''); setVFulfillmentType('vault'); setVIsActive(true)
     ;(document.getElementById('variant_modal') as HTMLDialogElement)?.showModal()
   }
   function openEditVariant(v: Variant) {
-    setEditingVariantId(v.id); setEditingVariantSku(v.sku); setVProductId(v.productId ?? ''); setVPrice(String(v.price)); setVCompareAt(v.compareAtPrice ? String(v.compareAtPrice) : ''); setVDuration(v.durationMonths ? String(v.durationMonths) : ''); setVAccountType(v.accountType ?? ''); setVConditions(v.conditions ?? ''); setVBadge(v.badge ?? ''); setVFulfillmentType(v.fulfillmentType === 'on_demand' ? 'on_demand' : 'vault')
+    setEditingVariantId(v.id); setEditingVariantSku(v.sku); setVProductId(v.productId ?? ''); setVPrice(String(v.price)); setVCompareAt(v.compareAtPrice ? String(v.compareAtPrice) : ''); setVDuration(v.durationMonths ? String(v.durationMonths) : ''); setVAccountType(v.accountType ?? ''); setVConditions(v.conditions ?? ''); setVBadge(v.badge ?? ''); setVFulfillmentType(v.fulfillmentType === 'on_demand' ? 'on_demand' : 'vault'); setVIsActive(v.isActive)
     ;(document.getElementById('variant_modal') as HTMLDialogElement)?.showModal()
   }
   async function handleVariantSubmit(e: React.FormEvent) {
@@ -243,6 +247,7 @@ export default function Products() {
       accountType: vAccountType || null,
       conditions: vConditions || null,
       fulfillmentType: vFulfillmentType,
+      isActive: vIsActive,
     }
     try {
       if (editingVariantId) {
@@ -573,6 +578,10 @@ export default function Products() {
             </div>
             <label className="text-xs font-bold tracking-widest uppercase text-zinc-500">Harga Coret (opsional)<input type="text" value={vCompareAt} onChange={(e) => setVCompareAt(e.target.value)} placeholder="60000" className="mt-1 w-full border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm font-mono" /><p className="text-[11px] text-zinc-400 mt-1 normal-case font-normal">Tampil dicoret bila lebih besar dari harga</p></label>
             <label className="text-xs font-bold tracking-widest uppercase text-zinc-500">Pemenuhan<select value={vFulfillmentType} onChange={(e) => setVFulfillmentType(e.target.value === 'on_demand' ? 'on_demand' : 'vault')} className="mt-1 w-full border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm"><option value="vault">Gudang</option><option value="on_demand">On Demand</option></select><p className="text-[11px] text-zinc-400 mt-1">{vFulfillmentType === 'on_demand' ? 'Selalu tersedia, tanpa impor stok' : 'Perlu impor kredensial ke vault'}</p></label>
+            <label className="flex items-center gap-3 border border-zinc-200 bg-zinc-50 px-3 py-2.5 cursor-pointer">
+              <input type="checkbox" checked={vIsActive} onChange={(e) => setVIsActive(e.target.checked)} className="checkbox checkbox-sm rounded-none" />
+              <span className="text-xs font-bold tracking-widest uppercase text-zinc-500">Aktif di katalog</span>
+            </label>
             {vProductId && (vDuration || vAccountType) && (
               <div className="bg-zinc-50 border border-zinc-200 px-3 py-2">
                 <span className="text-[11px] font-bold tracking-widest text-zinc-400">PREVIEW</span>
