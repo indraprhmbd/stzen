@@ -48,6 +48,7 @@ adminProductRoutes.get('/', async (c) => {
   const publicToInternal = new Map(internalRows.map((r) => [r.publicId, r.id]))
   const countByPublic = new Map<string, number>()
   for (const sc of stockCounts) {
+    if (!sc.productId) continue
     const pub = internalMap.get(sc.productId)
     if (pub) countByPublic.set(pub, sc.count)
   }

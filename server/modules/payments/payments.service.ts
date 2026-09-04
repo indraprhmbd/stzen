@@ -73,6 +73,12 @@ export const paymentsService = {
     const order = await ordersService.findPayableByProviderRef(parsed.providerRef)
     if (!order) throw new NotFoundError('Order not found for provider reference')
 
+    // Callback amount must match what the invoice was issued for — never
+    // fulfill an underpaying (or cross-wired) gateway notification.
+    if (parsed.amount != null && Number(parsed.amount) !== Number(order.amount)) {
+      throw new ConflictError(`Amount mismatch: callback ${parsed.amount} vs order ${order.amount}`)
+    }
+
     let result: Record<string, unknown>
     if (order.status !== 'PENDING') {
       // Already processed (retried webhook, or admin acted first). Idempotent no-op.
@@ -92,16 +98,23 @@ export const paymentsService = {
       snapshotText: `Webhook ${providerName} outcome=${parsed.outcome} order=${order.publicId} at ${new Date().toLocaleString('id-ID')}`,
       diff: result,
       idempotencyKey: idempotencyKey ?? undefined,
-    }).catch(() => {})
+    }).catch((e) => console.error('[audit] webhook failed', e))
 
     return result
   },
 
-  // PENDING -> PAID, then branch on fulfillment type:
+  // PENDING -> PAID via atomic claim (exactly one concurrent delivery wins),
+  // then branch on fulfillment type:
   //  - vault: allocate_credential RPC -> PAID -> DELIVERED, credentials viewable immediately
   //  - on_demand: stop at PAID, admin ingests + delivers manually (existing admin actions)
   async fulfillPaidOrder(order: PayableOrder): Promise<Record<string, unknown>> {
-    const paid = await ordersService.transitionStatus(order.publicId, 'approve')
+    const claimed = await ordersService.claimPaid(order.publicId)
+    if (!claimed) {
+      // Lost the race (duplicate delivery already processed) — re-read, never allocate.
+      const current = await ordersService.getById(order.publicId).catch(() => null)
+      return { status: current?.status ?? order.status, skipped: true }
+    }
+    const paid = { status: 'PAID' as const }
 
     if (order.fulfillmentType === 'on_demand') {
       return { status: paid.status }

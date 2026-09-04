@@ -17,7 +17,7 @@ function base64Encode(buffer: ArrayBuffer | Uint8Array): string {
   return btoa(binary)
 }
 
-function base64Decode(base64: string): Uint8Array {
+function base64Decode(base64: string): Uint8Array<ArrayBuffer> {
   let clean = base64.trim().replace(/\s+/g, '').replace(/-/g, '+').replace(/_/g, '/')
   const pad = clean.length % 4
   if (pad === 2) clean += '=='

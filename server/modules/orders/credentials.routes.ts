@@ -20,6 +20,7 @@ const credentialsRoutes = new Hono<CredentialsEnv>()
 credentialsRoutes.get('/', async (c) => {
   const user = c.get('user')
   const orderId = c.req.param('id')
+  if (!orderId) throw new NotFoundError('Order not found')
 
   // 1. Get order + verify ownership (orderId is public_id)
   const [order] = await db
@@ -50,6 +51,10 @@ credentialsRoutes.get('/', async (c) => {
 
   if (!order.vaultItemId) {
     throw new ConflictError('No credentials allocated for this order')
+  }
+
+  if (!order.productId) {
+    throw new NotFoundError('Order not found')
   }
 
   // 3. Get vault item

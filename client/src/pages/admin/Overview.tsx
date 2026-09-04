@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { authedApiRequest } from '../../lib/api'
-import { supabase } from '../../lib/supabase'
 import { useAdminQuery } from '../../hooks/useAdminQuery'
 import StatCard from '../../components/admin/StatCard'
 import DataTable from '../../components/admin/DataTable'
@@ -40,36 +39,23 @@ const pieColors: Record<string, string> = { PENDING: '#f59e0b', PAID: '#3b82f6',
 export default function Overview() {
   const [range, setRange] = useState<'7d' | '30d' | '90d'>('30d')
   const rangeLabel = range === '7d' ? '7 hari' : range === '90d' ? '90 hari' : '30 hari'
-  const { data, loading, error, refetch: fetchAll } = useAdminQuery(async () => {
-    const API_BASE = import.meta.env.VITE_API_BASE_URL || ''
-    const safeJson = async <T,>(res: Response | null, fallback: T): Promise<T> => {
-      if (!res) return fallback
-      if (res.status === 204) return fallback
-      const text = await res.text().catch(() => '')
-      if (!text) return fallback
-      try { return JSON.parse(text) as T } catch { return fallback }
-    }
-    const { data: { session } } = await supabase.auth.getSession()
-    const headers: Record<string, string> = session ? { Authorization: `Bearer ${session.access_token}` } : {}
+  const { data, loading, error, fetchedAt, refetch: fetchAll } = useAdminQuery(async () => {
+    const [statsRes, analyticsRes, ordersRes, productsRes] = await Promise.all([
+      authedApiRequest((c) => c.api.v1.admin.stats.$get()),
+      authedApiRequest((c) => c.api.v1.admin.analytics.$get({ query: { range } })),
+      authedApiRequest((c) => c.api.v1.admin.orders.$get({ query: { limit: '5' } })),
+      authedApiRequest((c) => c.api.v1.admin.products.$get()),
+    ])
 
-    const statsUrl = API_BASE ? `${API_BASE}/api/v1/admin/stats` : '/api/v1/admin/stats'
-    const analyticsUrl = API_BASE ? `${API_BASE}/api/v1/admin/analytics?range=${range}` : `/api/v1/admin/analytics?range=${range}`
-    const statsP = fetch(statsUrl, { headers }).catch(() => null as unknown as Response)
-    const analyticsP = fetch(analyticsUrl, { headers }).catch(() => null as unknown as Response)
-    const ordersP = authedApiRequest((c) => c.api.v1.admin.orders.$get({ query: {} })).catch(() => null as unknown as Response)
-    const productsP = authedApiRequest((c) => c.api.v1.admin.products.$get()).catch(() => null as unknown as Response)
-
-    const [statsRes, analyticsRes, ordersRes, productsRes] = await Promise.all([statsP, analyticsP, ordersP, productsP])
-
-    const s = await safeJson<Stats>(statsRes as unknown as Response, { totalProducts: 0, totalStock: 0, pendingOrders: 0, revenue: '0' })
-    const a = await safeJson<{ dailySales: unknown[]; byStatus: unknown[]; byCategory: unknown[]; topProducts: unknown[] }>(analyticsRes as unknown as Response, { dailySales: [], byStatus: [], byCategory: [], topProducts: [] })
-    const o = await safeJson<Order[]>(ordersRes as unknown as Response, [])
-    const p = await safeJson<Product[]>(productsRes as unknown as Response, [])
+    const s = (await statsRes.json()) as Stats
+    const a = (await analyticsRes.json()) as { dailySales: unknown[]; byStatus: unknown[]; byCategory: unknown[]; topProducts: unknown[] }
+    const o = (await ordersRes.json()) as { orders: Order[] }
+    const p = (await productsRes.json()) as Product[]
 
     return {
       stats: s,
       analytics: a,
-      orders: (Array.isArray(o) ? o : []).slice(0, 5),
+      orders: (Array.isArray(o.orders) ? o.orders : []).slice(0, 5),
       lowStock: (Array.isArray(p) ? p.filter((x) => x.stockCount < 5) : []).slice(0, 5),
     }
   }, [range])
@@ -94,6 +80,7 @@ export default function Overview() {
         <div className="flex items-baseline gap-2">
           <h1 className="text-[22px] font-black tracking-tight" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>Ringkasan</h1>
           <span className="text-xs font-mono text-zinc-400">: {new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+          {fetchedAt && <span className="text-[11px] font-mono text-zinc-400">· Disinkron {new Date(fetchedAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>}
         </div>
         <select value={range} onChange={(e) => setRange(e.target.value as '7d' | '30d' | '90d')} className="border border-zinc-200 bg-white px-3 py-1.5 text-xs font-mono">
           <option value="7d">7 hari</option>

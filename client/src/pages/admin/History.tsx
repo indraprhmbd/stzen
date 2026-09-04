@@ -32,7 +32,7 @@ export default function History() {
   const [offset, setOffset] = useState(0)
   const limit = 20
 
-  const { data, loading, error, refetch: fetchLogs } = useAdminQuery(async () => {
+  const { data, loading, error, fetchedAt, refetch: fetchLogs } = useAdminQuery(async () => {
     const params: Record<string, string> = { limit: String(limit), offset: String(offset) }
     if (type !== 'all') params.type = type
     if (q) params.q = q
@@ -61,7 +61,7 @@ export default function History() {
     <div className="flex flex-col gap-6">
       <div className="border-b border-zinc-200 pb-5">
         <h1 className="text-[22px] font-black tracking-tight" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>Riwayat</h1>
-        <p className="text-sm text-zinc-500 mt-1">Catatan immutable pesanan dan impor stok. Teks tidak terhubung dinamis.</p>
+        <p className="text-sm text-zinc-500 mt-1">Catatan immutable pesanan dan impor stok. Teks tidak terhubung dinamis.{fetchedAt && <span className="font-mono text-zinc-400"> Disinkron {new Date(fetchedAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>}</p>
       </div>
 
       <div className="bg-white border border-zinc-200 p-3 flex flex-col sm:flex-row gap-3">

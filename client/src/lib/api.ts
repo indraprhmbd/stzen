@@ -29,18 +29,27 @@ export async function authedApiRequest<T>(
   fn: (client: ReturnType<typeof hc<AppType>>) => Promise<T>,
   opts?: { headers?: Record<string, string> }
 ): Promise<T> {
-  const { data: { session } } = await withTimeout(supabase.auth.getSession(), 8000, 'getSession')
-
-  if (!session) {
-    throw new Error('Not authenticated')
-  }
+  const token = await getCachedToken()
 
   const client = hc<AppType>(API_BASE, {
     headers: {
-      Authorization: `Bearer ${session.access_token}`,
+      Authorization: `Bearer ${token}`,
       ...opts?.headers,
     },
   })
 
   return withTimeout(fn(client) as Promise<T>, 15000, 'api')
+}
+
+// Session memo: supabase getSession hits storage every call, and pages like
+// Overview fan out 3-4 authed requests per mount. Cache the token briefly so
+// one mount costs one session read. 10s TTL keeps logout/expiry responsive.
+let cachedToken: { token: string; exp: number } | null = null
+
+async function getCachedToken(): Promise<string> {
+  if (cachedToken && Date.now() < cachedToken.exp) return cachedToken.token
+  const { data: { session } } = await withTimeout(supabase.auth.getSession(), 8000, 'getSession')
+  if (!session) throw new Error('Not authenticated')
+  cachedToken = { token: session.access_token, exp: Date.now() + 10_000 }
+  return cachedToken.token
 }

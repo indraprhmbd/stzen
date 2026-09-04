@@ -24,7 +24,8 @@ adminOrderRoutes.get('/', async (c) => {
   const q = c.req.query('q') || undefined
   const limit = Math.min(parseInt(c.req.query('limit') || '20', 10) || 20, 100)
   const offset = Math.max(parseInt(c.req.query('offset') || '0', 10) || 0, 0)
-  const result = await ordersService.listAll({ status, q, limit, offset })
+  const oldest = c.req.query('oldest') === '1'
+  const result = await ordersService.listAll({ status, q, limit, offset, oldest })
   return c.json(result)
 })
 
@@ -47,7 +48,7 @@ adminOrderRoutes.post('/:id/approve', async (c) => {
     actorEmail: user.email ?? null,
     diff: order,
     idempotencyKey,
-  }).catch(() => {})
+  }).catch((e) => console.error('[audit] admin order action failed', e))
   return c.json(order)
 })
 
@@ -70,19 +71,25 @@ adminOrderRoutes.post('/:id/reject', async (c) => {
     actorEmail: user.email ?? null,
     diff: order,
     idempotencyKey,
-  }).catch(() => {})
+  }).catch((e) => console.error('[audit] admin order action failed', e))
   return c.json(order)
 })
 
-// POST /:id/deliver — Mark delivered: PAID -> DELIVERED
-adminOrderRoutes.post('/:id/deliver', async (c) => {
+const DeliverSchema = z.object({ credential: z.string().max(5000).optional() })
+
+// POST /:id/deliver — Flow-aware delivery: PAID -> DELIVERED with allocation.
+// Optional { credential } body for on-demand variants (imported + allocated
+// atomically). Vault variants with zero stock get 409 STOK_HABIS. The raw
+// credential is never written to audit logs.
+adminOrderRoutes.post('/:id/deliver', zValidator('json', DeliverSchema), async (c) => {
   const user = c.get('user')
   const idempotencyKey = c.req.header('Idempotency-Key') || undefined
   if (idempotencyKey) {
     const prior = await findAuditByIdempotencyKey(idempotencyKey).catch(() => null)
     if (prior) return c.json(prior)
   }
-  const order = await ordersService.transitionStatus(c.req.param('id'), 'deliver')
+  const { credential } = c.req.valid('json')
+  const order = await ordersService.deliverWithCredential(c.req.param('id'), credential)
   await appendAudit({
     action: 'order:deliver',
     resourceType: 'order',
@@ -93,7 +100,7 @@ adminOrderRoutes.post('/:id/deliver', async (c) => {
     actorEmail: user.email ?? null,
     diff: order,
     idempotencyKey,
-  }).catch(() => {})
+  }).catch((e) => console.error('[audit] admin order action failed', e))
   return c.json(order)
 })
 
@@ -143,7 +150,7 @@ adminOrderRoutes.post('/manual', zValidator('json', ManualOrderSchema), async (c
     actorId: user.sub,
     actorEmail: user.email ?? null,
     diff: order,
-  }).catch(() => {})
+  }).catch((e) => console.error('[audit] admin order action failed', e))
   return c.json(order, 201)
 })
 
@@ -166,6 +173,6 @@ adminOrderRoutes.post('/:id/refund', async (c) => {
     actorEmail: user.email ?? null,
     diff: order,
     idempotencyKey,
-  }).catch(() => {})
+  }).catch((e) => console.error('[audit] admin order action failed', e))
   return c.json(order)
 })

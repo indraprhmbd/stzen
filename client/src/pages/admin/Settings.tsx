@@ -12,7 +12,7 @@ const LABELS: Record<string, { group: string; label: string }> = {
 }
 
 export default function Settings() {
-  const { data, loading, error, refetch } = useAdminQuery(async () => {
+  const { data, loading, error, fetchedAt, refetch } = useAdminQuery(async () => {
     const res = await authedApiRequest((c) => c.api.v1.admin.settings.$get())
     return (await res.json()) as { keys: string[]; values: Record<string, string> }
   }, [])
@@ -49,7 +49,7 @@ export default function Settings() {
       <div className="border-b border-zinc-200 pb-5 flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-[22px] font-black tracking-tight" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>Pengaturan</h1>
-          <p className="text-sm text-zinc-500 mt-1">Rekening bank dan kontak bantuan toko</p>
+          <p className="text-sm text-zinc-500 mt-1">Rekening bank dan kontak bantuan toko{fetchedAt && <span className="font-mono text-zinc-400"> · Disinkron {new Date(fetchedAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>}</p>
         </div>
         <button onClick={handleSave} disabled={!dirty || saving} className="text-xs font-semibold bg-zinc-900 text-white px-5 py-2 hover:bg-black disabled:opacity-40">
           {saving ? 'Menyimpan...' : 'Simpan'}

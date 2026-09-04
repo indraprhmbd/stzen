@@ -71,10 +71,16 @@ export default function ProductDetail() {
   }, [product])
 
   async function handleBuy() {
-    if (!product) return
+    if (!product || purchasing) return
     setPurchasing(true)
+    // One key per buy-intent: double-clicks and network retries reuse it, so
+    // the server returns the original order instead of minting duplicates.
+    const idempotencyKey = crypto.randomUUID()
     try {
-      const res = await authedApiRequest((c) => c.api.v1.checkout.$post({ json: { productId: product.id } }))
+      const res = await authedApiRequest(
+        (c) => c.api.v1.checkout.$post({ json: { productId: product.id } }),
+        { headers: { 'Idempotency-Key': idempotencyKey } }
+      )
       if (res.ok) {
         const data = await res.json() as any
         const oid = typeof data.orderId === 'string' ? data.orderId : data.orderId?.id ?? ''

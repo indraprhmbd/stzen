@@ -1,9 +1,11 @@
-import { eq, desc, sql, ilike, or, and } from 'drizzle-orm'
+import { eq, desc, sql, ilike, or, and, inArray } from 'drizzle-orm'
 import { db } from '../../shared/db'
 import { orders, products, productVariants, vaultItems } from '../../shared/db/schema'
 import type { PayableOrder } from './orders.types'
-import { NotFoundError, ConflictError } from '../../shared/errors/http'
+import { NotFoundError, ConflictError, BadRequestError } from '../../shared/errors/http'
 import { generatePublicId } from '../../shared/lib/publicId'
+import { allocateCredential, getStockCounts } from '../../shared/lib/db-helpers'
+import { importKeyFromBase64, encrypt } from '../../shared/lib/crypto'
 import {
   type OrderWithProduct,
   type OrderAction,
@@ -146,6 +148,22 @@ export const ordersService = {
   // payments.service needs the internal uuid + fulfillment type for the
   // allocate_credential RPC and webhook lookups.
 
+  // ─── Atomic PENDING -> PAID claim (webhook race guard) ────────────────────
+  // Single-statement conditional update: concurrent deliveries race here, and
+  // exactly one wins. Losers get null and must treat the order as
+  // already-claimed (re-read for the response, never allocate). This is what
+  // turns gateway at-least-once retries into behaviorally-exactly-once
+  // fulfillment without threading a transaction through every caller.
+  async claimPaid(publicId: string) {
+    const rows = (await db.execute(sql`
+      update orders set status = 'PAID', paid_at = now()
+      where public_id = ${publicId} and status = 'PENDING'
+      returning public_id
+    `)) as unknown as any
+    const claimed = Array.isArray(rows) ? rows[0] : rows?.rows?.[0]
+    return claimed ? { ...claimed, id: claimed.public_id ?? publicId } : null
+  },
+
   async getPayableDetails(publicId: string): Promise<PayableOrder> {
     const [row] = await db
       .select({
@@ -201,10 +219,14 @@ export const ordersService = {
       .where(eq(orders.id, internalOrderId))
   },
 
-  async listAll(params: { status?: string; q?: string; limit?: number; offset?: number } = {}) {
-    const { status, q, limit = 50, offset = 0 } = params
+  async listAll(params: { status?: string; q?: string; limit?: number; offset?: number; oldest?: boolean } = {}) {
+    const { status, q, limit = 50, offset = 0, oldest = false } = params
     const conditions = []
-    if (status) conditions.push(eq(orders.status, status as any))
+    // Comma-separated statuses power the combined action queue (PENDING,PAID).
+    if (status) {
+      const list = status.split(',').map((s) => s.trim()).filter(Boolean)
+      conditions.push(list.length > 1 ? inArray(orders.status, list as any) : eq(orders.status, list[0] as any))
+    }
     if (q) {
       const like = `%${q}%`
       conditions.push(
@@ -227,6 +249,8 @@ export const ordersService = {
         status: orders.status,
         amount: orders.amount,
         paymentRef: orders.paymentRef,
+        paymentProvider: orders.paymentProvider,
+        fulfillmentType: productVariants.fulfillmentType,
         createdAt: orders.createdAt,
         paidAt: orders.paidAt,
         productName: products.name,
@@ -235,8 +259,9 @@ export const ordersService = {
       })
       .from(orders)
       .leftJoin(products, eq(orders.productId, products.id))
+      .leftJoin(productVariants, eq(orders.variantId, productVariants.id))
       .where(whereClause)
-      .orderBy(desc(orders.createdAt))
+      .orderBy(oldest ? sql`${orders.createdAt} asc` : desc(orders.createdAt))
       .limit(limit)
       .offset(offset)
 
@@ -253,13 +278,69 @@ export const ordersService = {
     const counts: Record<string, number> = { ALL: total }
     for (const r of statusCounts) counts[r.status] = r.count
 
+    // Batched vault availability for the page (2 queries, not N+1).
+    // on_demand variants map to 9999; legacy variant-less rows get null.
+    const variantIds = [...new Set(rows.map((r: any) => r.variantId).filter(Boolean))] as string[]
+    const stockByVariant = await getStockCounts(variantIds)
+
     return {
       orders: rows.map((r: any) => ({
         ...r,
         productName: r.variantNameSnapshot ?? r.baseNameSnapshot ?? r.productName ?? 'Produk',
+        fulfillmentType: r.fulfillmentType ?? 'vault',
+        vaultAvailable: r.variantId ? stockByVariant.get(r.variantId) ?? 0 : null,
       })),
       total,
       counts,
     }
+  },
+
+  // ─── Flow-aware delivery (admin ticket queue) ─────────────────────────────
+  // PAID -> DELIVERED with allocation:
+  //  - vault: allocate_credential RPC; zero stock -> ConflictError STOK_HABIS,
+  //    order stays PAID for refund-or-restock handling.
+  //  - on_demand: requires a credential — encrypt-imports ONE vault row, then
+  //    allocates it in the same call (no orphan stock between import/deliver).
+  // Retry-safe: an already-allocated order skips straight to deliver.
+  // Never logs the raw credential — audit snapshots only reference the order.
+  async deliverWithCredential(publicId: string, rawCredential?: string | null) {
+    const order = await this.getPayableDetails(publicId)
+    if (order.status !== 'PAID') {
+      throw new ConflictError(`Cannot deliver order in ${order.status} status`)
+    }
+    if (!order.variantId) {
+      throw new ConflictError('Order has no variant linked')
+    }
+
+    const existing = await this.getById(publicId)
+    if ((existing as any).vaultItemId) {
+      return this.transitionStatus(publicId, 'deliver')
+    }
+
+    if ((order.fulfillmentType ?? 'vault') === 'on_demand') {
+      const line = (rawCredential ?? '').trim()
+      if (!line) throw new BadRequestError('Credential required for on-demand delivery')
+      const aesSecret = process.env.AES_SECRET_KEY
+      if (!aesSecret) throw new Error('AES_SECRET_KEY not configured')
+      const key = await importKeyFromBase64(aesSecret)
+      const payload = await encrypt(key, line)
+      const [variant] = await db
+        .select({ productId: productVariants.productId })
+        .from(productVariants)
+        .where(eq(productVariants.id, order.variantId))
+      await db.insert(vaultItems).values({
+        variantId: order.variantId,
+        productId: variant?.productId ?? null,
+        credentialPayload: JSON.stringify(payload),
+        status: 'AVAILABLE',
+      })
+    }
+
+    const allocated = await allocateCredential(order.variantId, order.id)
+    if (!allocated) {
+      throw new ConflictError('STOK_HABIS: no vault stock available for this variant')
+    }
+    await this.setVaultItem(order.id, allocated.id)
+    return this.transitionStatus(publicId, 'deliver')
   },
 }
