@@ -36,8 +36,8 @@ export default function AdminOrders() {
       const data = await authedApiRequest((c) =>
         c.api.v1.admin.orders.$get({ query: { status: status !== 'ALL' ? status : undefined } } as any)
       )
-      const result = await data.json()
-      setOrders(result as AdminOrder[])
+      const result = (await data.json()) as unknown as { orders: AdminOrder[] }
+      setOrders(result.orders ?? [])
     } catch {
       console.error('Failed to fetch orders')
     } finally {

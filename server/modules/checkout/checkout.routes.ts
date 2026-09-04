@@ -10,11 +10,10 @@ import { appendAudit, findAuditByIdempotencyKey } from '../../shared/lib/audit'
 type CheckoutEnv = AuthEnv
 
 export const checkoutRoutes = new Hono<CheckoutEnv>()
+  // Auth is enforced globally in app.ts.
 
-// Auth is enforced globally in app.ts.
-
-// POST / — Create order
-checkoutRoutes.post(
+  // POST / — Create order
+  .post(
   '/',
   zValidator('json', CheckoutSchema),
   async (c) => {

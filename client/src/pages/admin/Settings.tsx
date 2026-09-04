@@ -14,7 +14,7 @@ const LABELS: Record<string, { group: string; label: string }> = {
 export default function Settings() {
   const { data, loading, error, fetchedAt, refetch } = useAdminQuery(async () => {
     const res = await authedApiRequest((c) => c.api.v1.admin.settings.$get())
-    return (await res.json()) as { keys: string[]; values: Record<string, string> }
+    return (await res.json()) as { keys: readonly string[]; values: Record<string, string> }
   }, [])
   const [draft, setDraft] = useState<Record<string, string> | null>(null)
   const [saving, setSaving] = useState(false)

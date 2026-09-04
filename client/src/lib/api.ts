@@ -11,7 +11,10 @@ export const api = hc<AppType>(API_BASE)
 
 // V1 convenience client (most common usage)
 // Usage: apiV1.products.$get(), apiV1.admin.products.$get()
-export const apiV1 = hc<AppType>(`${API_BASE}/api/v1`)
+// Navigated from the API root (NOT hc(BASE + '/api/v1')): hono/client resolves
+// paths against the full AppType schema, so rooting the client below /api/v1
+// orphans every path lookup. Runtime URLs are identical either way.
+export const apiV1 = hc<AppType>(API_BASE).api.v1
 
 // ─── Authed Request Helper ──────────────────────────────────────────────────
 // Injects Authorization header from current Supabase session.

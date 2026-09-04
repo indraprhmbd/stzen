@@ -16,15 +16,15 @@ import { paymentsRoutes, webhooksRoutes } from './modules/payments'
 // Export AppType for end-to-end type safety with hono/client.
 
 export function createApp() {
-  const app = new Hono<AuthEnv>()
+  const base = new Hono<AuthEnv>()
 
   // Global middleware
-  app.use('*', logger())
-  app.use('*', secureHeaders())
+  base.use('*', logger())
+  base.use('*', secureHeaders())
   const allowedOrigins = ['http://localhost:5173', 'http://localhost:4173']
   const lanOriginPattern = /^http:\/\/(192\.168|10)\.\d{1,3}\.\d{1,3}\.\d{1,3}:(5173|4173)$/
 
-  app.use(
+  base.use(
     '*',
     cors({
       origin: (origin) => {
@@ -40,12 +40,7 @@ export function createApp() {
   )
 
   // Global error handler
-  app.onError(errorHandler)
-
-  // Health check (unversioned, infrastructure endpoint)
-  app.get('/api/health', (c) =>
-    c.json({ status: 'ok', timestamp: new Date().toISOString() })
-  )
+  base.onError(errorHandler)
 
   // Auth gate — default-deny. Every /api/v1/* route requires a valid JWT
   // unless explicitly allowlisted here. This replaces per-route-file
@@ -54,7 +49,7 @@ export function createApp() {
   // (requireRole('admin')) still live in each admin route file — this gate
   // only proves identity, not authorization.
   const PUBLIC_API_PREFIXES = ['/api/v1/products', '/api/v1/webhooks']
-  app.use('/api/v1/*', async (c, next) => {
+  base.use('/api/v1/*', async (c, next) => {
     if (PUBLIC_API_PREFIXES.some((p) => c.req.path.startsWith(p))) {
       return next()
     }
@@ -62,21 +57,30 @@ export function createApp() {
   })
 
   // Rate limits (in-memory, single instance)
-  app.use('/api/v1/admin/*', rateLimit(60, 60_000))
-  app.use('/api/v1/checkout/*', rateLimit(30, 60_000))
-  app.use('/api/v1/payments/*', rateLimit(30, 60_000))
+  base.use('/api/v1/admin/*', rateLimit(60, 60_000))
+  base.use('/api/v1/checkout/*', rateLimit(30, 60_000))
+  base.use('/api/v1/payments/*', rateLimit(30, 60_000))
   // Webhooks get their own lenient limit — gateway retries shouldn't 429 into a dropped payment.
-  app.use('/api/v1/webhooks/*', rateLimit(120, 60_000))
+  base.use('/api/v1/webhooks/*', rateLimit(120, 60_000))
 
-  // ─── API v1 ─────────────────────────────────────────────────────────────
-  app.route('/api/v1/products', productRoutes)
-  app.route('/api/v1/checkout', checkoutRoutes)
-  app.route('/api/v1/orders', orderRoutes)
-  app.route('/api/v1/admin', adminRoutes)
-  app.route('/api/v1/payments', paymentsRoutes)
-  // PUBLIC — no authMiddleware. Gateways call this directly; each provider
-  // verifies its own signature inside parseWebhook.
-  app.route('/api/v1/webhooks', webhooksRoutes)
+  // ─── API routes ─────────────────────────────────────────────────────────
+  // Chained (not sequential statements): Hono accumulates the route schema
+  // into the RETURNED app's type. Discarded app.route(...) calls register at
+  // runtime but leave AppType as the blank base Hono — silently voiding all
+  // hono/client type safety. ReturnType<typeof createApp> must be the chain.
+  const app = base
+    // Health check (unversioned, infrastructure endpoint)
+    .get('/api/health', (c) =>
+      c.json({ status: 'ok', timestamp: new Date().toISOString() })
+    )
+    .route('/api/v1/products', productRoutes)
+    .route('/api/v1/checkout', checkoutRoutes)
+    .route('/api/v1/orders', orderRoutes)
+    .route('/api/v1/admin', adminRoutes)
+    .route('/api/v1/payments', paymentsRoutes)
+    // PUBLIC — no authMiddleware. Gateways call this directly; each provider
+    // verifies its own signature inside parseWebhook.
+    .route('/api/v1/webhooks', webhooksRoutes)
 
   // 404 catch-all
   app.notFound((c) => c.json({ error: 'Not found' }, 404))

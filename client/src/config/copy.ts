@@ -3,7 +3,7 @@ export interface Copy {
   auth: { signIn: string; signOut: string; signInWithGoogle: string; email: string; password: string; or: string; backToStore: string }
   hero: { title1: string; title2: string; tagline: string; cta: string; statusPill: string; searchPlaceholder: string; searchHint: string }
   marquee: string[]
-  products: { title: string; buy: string; soldOut: string; inStock: string; onlyXLeft: string; outOfStock: string; sortNewest: string; sortPrice: string; sortStock: string; sortOutOfStock: string; viewGrid: string; viewList: string; verifiedBuyer: string; loginForMore: string; features: string[] }
+  products: { title: string; buy: string; soldOut: string; inStock: string; onlyXLeft: string; outOfStock: string; sortNewest: string; sortPrice: string; sortStock: string; sortOutOfStock: string; viewGrid: string; viewList: string; verifiedBuyer: string; loginForMore: string }
   howItWorks: { title: string; steps: { num: string; title: string; desc: string }[] }
   whyUs: { title: string; items: { title: string; desc: string }[] }
   testimonials: { title: string; items: { quote: string; name: string; product: string }[] }
@@ -57,7 +57,6 @@ const id: Copy = {
     viewList: 'List',
     verifiedBuyer: 'PEMBELI TERVERIFIKASI',
     loginForMore: 'Login untuk melihat semua produk',
-    features: ['Akses Langsung', 'Garansi 30 Hari', 'PIN Pribadi', 'Support Chat'],
   },
   howItWorks: {
     title: 'CARA KERJA',
@@ -164,7 +163,6 @@ const en: Copy = {
     viewList: 'List',
     verifiedBuyer: 'VERIFIED BUYER',
     loginForMore: 'Log in to see all products',
-    features: ['Instant Access', '30-Day Warranty', 'Private PIN', 'Chat Support'],
   },
   howItWorks: {
     title: 'HOW IT WORKS',

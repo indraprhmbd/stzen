@@ -7,12 +7,11 @@ import { requireRole } from '../../shared/middleware/require-role'
 type AdminStatsEnv = AuthEnv
 
 export const adminStatsRoutes = new Hono<AdminStatsEnv>()
+  // Auth is enforced globally in app.ts; this only adds the role check.
+  .use('*', requireRole('admin'))
 
-// Auth is enforced globally in app.ts; this only adds the role check.
-adminStatsRoutes.use('*', requireRole('admin'))
-
-// GET / — Single roundtrip to avoid max:1 pool contention (was 4 parallel selects)
-adminStatsRoutes.get('/', async (c) => {
+  // GET / — Single roundtrip to avoid max:1 pool contention (was 4 parallel selects)
+  .get('/', async (c) => {
   try {
     const [row] = await db.execute(sql`
       SELECT

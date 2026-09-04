@@ -13,13 +13,26 @@ import { appendAudit, findAuditByIdempotencyKey } from '../../shared/lib/audit'
 
 type AdminOrderEnv = AuthEnv
 
+const DeliverSchema = z.object({ credential: z.string().max(5000).optional() })
+
+const ManualOrderSchema = z.object({
+  customerEmail: z.string().email(),
+  variantId: z.string().min(1),
+  paymentRef: z.string().max(120).nullable().optional(),
+})
+
 export const adminOrderRoutes = new Hono<AdminOrderEnv>()
+  // Auth is enforced globally in app.ts; this only adds the role check.
+  .use('*', requireRole('admin'))
 
-// Auth is enforced globally in app.ts; this only adds the role check.
-adminOrderRoutes.use('*', requireRole('admin'))
-
-// GET / — Paginated orders with optional status filter and search
-adminOrderRoutes.get('/', async (c) => {
+  // GET / — Paginated orders with optional status filter and search
+  .get('/', zValidator('query', z.object({
+    status: z.string().optional(),
+    q: z.string().optional(),
+    limit: z.string().optional(),
+    offset: z.string().optional(),
+    oldest: z.string().optional(),
+  })), async (c) => {
   const status = c.req.query('status') || undefined
   const q = c.req.query('q') || undefined
   const limit = Math.min(parseInt(c.req.query('limit') || '20', 10) || 20, 100)
@@ -30,7 +43,7 @@ adminOrderRoutes.get('/', async (c) => {
 })
 
 // POST /:id/approve — Approve payment: PENDING -> PAID
-adminOrderRoutes.post('/:id/approve', async (c) => {
+  .post('/:id/approve', async (c) => {
   const user = c.get('user')
   const idempotencyKey = c.req.header('Idempotency-Key') || undefined
   if (idempotencyKey) {
@@ -53,7 +66,7 @@ adminOrderRoutes.post('/:id/approve', async (c) => {
 })
 
 // POST /:id/reject — Reject payment: PENDING -> REJECTED
-adminOrderRoutes.post('/:id/reject', async (c) => {
+  .post('/:id/reject', async (c) => {
   const user = c.get('user')
   const idempotencyKey = c.req.header('Idempotency-Key') || undefined
   if (idempotencyKey) {
@@ -75,13 +88,11 @@ adminOrderRoutes.post('/:id/reject', async (c) => {
   return c.json(order)
 })
 
-const DeliverSchema = z.object({ credential: z.string().max(5000).optional() })
-
-// POST /:id/deliver — Flow-aware delivery: PAID -> DELIVERED with allocation.
-// Optional { credential } body for on-demand variants (imported + allocated
-// atomically). Vault variants with zero stock get 409 STOK_HABIS. The raw
-// credential is never written to audit logs.
-adminOrderRoutes.post('/:id/deliver', zValidator('json', DeliverSchema), async (c) => {
+  // POST /:id/deliver — Flow-aware delivery: PAID -> DELIVERED with allocation.
+  // Optional { credential } body for on-demand variants (imported + allocated
+  // atomically). Vault variants with zero stock get 409 STOK_HABIS. The raw
+  // credential is never written to audit logs.
+  .post('/:id/deliver', zValidator('json', DeliverSchema), async (c) => {
   const user = c.get('user')
   const idempotencyKey = c.req.header('Idempotency-Key') || undefined
   if (idempotencyKey) {
@@ -104,15 +115,9 @@ adminOrderRoutes.post('/:id/deliver', zValidator('json', DeliverSchema), async (
   return c.json(order)
 })
 
-const ManualOrderSchema = z.object({
-  customerEmail: z.string().email(),
-  variantId: z.string().min(1),
-  paymentRef: z.string().max(120).nullable().optional(),
-})
-
 // POST /manual — Admin creates PENDING order on behalf of a customer
-adminOrderRoutes.post('/manual', zValidator('json', ManualOrderSchema), async (c) => {
-  const user = c.get('user')
+  .post('/manual', zValidator('json', ManualOrderSchema), async (c) => {
+    const user = c.get('user')
   const { customerEmail, variantId, paymentRef } = c.req.valid('json')
   const [profile] = await db.select({ id: profiles.id }).from(profiles).where(eq(profiles.email, customerEmail))
   if (!profile) return c.json({ error: 'Pelanggan tidak ditemukan' }, 404)
@@ -155,7 +160,7 @@ adminOrderRoutes.post('/manual', zValidator('json', ManualOrderSchema), async (c
 })
 
 // POST /:id/refund — Refund payment: PAID -> REFUNDED, releases vault stock
-adminOrderRoutes.post('/:id/refund', async (c) => {
+  .post('/:id/refund', async (c) => {
   const user = c.get('user')
   const idempotencyKey = c.req.header('Idempotency-Key') || undefined
   if (idempotencyKey) {

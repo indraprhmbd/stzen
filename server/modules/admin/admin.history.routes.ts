@@ -1,4 +1,6 @@
 import { Hono } from 'hono'
+import { zValidator } from '@hono/zod-validator'
+import { z } from 'zod'
 import { sql } from 'drizzle-orm'
 import { db } from '../../shared/db'
 import { type AuthEnv } from '../../shared/middleware/auth'
@@ -7,12 +9,16 @@ import { requireRole } from '../../shared/middleware/require-role'
 type HistoryEnv = AuthEnv
 
 export const adminHistoryRoutes = new Hono<HistoryEnv>()
+  // Auth is enforced globally in app.ts; this only adds the role check.
+  .use('*', requireRole('admin'))
 
-// Auth is enforced globally in app.ts; this only adds the role check.
-adminHistoryRoutes.use('*', requireRole('admin'))
-
-// GET / — list audit logs with filters
-adminHistoryRoutes.get('/', async (c) => {
+  // GET / — list audit logs with filters
+  .get('/', zValidator('query', z.object({
+    type: z.string().optional(),
+    q: z.string().optional(),
+    limit: z.string().optional(),
+    offset: z.string().optional(),
+  })), async (c) => {
   const type = c.req.query('type') // order, stock, all
   const q = c.req.query('q')
   const limit = Math.min(parseInt(c.req.query('limit') || '20', 10), 100)

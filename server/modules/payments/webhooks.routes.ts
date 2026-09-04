@@ -13,8 +13,7 @@ import { paymentsService } from './payments.service'
 // providers use c.req.text()).
 
 export const webhooksRoutes = new Hono()
-
-webhooksRoutes.post('/:provider', async (c) => {
+  .post('/:provider', async (c) => {
   const result = await paymentsService.handleWebhook(c.req.param('provider'), c)
   return c.json(result)
 })

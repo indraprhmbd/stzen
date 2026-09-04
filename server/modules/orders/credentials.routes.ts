@@ -13,11 +13,10 @@ import { NotFoundError, ConflictError } from '../../shared/errors/http'
 type CredentialsEnv = AuthEnv
 
 const credentialsRoutes = new Hono<CredentialsEnv>()
+  // Auth is enforced globally in app.ts.
 
-// Auth is enforced globally in app.ts.
-
-// GET /:id/credentials — Decrypt vault item for this order
-credentialsRoutes.get('/', async (c) => {
+  // GET /:id/credentials — Decrypt vault item for this order
+  .get('/', async (c) => {
   const user = c.get('user')
   const orderId = c.req.param('id')
   if (!orderId) throw new NotFoundError('Order not found')

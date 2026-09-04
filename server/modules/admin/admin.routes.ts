@@ -11,11 +11,10 @@ import { adminSettingsRoutes } from './admin.settings.routes'
 // Composes admin sub-routes. Auth + role guard applied inside each sub-router.
 
 export const adminRoutes = new Hono()
-
-adminRoutes.route('/orders', adminOrderRoutes)
-adminRoutes.route('/products', adminProductRoutes)
-adminRoutes.route('/variants', adminVariantRoutes)
-adminRoutes.route('/stats', adminStatsRoutes)
-adminRoutes.route('/history', adminHistoryRoutes)
-adminRoutes.route('/analytics', adminAnalyticsRoutes)
-adminRoutes.route('/settings', adminSettingsRoutes)
+  .route('/orders', adminOrderRoutes)
+  .route('/products', adminProductRoutes)
+  .route('/variants', adminVariantRoutes)
+  .route('/stats', adminStatsRoutes)
+  .route('/history', adminHistoryRoutes)
+  .route('/analytics', adminAnalyticsRoutes)
+  .route('/settings', adminSettingsRoutes)

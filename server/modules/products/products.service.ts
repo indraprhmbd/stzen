@@ -147,6 +147,8 @@ export const productsService = {
         publicId: productVariants.publicId,
         sku: productVariants.sku,
         name: productVariants.name,
+        overview: productVariants.overview,
+        description: productVariants.description,
         price: productVariants.price,
         compareAtPrice: productVariants.compareAtPrice,
         badge: productVariants.badge,
@@ -164,10 +166,11 @@ export const productsService = {
 
     if (variant) {
       const stockCount = await getStockCount(variant.id)
-      const [base] = variant.productId ? await db.select({ category: products.category, description: products.description }).from(products).where(eq(products.id, variant.productId)) : [{} as any]
+      const [base] = variant.productId ? await db.select({ category: products.category, description: products.description, overview: products.overview }).from(products).where(eq(products.id, variant.productId)) : [{} as any]
       // Strip internal productId; instructions are post-delivery only (credentials endpoint).
+      // Content fallback: variant wins, induk fills gaps.
       const { publicId: pid, productId: _internalBase, ...rest } = variant as any
-      return { ...rest, id: pid, category: (base as any)?.category ?? '', description: (base as any)?.description ?? null, stockCount }
+      return { ...rest, id: pid, category: (base as any)?.category ?? '', overview: (variant as any).overview ?? (base as any)?.overview ?? null, description: (variant as any).description ?? (base as any)?.description ?? null, stockCount }
     }
 
     // fallback legacy product id

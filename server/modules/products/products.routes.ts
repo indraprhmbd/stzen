@@ -1,13 +1,14 @@
 import { Hono } from 'hono'
+import { zValidator } from '@hono/zod-validator'
 import { productsService } from './products.service'
+import { ProductQuerySchema } from './products.schema'
 import type { ProductQueryParams } from './products.types'
 
 // ─── Product Routes (Public) ────────────────────────────────────────────────
 
 export const productRoutes = new Hono()
-
-// GET / — Paginated active products with sort/search/filter
-productRoutes.get('/', async (c) => {
+  // GET / — Paginated active products with sort/search/filter
+  .get('/', zValidator('query', ProductQuerySchema), async (c) => {
   const category = c.req.query('category') || undefined
   const sort = c.req.query('sort') || undefined
   const page = parseInt(c.req.query('page') || '1')
@@ -27,7 +28,7 @@ productRoutes.get('/', async (c) => {
 })
 
 // GET /categories — Unique category list with counts
-productRoutes.get('/categories', async (c) => {
+  .get('/categories', async (c) => {
   const rows = await productsService.listActive()
   const counts: Record<string, number> = {}
   rows.forEach((p) => {
@@ -37,7 +38,7 @@ productRoutes.get('/categories', async (c) => {
 })
 
 // GET /:id — Single product detail
-productRoutes.get('/:id', async (c) => {
+  .get('/:id', async (c) => {
   const product = await productsService.getById(c.req.param('id'))
   return c.json(product)
 })

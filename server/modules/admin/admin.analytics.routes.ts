@@ -1,4 +1,6 @@
 import { Hono } from 'hono'
+import { zValidator } from '@hono/zod-validator'
+import { z } from 'zod'
 import { sql } from 'drizzle-orm'
 import { db } from '../../shared/db'
 import { type AuthEnv } from '../../shared/middleware/auth'
@@ -7,12 +9,11 @@ import { requireRole } from '../../shared/middleware/require-role'
 type AnalyticsEnv = AuthEnv
 
 export const adminAnalyticsRoutes = new Hono<AnalyticsEnv>()
+  // Auth is enforced globally in app.ts; this only adds the role check.
+  .use('*', requireRole('admin'))
 
-// Auth is enforced globally in app.ts; this only adds the role check.
-adminAnalyticsRoutes.use('*', requireRole('admin'))
-
-// GET / — analytics for 30d dense dashboard
-adminAnalyticsRoutes.get('/', async (c) => {
+  // GET / — analytics for 30d dense dashboard
+  .get('/', zValidator('query', z.object({ range: z.string().optional() })), async (c) => {
   const range = c.req.query('range') || '30d'
   const days = range === '7d' ? 7 : range === '14d' ? 14 : 30
 

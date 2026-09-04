@@ -9,6 +9,7 @@ import { useCopy } from '../hooks/useCopy'
 type Product = {
   id: string
   name: string
+  overview: string | null
   description: string | null
   category: string
   price: string
@@ -16,6 +17,7 @@ type Product = {
   badge: string | null
   stockCount: number
   fulfillmentType?: string
+  isActive: boolean
 }
 
 export default function ProductDetail() {
@@ -124,9 +126,9 @@ export default function ProductDetail() {
               </span>
             ))}
           </div>
-          {product.description && (
+          {product.overview && (
             <p className="text-sm font-bold text-neutral/80 leading-snug max-w-prose">
-              {product.description}
+              {product.overview}
             </p>
           )}
         </div>
@@ -221,19 +223,9 @@ export default function ProductDetail() {
           </button>
           {descOpen && (
             <div className="p-3">
-              <p className="text-sm font-bold text-neutral/80 leading-relaxed">
+              <p className="text-sm font-bold text-neutral/80 leading-relaxed whitespace-pre-line">
                 {product.description}
               </p>
-              {t.products.features && t.products.features.length > 0 && (
-                <ul className="mt-3 flex flex-col gap-1.5">
-                  {t.products.features.map((feat, i) => (
-                    <li key={i} className="flex items-center gap-2 text-xs font-bold text-neutral">
-                      <span className="material-symbols-outlined text-[14px] text-primary">check_circle</span>
-                      {feat}
-                    </li>
-                  ))}
-                </ul>
-              )}
             </div>
           )}
         </div>

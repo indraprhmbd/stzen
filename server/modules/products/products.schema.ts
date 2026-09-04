@@ -4,6 +4,7 @@ import { z } from 'zod'
 
 export const ProductCreateSchema = z.object({
   name: z.string().min(1, 'Name is required').max(200),
+  overview: z.string().max(200).optional(),
   description: z.string().optional(),
   category: z.string().min(1, 'Category is required').max(100),
   price: z.string().regex(/^\d+$/, 'Price must be integer rupiah (e.g. 25000)').optional(),
@@ -24,6 +25,18 @@ export const BulkStockSchema = z.object({
       (val) => val.split('\n').filter((l) => l.trim()).length > 0,
       'At least one credential line is required'
     ),
+})
+
+// ─── Storefront Query Schema ────────────────────────────────────────────────
+// All-optional strings: only whitelists keys for the typed client, parsing
+// stays manual in the route. Runtime behavior unchanged.
+
+export const ProductQuerySchema = z.object({
+  category: z.string().optional(),
+  sort: z.string().optional(),
+  page: z.string().optional(),
+  limit: z.string().optional(),
+  search: z.string().optional(),
 })
 
 // ─── Inferred Types ─────────────────────────────────────────────────────────

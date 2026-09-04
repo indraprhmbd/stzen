@@ -8,22 +8,21 @@ import { credentialsRoutes } from './credentials.routes'
 type OrderEnv = AuthEnv
 
 export const orderRoutes = new Hono<OrderEnv>()
+  // Auth is enforced globally in app.ts.
 
-// Auth is enforced globally in app.ts.
-
-// GET / — List current user's orders
-orderRoutes.get('/', async (c) => {
+  // GET / — List current user's orders
+  .get('/', async (c) => {
   const user = c.get('user')
   const userOrders = await ordersService.listByUser(user.sub)
   return c.json(userOrders)
 })
 
 // GET /:id — Order detail (must belong to current user)
-orderRoutes.get('/:id', async (c) => {
+  .get('/:id', async (c) => {
   const user = c.get('user')
   const order = await ordersService.getById(c.req.param('id'), user.sub)
   return c.json(order)
 })
 
 // GET /:id/credentials — Decrypt vault item for this order
-orderRoutes.route('/:id/credentials', credentialsRoutes)
+  .route('/:id/credentials', credentialsRoutes)

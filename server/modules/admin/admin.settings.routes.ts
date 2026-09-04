@@ -12,11 +12,6 @@ import { appendAudit } from '../../shared/lib/audit'
 
 type SettingsEnv = AuthEnv
 
-export const adminSettingsRoutes = new Hono<SettingsEnv>()
-
-// Auth is enforced globally in app.ts; this only adds the role check.
-adminSettingsRoutes.use('*', requireRole('admin'))
-
 const KNOWN_KEYS = [
   'support.whatsapp',
   'support.telegram',
@@ -26,8 +21,16 @@ const KNOWN_KEYS = [
   'payment.account_name',
 ] as const
 
+const SettingsUpdateSchema = z.object({
+  values: z.record(z.string(), z.string().max(500)),
+})
+
+export const adminSettingsRoutes = new Hono<SettingsEnv>()
+  // Auth is enforced globally in app.ts; this only adds the role check.
+  .use('*', requireRole('admin'))
+
 // GET / — All settings as object plus key metadata
-adminSettingsRoutes.get('/', async (c) => {
+  .get('/', async (c) => {
   const rows = (await db.execute(sql`select key, value from settings`)) as unknown as any
   const list: { key: string; value: string }[] = Array.isArray(rows) ? rows : rows?.rows ?? []
   const values: Record<string, string> = {}
@@ -35,12 +38,8 @@ adminSettingsRoutes.get('/', async (c) => {
   return c.json({ keys: KNOWN_KEYS, values })
 })
 
-const SettingsUpdateSchema = z.object({
-  values: z.record(z.string(), z.string().max(500)),
-})
-
 // PUT / — Upsert known keys only
-adminSettingsRoutes.put('/', zValidator('json', SettingsUpdateSchema), async (c) => {
+  .put('/', zValidator('json', SettingsUpdateSchema), async (c) => {
   const user = c.get('user')
   const { values } = c.req.valid('json')
   const allowed = new Set<string>(KNOWN_KEYS as unknown as string[])

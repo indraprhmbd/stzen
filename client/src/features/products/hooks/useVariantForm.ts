@@ -1,0 +1,84 @@
+import { useState } from 'react'
+import { authedApiRequest } from '../../../lib/api'
+import type { Product, Variant } from '../types'
+
+// Moved as-is from pages/admin/Products.tsx: variant form state + CRUD +
+// induk auto-fill (fills empties only, save stays link-preserving).
+export function useVariantForm(products: Product[], fetchAll: () => void, showToast: (msg: string, type: 'success' | 'error') => void) {
+  const [vProductId, setVProductId] = useState('')
+  const [vPrice, setVPrice] = useState('')
+  const [vCompareAt, setVCompareAt] = useState('')
+  const [vDuration, setVDuration] = useState<string>('')
+  const [vAccountType, setVAccountType] = useState('')
+  const [vConditions, setVConditions] = useState('')
+  const [vBadge, setVBadge] = useState('')
+  const [editingVariantId, setEditingVariantId] = useState<string | null>(null)
+  const [editingVariantSku, setEditingVariantSku] = useState<string | null>(null)
+  const [vFulfillmentType, setVFulfillmentType] = useState<'vault' | 'on_demand'>('vault')
+  const [vIsActive, setVIsActive] = useState(true)
+  const [vOverview, setVOverview] = useState('')
+  const [vDescription, setVDescription] = useState('')
+
+  function openCreateVariant(presetProductId?: string) {
+    const baseId = presetProductId ?? products[0]?.id ?? ''
+    const base = products.find((p) => p.id === baseId)
+    setEditingVariantId(null); setEditingVariantSku(null); setVProductId(baseId); setVPrice(''); setVCompareAt(''); setVDuration(''); setVAccountType(''); setVConditions(''); setVBadge(''); setVFulfillmentType('vault'); setVIsActive(true)
+    setVOverview(base?.overview ?? ''); setVDescription(base?.description ?? '')
+    ;(document.getElementById('variant_modal') as HTMLDialogElement)?.showModal()
+  }
+  function openEditVariant(v: Variant) {
+    setEditingVariantId(v.id); setEditingVariantSku(v.sku); setVProductId(v.productId ?? ''); setVPrice(String(v.price)); setVCompareAt(v.compareAtPrice ? String(v.compareAtPrice) : ''); setVDuration(v.durationMonths ? String(v.durationMonths) : ''); setVAccountType(v.accountType ?? ''); setVConditions(v.conditions ?? ''); setVBadge(v.badge ?? ''); setVFulfillmentType(v.fulfillmentType === 'on_demand' ? 'on_demand' : 'vault'); setVIsActive(v.isActive)
+    const base = products.find((p) => p.id === (v.productId ?? ''))
+    setVOverview(v.overview ?? base?.overview ?? ''); setVDescription(v.description ?? base?.description ?? '')
+    ;(document.getElementById('variant_modal') as HTMLDialogElement)?.showModal()
+  }
+  // Switching induk refills content fields only when the user hasn't typed
+  // their own — custom text is never clobbered.
+  function handleVariantBaseChange(newId: string) {
+    setVProductId(newId)
+    const base = products.find((p) => p.id === newId)
+    setVOverview((prev) => (prev.trim() === '' ? (base?.overview ?? '') : prev))
+    setVDescription((prev) => (prev.trim() === '' ? (base?.description ?? '') : prev))
+  }
+
+  async function handleVariantSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    // Link-preserving save: text identical to the induk stays null (live
+    // fallback, no stale copies); only real edits become variant overrides.
+    const base = products.find((p) => p.id === vProductId)
+    const trimmedOverview = vOverview.trim()
+    const trimmedDescription = vDescription.trim()
+    const payload: any = {
+      productId: vProductId,
+      price: vPrice,
+      compareAtPrice: vCompareAt.trim() === '' ? null : vCompareAt.trim(),
+      badge: vBadge || null,
+      durationMonths: vDuration ? parseInt(vDuration, 10) : null,
+      accountType: vAccountType || null,
+      conditions: vConditions || null,
+      fulfillmentType: vFulfillmentType,
+      isActive: vIsActive,
+      overview: trimmedOverview === '' || trimmedOverview === (base?.overview ?? '').trim() ? null : trimmedOverview,
+      description: trimmedDescription === '' || trimmedDescription === (base?.description ?? '').trim() ? null : vDescription,
+    }
+    try {
+      if (editingVariantId) {
+        await authedApiRequest((c) => c.api.v1.admin.variants[':id'].$put({ param: { id: editingVariantId }, json: payload }))
+        showToast('Varian diperbarui', 'success')
+      } else {
+        await authedApiRequest((c) => c.api.v1.admin.variants.$post({ json: payload }))
+        showToast('Varian dibuat', 'success')
+      }
+      ;(document.getElementById('variant_modal') as HTMLDialogElement)?.close()
+      fetchAll()
+    } catch { showToast('Gagal menyimpan varian', 'error') }
+  }
+
+  return {
+    vProductId, vPrice, vCompareAt, vDuration, vAccountType, vConditions, vBadge,
+    editingVariantId, editingVariantSku, vFulfillmentType, vIsActive, vOverview, vDescription,
+    setVProductId, setVPrice, setVCompareAt, setVDuration, setVAccountType, setVConditions, setVBadge,
+    setVFulfillmentType, setVIsActive, setVOverview, setVDescription,
+    openCreateVariant, openEditVariant, handleVariantBaseChange, handleVariantSubmit,
+  }
+}

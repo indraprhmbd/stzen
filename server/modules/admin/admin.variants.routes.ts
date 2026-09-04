@@ -8,6 +8,7 @@ import { type AuthEnv } from '../../shared/middleware/auth'
 import { requireRole } from '../../shared/middleware/require-role'
 import { generatePublicId } from '../../shared/lib/publicId'
 import { generateSku, composeVariantName } from '../../shared/lib/sku'
+import { BulkStockSchema } from '../products/products.schema'
 import { vaultService } from '../vault/vault.service'
 import { appendAudit } from '../../shared/lib/audit'
 
@@ -16,6 +17,8 @@ const VariantCreateSchema = z.object({
   price: z.string().regex(/^\d+$/, 'Price integer'),
   compareAtPrice: z.string().regex(/^\d+$/, 'Compare price integer').nullable().optional(),
   badge: z.string().nullable().optional(),
+  overview: z.string().max(200).nullable().optional(),
+  description: z.string().nullable().optional(),
   durationMonths: z.number().int().nullable().optional(),
   accountType: z.string().nullable().optional(),
   conditions: z.string().nullable().optional(),
@@ -28,6 +31,8 @@ const VariantUpdateSchema = z.object({
   price: z.string().regex(/^\d+$/, 'Price integer').optional(),
   compareAtPrice: z.string().regex(/^\d+$/, 'Compare price integer').nullable().optional(),
   badge: z.string().nullable().optional(),
+  overview: z.string().max(200).nullable().optional(),
+  description: z.string().nullable().optional(),
   durationMonths: z.number().int().nullable().optional(),
   accountType: z.string().nullable().optional(),
   conditions: z.string().nullable().optional(),
@@ -37,11 +42,11 @@ const VariantUpdateSchema = z.object({
 
 type VariantEnv = AuthEnv
 export const adminVariantRoutes = new Hono<VariantEnv>()
-// Auth is enforced globally in app.ts; this only adds the role check.
-adminVariantRoutes.use('*', requireRole('admin'))
+  // Auth is enforced globally in app.ts; this only adds the role check.
+  .use('*', requireRole('admin'))
 
-// GET / — list variants with stock
-adminVariantRoutes.get('/', async (c) => {
+  // GET / — list variants with stock
+  .get('/', async (c) => {
   const { sql, eq } = await import('drizzle-orm')
   const { vaultItems, products } = await import('../../shared/db/schema')
   const rows = await db
@@ -53,6 +58,8 @@ adminVariantRoutes.get('/', async (c) => {
       internalProductId: productVariants.productId,
       sku: productVariants.sku,
       name: productVariants.name,
+      overview: productVariants.overview,
+      description: productVariants.description,
       price: productVariants.price,
       compareAtPrice: productVariants.compareAtPrice,
       badge: productVariants.badge,
@@ -75,7 +82,7 @@ adminVariantRoutes.get('/', async (c) => {
 })
 
 // POST / — create variant, composite name + auto sku
-adminVariantRoutes.post('/', zValidator('json', VariantCreateSchema), async (c) => {
+  .post('/', zValidator('json', VariantCreateSchema), async (c) => {
   const data = c.req.valid('json') as any
   const [base] = await db.select({ name: products.name }).from(products).where(eq(products.publicId, data.productId))
   // allow productId as publicId or internal
@@ -104,6 +111,8 @@ adminVariantRoutes.post('/', zValidator('json', VariantCreateSchema), async (c) 
     price: priceInt,
     compareAtPrice: compareAt,
     badge: data.badge,
+    overview: data.overview ?? null,
+    description: data.description ?? null,
     durationMonths: data.durationMonths,
     accountType: data.accountType,
     conditions: data.conditions,
@@ -125,7 +134,7 @@ adminVariantRoutes.post('/', zValidator('json', VariantCreateSchema), async (c) 
 })
 
 // PUT /:id — update variant
-adminVariantRoutes.put('/:id', zValidator('json', VariantUpdateSchema), async (c) => {
+  .put('/:id', zValidator('json', VariantUpdateSchema), async (c) => {
   const publicId = c.req.param('id')
   const data = c.req.valid('json') as any
   if (data.price !== undefined) data.price = parseInt(data.price, 10)
@@ -176,7 +185,7 @@ adminVariantRoutes.put('/:id', zValidator('json', VariantUpdateSchema), async (c
 })
 
 // DELETE /:id
-adminVariantRoutes.delete('/:id', async (c) => {
+  .delete('/:id', async (c) => {
   const publicId = c.req.param('id')
   const [deleted] = await db.delete(productVariants).where(eq(productVariants.publicId, publicId)).returning()
   if (!deleted) return c.json({ error: 'Variant not found' }, 404)
@@ -194,11 +203,10 @@ adminVariantRoutes.delete('/:id', async (c) => {
 })
 
 // POST /:id/stock — bulk import for variant (skip on_demand)
-adminVariantRoutes.post('/:id/stock', async (c) => {
-  const publicId = c.req.param('id')
-  const body = await c.req.json() as any
-  const credentials: string = body.credentials
-  if (!credentials || !credentials.trim()) return c.json({ error: 'No valid credential lines' }, 400)
+  .post('/:id/stock', zValidator('json', BulkStockSchema), async (c) => {
+    const publicId = c.req.param('id')
+    const { credentials } = c.req.valid('json')
+    if (!credentials || !credentials.trim()) return c.json({ error: 'No valid credential lines' }, 400)
   const [variant] = await db.select({ id: productVariants.id, name: productVariants.name, fulfillmentType: productVariants.fulfillmentType }).from(productVariants).where(eq(productVariants.publicId, publicId))
   if (!variant) return c.json({ error: 'Variant not found' }, 404)
   if (variant.fulfillmentType === 'on_demand') return c.json({ error: 'Varian on demand tidak memerlukan impor stok' }, 400)

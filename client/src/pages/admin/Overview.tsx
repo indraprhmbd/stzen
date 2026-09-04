@@ -48,7 +48,7 @@ export default function Overview() {
     ])
 
     const s = (await statsRes.json()) as Stats
-    const a = (await analyticsRes.json()) as { dailySales: unknown[]; byStatus: unknown[]; byCategory: unknown[]; topProducts: unknown[] }
+    const a = (await analyticsRes.json()) as unknown as { dailySales: unknown[]; byStatus: unknown[]; byCategory: unknown[]; topProducts: unknown[] }
     const o = (await ordersRes.json()) as { orders: Order[] }
     const p = (await productsRes.json()) as Product[]
 

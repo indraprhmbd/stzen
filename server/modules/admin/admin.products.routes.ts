@@ -20,12 +20,11 @@ import {
 type AdminProductEnv = AuthEnv
 
 export const adminProductRoutes = new Hono<AdminProductEnv>()
+  // Auth is enforced globally in app.ts; this only adds the role check.
+  .use('*', requireRole('admin'))
 
-// Auth is enforced globally in app.ts; this only adds the role check.
-adminProductRoutes.use('*', requireRole('admin'))
-
-// GET / — List all products with stock counts (exposes public_id as id)
-adminProductRoutes.get('/', async (c) => {
+  // GET / — List all products with stock counts (exposes public_id as id)
+  .get('/', async (c) => {
   const allProducts = await productsService.listAll()
 
   // Get stock counts per product (internal id)
@@ -62,7 +61,7 @@ adminProductRoutes.get('/', async (c) => {
 })
 
 // POST / — Create product (induk, price optional, defaults 0)
-adminProductRoutes.post(
+  .post(
   '/',
   zValidator('json', ProductCreateSchema),
   async (c) => {
@@ -88,7 +87,7 @@ adminProductRoutes.post(
 )
 
 // PUT /:id — Update product (id is public_id)
-adminProductRoutes.put(
+  .put(
   '/:id',
   zValidator('json', ProductUpdateSchema),
   async (c) => {
@@ -122,7 +121,7 @@ adminProductRoutes.put(
 
 // DELETE /:id — Delete product (id is public_id). Refuses when variants
 // still reference the base (FK would 500) — move or delete variants first.
-adminProductRoutes.delete('/:id', async (c) => {
+  .delete('/:id', async (c) => {
   const publicId = c.req.param('id')
   const [base] = await db.select({ id: products.id }).from(products).where(eq(products.publicId, publicId))
   if (!base) return c.json({ error: 'Product not found' }, 404)
@@ -156,7 +155,7 @@ adminProductRoutes.delete('/:id', async (c) => {
 })
 
 // POST /:id/stock — Bulk import credentials (id is public_id)
-adminProductRoutes.post(
+  .post(
   '/:id/stock',
   zValidator('json', BulkStockSchema),
   async (c) => {
