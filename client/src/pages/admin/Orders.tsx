@@ -8,6 +8,7 @@ import ConfirmDialog, { openConfirm } from '../../components/admin/ConfirmDialog
 import DeliverDialog, { openConfirm as openDialog } from '../../components/admin/DeliverDialog'
 import { printReceipt as printOrderReceipt } from '../../lib/receipt'
 import { Refresh, Plus, Search, NavArrowLeft, NavArrowRight } from 'iconoir-react'
+import TableSkeleton from '../../components/admin/TableSkeleton'
 
 interface AdminOrder {
   id: string
@@ -189,6 +190,9 @@ export default function Orders() {
 
   async function exportCsv() {
     setExportErr(null)
+    if (total > 1000) {
+      setExportErr(`Peringatan: hanya 1000 dari ${total} pesanan diekspor. Gunakan filter untuk menyaring data.`)
+    }
     setExportBusy(true)
     try {
       const query: Record<string, string> = { limit: '1000', offset: '0' }
@@ -240,7 +244,7 @@ export default function Orders() {
     }
   }
 
-  if (loading) return <div className="flex justify-center py-16"><span className="loading loading-spinner loading-lg"></span></div>
+  if (loading) return <TableSkeleton rows={8} cols={9} />
   if (error) return <div className="ad-card-flat p-8 text-center"><div className="text-sm font-semibold text-red-600">Gagal memuat</div><div className="text-xs text-[#6e6e73] mt-1">{error}</div><button onClick={fetchOrders} className="ad-btn ad-btn-dark mt-4">Coba lagi</button></div>
 
   return (

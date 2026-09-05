@@ -4,6 +4,7 @@ import { useAdminQuery } from '../../hooks/useAdminQuery'
 import StatCard from '../../components/admin/StatCard'
 import DataTable from '../../components/admin/DataTable'
 import StatusChip from '../../components/admin/StatusChip'
+import TableSkeleton from '../../components/admin/TableSkeleton'
 import { Refresh, Cube, Archive, ShoppingBag, GraphUp } from 'iconoir-react'
 import { AreaChart, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell, Area } from 'recharts'
 
@@ -45,23 +46,23 @@ export default function Overview() {
   const [range, setRange] = useState<'7d' | '30d' | '90d'>('30d')
   const rangeLabel = range === '7d' ? '7 hari' : range === '90d' ? '90 hari' : '30 hari'
   const { data, loading, error, fetchedAt, refetch: fetchAll } = useAdminQuery(async () => {
-    const [statsRes, analyticsRes, ordersRes, productsRes] = await Promise.all([
+    const [statsRes, analyticsRes, ordersRes, lowStockRes] = await Promise.all([
       authedApiRequest((c) => c.api.v1.admin.stats.$get()),
       authedApiRequest((c) => c.api.v1.admin.analytics.$get({ query: { range } })),
       authedApiRequest((c) => c.api.v1.admin.orders.$get({ query: { limit: '5' } })),
-      authedApiRequest((c) => c.api.v1.admin.products.$get()),
+      authedApiRequest((c) => c.api.v1.admin.stats['low-stock'].$get({ query: { threshold: '5', limit: '5' } })),
     ])
 
     const s = (await statsRes.json()) as Stats
     const a = (await analyticsRes.json()) as unknown as { dailySales: unknown[]; byStatus: unknown[]; byCategory: unknown[]; topProducts: unknown[] }
     const o = (await ordersRes.json()) as { orders: Order[] }
-    const p = (await productsRes.json()) as Product[]
+    const ls = (await lowStockRes.json()) as Product[]
 
     return {
       stats: s,
       analytics: a,
       orders: (Array.isArray(o.orders) ? o.orders : []).slice(0, 5),
-      lowStock: (Array.isArray(p) ? p.filter((x) => x.stockCount < 5) : []).slice(0, 5),
+      lowStock: Array.isArray(ls) ? ls.slice(0, 5) : [],
     }
   }, [range])
   const stats = data?.stats ?? null
@@ -75,7 +76,7 @@ export default function Overview() {
   const topProducts = useMemo(() => analytics?.topProducts ?? [], [analytics])
   const byStatus = useMemo(() => (analytics?.byStatus ?? []) as { status: string; count: number }[], [analytics])
 
-  if (loading) return <div className="flex justify-center py-16"><span className="loading loading-spinner loading-lg"></span></div>
+  if (loading) return <TableSkeleton rows={4} cols={4} />
   if (error) return <div className="ad-card-flat p-8 text-center"><div className="text-sm font-semibold text-red-600">Gagal memuat ringkasan</div><div className="text-xs text-[#6e6e73] mt-1">{error}</div><button onClick={fetchAll} className="ad-btn ad-btn-dark mt-4">Coba lagi</button></div>
 
   const values: Record<string, string> = {

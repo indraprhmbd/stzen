@@ -4,6 +4,7 @@ import { useAdminQuery } from '../../hooks/useAdminQuery'
 import DataTable from '../../components/admin/DataTable'
 import StatusChip from '../../components/admin/StatusChip'
 import { Refresh, Search, NavArrowLeft, NavArrowRight } from 'iconoir-react'
+import TableSkeleton from '../../components/admin/TableSkeleton'
 
 interface Log {
   id: string
@@ -55,7 +56,7 @@ export default function History() {
 
   useEffect(() => { setOffset(0) }, [type, q])
 
-  if (loading) return <div className="flex justify-center py-16"><span className="loading loading-spinner loading-lg"></span></div>
+  if (loading) return <TableSkeleton rows={10} cols={4} />
   if (error) return <div className="ad-card-flat p-8 text-center"><div className="text-sm font-semibold text-red-600">Gagal memuat</div><div className="text-xs text-[#6e6e73] mt-1">{error}</div><button onClick={fetchLogs} className="ad-btn ad-btn-dark mt-4">Coba lagi</button></div>
 
   return (

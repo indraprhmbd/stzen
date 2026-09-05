@@ -2,6 +2,15 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { authedApiRequest } from '../../../lib/api'
 import type { Variant } from '../types'
 
+function useDebounce<T>(value: T, delay: number): T {
+  const [debounced, setDebounced] = useState(value)
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(value), delay)
+    return () => clearTimeout(t)
+  }, [value, delay])
+  return debounced
+}
+
 // ─── VaultManager hook ──────────────────────────────────────────────────────
 // Drives the entire Stok tab: unlock gate, variant picker, paginated
 // credential list with per-row actions. One hook, one component, no split
@@ -31,6 +40,7 @@ export function useVaultManager(variants: Variant[]) {
   const [variantId, setVariantId] = useState('')
   const [page, setPage] = useState(0)
   const [q, setQ] = useState('')
+  const debouncedQ = useDebounce(q, 300)
   const [data, setData] = useState<VaultListResponse | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -80,7 +90,7 @@ export function useVaultManager(variants: Variant[]) {
     setLoading(true); setError(null)
     try {
       const query: { variant: string; page?: number; q?: string } = { variant: variantId, page }
-      if (q) query.q = q
+      if (debouncedQ) query.q = debouncedQ
       const res = await authedApiRequest(
         (c) => c.api.v1.admin.vault.$get({ query }),
         { headers: { 'X-Vault-Token': token } }
@@ -95,7 +105,7 @@ export function useVaultManager(variants: Variant[]) {
     if (!token || !variantId) return
     const id = ++fetchRef.current
     fetchList().then(() => { if (id !== fetchRef.current) return })
-  }, [token, variantId, page, q])
+  }, [token, variantId, page, debouncedQ])
 
   // Re-lock on tab/page visibility hidden (soft: only if token present)
   useEffect(() => {

@@ -32,3 +32,28 @@ export const adminStatsRoutes = new Hono<AdminStatsEnv>()
     return c.json({ totalProducts: 0, totalStock: 0, pendingOrders: 0, revenue: '0' })
   }
 })
+
+  // GET /low-stock — top N products below threshold. Single query, no full product table scan.
+  .get('/low-stock', async (c) => {
+  const threshold = parseInt(c.req.query('threshold') || '5', 10)
+  const limit = Math.min(parseInt(c.req.query('limit') || '10', 10), 50)
+
+  try {
+    const rows = await db.execute(sql`
+      select p.public_id as id, p.name, p.category,
+             coalesce(sum(case when v.status = 'AVAILABLE' then 1 else 0 end), 0)::int as stock_count
+      from products p
+      left join vault_items v on v.product_id = p.id
+      group by p.public_id, p.name, p.category
+      having coalesce(sum(case when v.status = 'AVAILABLE' then 1 else 0 end), 0) < ${threshold}
+      order by stock_count asc
+      limit ${limit}
+    `) as unknown as any[]
+
+    const data = Array.isArray(rows) ? rows : (rows as any).rows ?? []
+    return c.json(data)
+  } catch (e) {
+    console.error('low-stock query failed', e)
+    return c.json([])
+  }
+})

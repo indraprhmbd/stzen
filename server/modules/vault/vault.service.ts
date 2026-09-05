@@ -123,21 +123,20 @@ export const vaultService = {
       }))
     )
 
-    const [{ count }] = await db
-      .select({ count: sql<number>`cast(count(*) as int)` })
-      .from(vaultItems)
-      .where(eq(vaultItems.variantId, variant.id))
+    // Single query replaces the redundant count + byStatus pair
     const byStatus = await db
       .select({ status: vaultItems.status, count: sql<number>`cast(count(*) as int)` })
       .from(vaultItems)
       .where(eq(vaultItems.variantId, variant.id))
       .groupBy(vaultItems.status)
 
+    const total = byStatus.reduce((sum, r) => sum + r.count, 0)
+
     return {
       items,
       page,
       hasMore,
-      total: count,
+      total,
       counts: Object.fromEntries(byStatus.map((s) => [s.status, s.count])),
     }
   },

@@ -40,20 +40,18 @@ export const adminProductRoutes = new Hono<AdminProductEnv>()
     .where(eq(vaultItems.status, 'AVAILABLE'))
     .groupBy(vaultItems.productId)
 
-  // allProducts already has id = publicId, but we need internal id for stock mapping
-  // Fetch internal mapping
-  const internalRows = await db.select({ id: products.id, publicId: products.publicId }).from(products)
-  const internalMap = new Map(internalRows.map((r) => [r.id, r.publicId]))
-  const publicToInternal = new Map(internalRows.map((r) => [r.publicId, r.id]))
+  // allProducts now includes internalId, use it directly for stock mapping
+  const internalIdToPublic = new Map(allProducts.map((p: any) => [p.internalId, p.id]))
   const countByPublic = new Map<string, number>()
   for (const sc of stockCounts) {
     if (!sc.productId) continue
-    const pub = internalMap.get(sc.productId)
+    const pub = internalIdToPublic.get(sc.productId)
     if (pub) countByPublic.set(pub, sc.count)
   }
 
   const productsWithStock = allProducts.map((p: any) => ({
     ...p,
+    internalId: undefined,
     stockCount: countByPublic.get(p.id) ?? 0,
   }))
 

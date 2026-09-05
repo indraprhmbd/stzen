@@ -16,6 +16,20 @@ import {
 // ─── Orders Service ─────────────────────────────────────────────────────────
 // Business logic for order management. Centralized state machine.
 
+// 30s cache for statusCounts — runs full GROUP BY on orders table.
+// Stale window acceptable for badge counts; saves 1 full scan per
+// paginated request when multiple tabs load simultaneously.
+let statusCountsCache: { data: any[]; ts: number } | null = null
+async function getStatusCounts(): Promise<any[]> {
+  if (statusCountsCache && Date.now() - statusCountsCache.ts < 30_000) return statusCountsCache.data
+  const rows = await db
+    .select({ status: orders.status, count: sql<number>`cast(count(*) as int)` })
+    .from(orders)
+    .groupBy(orders.status)
+  statusCountsCache = { data: rows, ts: Date.now() }
+  return rows
+}
+
 export const ordersService = {
   async listByUser(userId: string): Promise<OrderWithProduct[]> {
     const rows = await db
@@ -260,41 +274,40 @@ export const ordersService = {
     }
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined
 
-    const rows = await db
-      .select({
-        id: orders.publicId,
-        userId: orders.userId,
-        productId: orders.productId,
-        variantId: orders.variantId,
-        status: orders.status,
-        amount: orders.amount,
-        paymentRef: orders.paymentRef,
-        paymentProvider: orders.paymentProvider,
-        fulfillmentType: productVariants.fulfillmentType,
-        createdAt: orders.createdAt,
-        paidAt: orders.paidAt,
-        productName: products.name,
-        variantNameSnapshot: orders.variantNameSnapshot,
-        baseNameSnapshot: orders.baseNameSnapshot,
-      })
-      .from(orders)
-      .leftJoin(products, eq(orders.productId, products.id))
-      .leftJoin(productVariants, eq(orders.variantId, productVariants.id))
-      .where(whereClause)
-      .orderBy(oldest ? sql`${orders.createdAt} asc` : desc(orders.createdAt))
-      .limit(limit)
-      .offset(offset)
+    // Parallelize data + count + statusCounts (3 independent queries)
+    const [rows, [{ count: total }], statusCounts] = await Promise.all([
+      db
+        .select({
+          id: orders.publicId,
+          userId: orders.userId,
+          productId: orders.productId,
+          variantId: orders.variantId,
+          status: orders.status,
+          amount: orders.amount,
+          paymentRef: orders.paymentRef,
+          paymentProvider: orders.paymentProvider,
+          fulfillmentType: productVariants.fulfillmentType,
+          createdAt: orders.createdAt,
+          paidAt: orders.paidAt,
+          productName: products.name,
+          variantNameSnapshot: orders.variantNameSnapshot,
+          baseNameSnapshot: orders.baseNameSnapshot,
+        })
+        .from(orders)
+        .leftJoin(products, eq(orders.productId, products.id))
+        .leftJoin(productVariants, eq(orders.variantId, productVariants.id))
+        .where(whereClause)
+        .orderBy(oldest ? sql`${orders.createdAt} asc` : desc(orders.createdAt))
+        .limit(limit)
+        .offset(offset),
+      db
+        .select({ count: sql<number>`cast(count(*) as int)` })
+        .from(orders)
+        .leftJoin(products, eq(orders.productId, products.id))
+        .where(whereClause),
+      getStatusCounts(),
+    ] as any[])
 
-    const [{ count: total }] = await db
-      .select({ count: sql<number>`cast(count(*) as int)` })
-      .from(orders)
-      .leftJoin(products, eq(orders.productId, products.id))
-      .where(whereClause)
-
-    const statusCounts = await db
-      .select({ status: orders.status, count: sql<number>`cast(count(*) as int)` })
-      .from(orders)
-      .groupBy(orders.status)
     const counts: Record<string, number> = { ALL: total }
     for (const r of statusCounts) counts[r.status] = r.count
 

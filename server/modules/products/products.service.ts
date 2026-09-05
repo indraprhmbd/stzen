@@ -209,8 +209,8 @@ export const productsService = {
   async listAll() {
     const rows = await db.select().from(products).orderBy(products.createdAt)
     return rows.map((r: any) => {
-      const { publicId, ...rest } = r
-      return { ...rest, id: publicId }
+      const { publicId, id: internalId, ...rest } = r
+      return { ...rest, id: publicId, internalId }
     })
   },
 

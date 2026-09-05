@@ -67,7 +67,7 @@ export default function VariantGroups({ groups, filteredCount, collapsedGroups, 
           const collapsed = collapsedGroups[g.key] ?? true
           return (
           <Fragment key={g.key}>
-            <tr onClick={() => setCollapsedGroups((s) => ({ ...s, [g.key]: !collapsed }))} className="cursor-pointer" style={{ background: '#f5f5f7' }}>
+            <tr onClick={() => setCollapsedGroups((s) => ({ ...s, [g.key]: !collapsed }))} className="cursor-pointer bg-white">
               <td colSpan={5}>
                 <span className="inline-flex items-center gap-2">
                   <NavArrowDown width={15} height={15} strokeWidth={1.5} className={`text-[#6e6e73] transition-transform ${collapsed ? '-rotate-90' : ''}`} />
@@ -80,7 +80,7 @@ export default function VariantGroups({ groups, filteredCount, collapsedGroups, 
             </tr>
             {!collapsed && g.items.map((v) => renderVariantRow(v))}
             {!collapsed && (
-              <tr style={{ background: '#fafafa' }}>
+              <tr className="bg-white">
                 <td colSpan={6} className="text-center">
                   <button
                     onClick={() => setCollapsedGroups((s) => ({ ...s, [g.key]: true }))}
