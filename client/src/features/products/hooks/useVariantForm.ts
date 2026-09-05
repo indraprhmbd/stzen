@@ -48,7 +48,7 @@ export function useVariantForm(products: Product[], fetchAll: () => void, showTo
     if (!vDescriptionBlank) setVDescription((prev) => (prev.trim() === '' ? (base?.description ?? '') : prev))
   }
 
-  async function handleVariantSubmit(e: React.FormEvent) {
+  async function handleVariantSubmit(e: React.FormEvent, onCreateSuccess?: (id: string) => void) {
     e.preventDefault()
     // Link-preserving save: text identical to the induk stays null (live
     // fallback, no stale copies); explicit blank stays '' (hidden in
@@ -74,11 +74,17 @@ export function useVariantForm(products: Product[], fetchAll: () => void, showTo
       if (editingVariantId) {
         await authedApiRequest((c) => c.api.v1.admin.variants[':id'].$put({ param: { id: editingVariantId }, json: payload }))
         showToast('Varian diperbarui', 'success')
+        ;(document.getElementById('variant_modal') as HTMLDialogElement)?.close()
       } else {
-        await authedApiRequest((c) => c.api.v1.admin.variants.$post({ json: payload }))
+        const res = await authedApiRequest((c) => c.api.v1.admin.variants.$post({ json: payload }))
+        const created = await res.json() as { id: string }
         showToast('Varian dibuat', 'success')
+        if (onCreateSuccess) {
+          onCreateSuccess(created.id)
+        } else {
+          ;(document.getElementById('variant_modal') as HTMLDialogElement)?.close()
+        }
       }
-      ;(document.getElementById('variant_modal') as HTMLDialogElement)?.close()
       fetchAll()
     } catch { showToast('Gagal menyimpan varian', 'error') }
   }

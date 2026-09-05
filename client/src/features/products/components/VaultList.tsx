@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import SearchableSelect from '../../../components/admin/SearchableSelect'
 import DataTable from '../../../components/admin/DataTable'
 import StatusChip from '../../../components/admin/StatusChip'
@@ -8,9 +8,9 @@ import { authedApiRequest } from '../../../lib/api'
 import type { Variant } from '../types'
 import { Lock, LockSlash, Refresh, Copy, EditPencil, Trash, Prohibition, Redo, Search, NavArrowLeft, NavArrowRight, Plus } from 'iconoir-react'
 
-interface Props { variants: Variant[]; fetchedAt: number | null }
+interface Props { variants: Variant[]; fetchedAt: number | null; initialVariantId?: string | null; onVariantSelected?: () => void }
 
-export default function VaultList({ variants, fetchedAt }: Props) {
+export default function VaultList({ variants, fetchedAt, initialVariantId, onVariantSelected }: Props) {
   const v = useVaultManager(variants)
   const [editing, setEditing] = useState<{ id: string; text: string } | null>(null)
   const [pendingDelete, setPendingDelete] = useState<{ id: string } | null>(null)
@@ -19,6 +19,15 @@ export default function VaultList({ variants, fetchedAt }: Props) {
   const [showImport, setShowImport] = useState(false)
   const [importText, setImportText] = useState('')
   const [importLoading, setImportLoading] = useState(false)
+
+  // Pre-select variant when navigating from create dialog
+  useEffect(() => {
+    if (initialVariantId) {
+      v.setVariantId(initialVariantId)
+      setShowImport(true)
+      onVariantSelected?.()
+    }
+  }, [initialVariantId])
 
   const importParsed = useMemo(() => {
     const lines: string[] = []

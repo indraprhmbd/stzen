@@ -35,6 +35,7 @@ export default function ProductsPage() {
   const tabs = [['basis', 'Produk'], ['varian', 'Varian'], ['stok', 'Stok']] as const
   const [pendingDelete, setPendingDelete] = useState<{ kind: 'product' | 'variant'; id: string; name: string } | null>(null)
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({})
+  const [importVariantId, setImportVariantId] = useState<string | null>(null)
 
   const filteredVariants = useMemo(() => {
     return variants.filter((v) => {
@@ -156,7 +157,7 @@ export default function ProductsPage() {
 
       {tab === 'stok' && (
       <div role="tabpanel" id="panel-stok" aria-labelledby="tab-stok" className="flex flex-col gap-6">
-        <VaultList variants={variants} fetchedAt={fetchedAt} />
+        <VaultList variants={variants} fetchedAt={fetchedAt} initialVariantId={importVariantId} onVariantSelected={() => setImportVariantId(null)} />
       </div>
       )}
 
@@ -171,6 +172,7 @@ export default function ProductsPage() {
         products={products}
         form={variantForm}
         onSubmit={variantForm.handleVariantSubmit}
+        onImportNow={(variantId) => { setImportVariantId(variantId); setTab('stok') }}
       />
 
       <ConfirmDialog
