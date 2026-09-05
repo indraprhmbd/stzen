@@ -8,10 +8,11 @@ const unitLabel: Record<string, string> = { day: 'Hari', week: 'Minggu', month: 
 interface Props {
   products: Product[]
   form: ReturnType<typeof useVariantForm>
+  onSubmit: (e: React.FormEvent) => void
   onImportNow?: (variantId: string) => void
 }
 
-export default function VariantDialog({ products, form: v, onImportNow }: Props) {
+export default function VariantDialog({ products, form: v, onSubmit, onImportNow }: Props) {
   const [createdVariantId, setCreatedVariantId] = useState<string | null>(null)
   const base = products.find((p) => p.id === v.vProductId)
   const baseOverview = base?.overview ?? ''
@@ -27,7 +28,7 @@ export default function VariantDialog({ products, form: v, onImportNow }: Props)
   const clearBtn = 'inline-flex items-center gap-1 text-[11px] font-semibold text-[#6e6e73] hover:text-[#1d1d1f]'
   function handleClose() {
     setCreatedVariantId(null)
-    v.setVariantModalOpen(false)
+    ;(document.getElementById('variant_modal') as HTMLDialogElement)?.close()
   }
 
   function handleSubmit(e: React.FormEvent) {
@@ -42,7 +43,7 @@ export default function VariantDialog({ products, form: v, onImportNow }: Props)
   }
 
   return (
-    <dialog id="variant_modal" className="modal" open={v.variantModalOpen}>
+    <dialog id="variant_modal" className="modal">
       <div className="modal-box ad-dialog max-w-xl max-h-[90vh] overflow-y-auto p-6">
         {createdVariantId ? (
           /* Post-create import prompt */
@@ -118,7 +119,7 @@ export default function VariantDialog({ products, form: v, onImportNow }: Props)
           </>
         )}
       </div>
-      {/* backdrop click handled by modal class */}
+      <form method="dialog" className="modal-backdrop"><button>close</button></form>
     </dialog>
   )
 }

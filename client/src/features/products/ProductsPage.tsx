@@ -171,6 +171,7 @@ export default function ProductsPage() {
       <VariantDialog
         products={products}
         form={variantForm}
+        onSubmit={variantForm.handleVariantSubmit}
         onImportNow={(variantId) => { setImportVariantId(variantId); setTab('stok') }}
       />
 
