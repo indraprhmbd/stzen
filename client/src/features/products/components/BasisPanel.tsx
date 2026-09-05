@@ -16,7 +16,7 @@ interface Props {
 
 export default function BasisPanel({ products, variants, onCreate, onEdit, onDelete, loading }: Props) {
   const priceMap = useMemo(() => {
-    const map = new Map<string, { min: number; max: number; avg: number; count: number }>()
+    const map = new Map<string, { min: number; max: number; avg: number; median: number; mode: number; count: number }>()
     for (const v of variants) {
       if (!v.productId) continue
       const price = Number(v.price)
@@ -27,10 +27,22 @@ export default function BasisPanel({ products, variants, onCreate, onEdit, onDel
         existing.count++
         existing.avg += price
       } else {
-        map.set(v.productId, { min: price, max: price, avg: price, count: 1 })
+        map.set(v.productId, { min: price, max: price, avg: price, median: price, mode: price, count: 1 })
       }
     }
-    for (const [, v] of map) v.avg = Math.round(v.avg / v.count)
+    // Compute median + mode per product
+    for (const [pid, s] of map) {
+      s.avg = Math.round(s.avg / s.count)
+      const prices = variants.filter((v) => v.productId === pid).map((v) => Number(v.price)).sort((a, b) => a - b)
+      const mid = Math.floor(prices.length / 2)
+      s.median = prices.length % 2 ? prices[mid] : Math.round((prices[mid - 1] + prices[mid]) / 2)
+      // Mode: most frequent, fallback to first if tie
+      const freq = new Map<number, number>()
+      for (const p of prices) freq.set(p, (freq.get(p) ?? 0) + 1)
+      let maxFreq = 0
+      for (const [, f] of freq) { if (f > maxFreq) maxFreq = f }
+      s.mode = prices.find((p) => freq.get(p) === maxFreq) ?? prices[0]
+    }
     return map
   }, [variants])
 
@@ -49,17 +61,19 @@ export default function BasisPanel({ products, variants, onCreate, onEdit, onDel
     </div>
     <div className="ad-card">
       <DataTable
-        columns={[{ label: 'INDUK' }, { label: 'KATEGORI' }, { label: 'AVG HARGA' }, { label: 'RENTANG' }, { label: 'STATUS' }, { label: 'AKSI', className: 'text-right' }]}
+        columns={[{ label: 'INDUK' }, { label: 'KATEGORI' }, { label: 'AVG' }, { label: 'MEDIAN' }, { label: 'MODUS' }, { label: 'RENTANG' }, { label: 'STATUS' }, { label: 'AKSI', className: 'text-right' }]}
         empty={!loading && products.length === 0}
         emptyText="Belum ada induk."
       >
-        {loading ? <SkeletonRows rows={5} cols={6} /> : products.map((p) => {
+        {loading ? <SkeletonRows rows={5} cols={8} /> : products.map((p) => {
           const stats = priceMap.get(p.id)
           return (
           <tr key={p.id}>
             <td className="text-[13px] font-medium">{p.name}</td>
             <td className="text-xs text-[#6e6e73]">{p.category}</td>
             <td className="text-[13px] ad-num font-semibold">{stats ? `Rp ${stats.avg.toLocaleString('id-ID')}` : '-'}</td>
+            <td className="text-[13px] ad-num text-[#6e6e73]">{stats ? `Rp ${stats.median.toLocaleString('id-ID')}` : '-'}</td>
+            <td className="text-[13px] ad-num text-[#6e6e73]">{stats ? `Rp ${stats.mode.toLocaleString('id-ID')}` : '-'}</td>
             <td className="text-xs ad-num text-[#6e6e73]">{stats && stats.min !== stats.max ? `Rp ${stats.min.toLocaleString('id-ID')} - ${stats.max.toLocaleString('id-ID')}` : stats ? `Rp ${stats.min.toLocaleString('id-ID')}` : '-'}</td>
             <td><StatusChip tone={p.isActive ? 'green' : 'zinc'}>{p.isActive ? 'AKTIF' : 'NONAKTIF'}</StatusChip></td>
             <td className="text-right"><div className="flex justify-end gap-1.5"><button onClick={() => onEdit(p)} className="ad-btn">Edit</button><button onClick={() => onDelete(p)} className="ad-btn ad-btn-danger">Hapus</button></div></td>
