@@ -23,6 +23,7 @@ export function useVariantForm(products: Product[], fetchAll: () => void, showTo
   // in the catalog. Without it, empty input means inherit (null).
   const [vOverviewBlank, setVOverviewBlank] = useState(false)
   const [vDescriptionBlank, setVDescriptionBlank] = useState(false)
+  const [variantModalOpen, setVariantModalOpen] = useState(false)
 
   function openCreateVariant(presetProductId?: string) {
     const baseId = presetProductId ?? products[0]?.id ?? ''
@@ -30,14 +31,14 @@ export function useVariantForm(products: Product[], fetchAll: () => void, showTo
     setEditingVariantId(null); setEditingVariantSku(null); setVProductId(baseId); setVPrice(''); setVCompareAt(''); setVDuration(''); setVDurationUnit('month'); setVAccountType(''); setVConditions(''); setVBadge(''); setVFulfillmentType('vault'); setVIsActive(true)
     setVOverview(base?.overview ?? ''); setVDescription(base?.description ?? '')
     setVOverviewBlank(false); setVDescriptionBlank(false)
-    ;(document.getElementById('variant_modal') as HTMLDialogElement)?.showModal()
+    setVariantModalOpen(true)
   }
   function openEditVariant(v: Variant) {
     setEditingVariantId(v.id); setEditingVariantSku(v.sku); setVProductId(v.productId ?? ''); setVPrice(String(v.price)); setVCompareAt(v.compareAtPrice ? String(v.compareAtPrice) : ''); setVDuration(v.durationMonths ? String(v.durationMonths) : ''); setVDurationUnit((v.durationUnit as 'day' | 'week' | 'month') ?? 'month'); setVAccountType(v.accountType ?? ''); setVConditions(v.conditions ?? ''); setVBadge(v.badge ?? ''); setVFulfillmentType(v.fulfillmentType === 'on_demand' ? 'on_demand' : 'vault'); setVIsActive(v.isActive)
     const base = products.find((p) => p.id === (v.productId ?? ''))
     setVOverview(v.overview ?? base?.overview ?? ''); setVDescription(v.description ?? base?.description ?? '')
     setVOverviewBlank(v.overview === ''); setVDescriptionBlank(v.description === '')
-    ;(document.getElementById('variant_modal') as HTMLDialogElement)?.showModal()
+    setVariantModalOpen(true)
   }
   // Switching induk refills content fields only when the user hasn't typed
   // their own and hasn't explicitly blanked them.
@@ -74,7 +75,7 @@ export function useVariantForm(products: Product[], fetchAll: () => void, showTo
       if (editingVariantId) {
         await authedApiRequest((c) => c.api.v1.admin.variants[':id'].$put({ param: { id: editingVariantId }, json: payload }))
         showToast('Varian diperbarui', 'success')
-        ;(document.getElementById('variant_modal') as HTMLDialogElement)?.close()
+        setVariantModalOpen(false)
       } else {
         const res = await authedApiRequest((c) => c.api.v1.admin.variants.$post({ json: payload }))
         const created = await res.json() as { id: string }
@@ -82,7 +83,7 @@ export function useVariantForm(products: Product[], fetchAll: () => void, showTo
         if (onCreateSuccess) {
           onCreateSuccess(created.id)
         } else {
-          ;(document.getElementById('variant_modal') as HTMLDialogElement)?.close()
+          setVariantModalOpen(false)
         }
       }
       fetchAll()
@@ -92,10 +93,10 @@ export function useVariantForm(products: Product[], fetchAll: () => void, showTo
   return {
     vProductId, vPrice, vCompareAt, vDuration, vDurationUnit, vAccountType, vConditions, vBadge,
     editingVariantId, editingVariantSku, vFulfillmentType, vIsActive, vOverview, vDescription,
-    vOverviewBlank, vDescriptionBlank,
+    vOverviewBlank, vDescriptionBlank, variantModalOpen,
     setVProductId, setVPrice, setVCompareAt, setVDuration, setVDurationUnit, setVAccountType, setVConditions, setVBadge,
     setVFulfillmentType, setVIsActive, setVOverview, setVDescription,
-    setVOverviewBlank, setVDescriptionBlank,
+    setVOverviewBlank, setVDescriptionBlank, setVariantModalOpen,
     openCreateVariant, openEditVariant, handleVariantBaseChange, handleVariantSubmit,
   }
 }

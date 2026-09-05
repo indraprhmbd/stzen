@@ -28,7 +28,7 @@ export default function VariantDialog({ products, form: v, onSubmit, onImportNow
   const clearBtn = 'inline-flex items-center gap-1 text-[11px] font-semibold text-[#6e6e73] hover:text-[#1d1d1f]'
   function handleClose() {
     setCreatedVariantId(null)
-    ;(document.getElementById('variant_modal') as HTMLDialogElement)?.close()
+    v.setVariantModalOpen(false)
   }
 
   function handleSubmit(e: React.FormEvent) {
@@ -43,7 +43,7 @@ export default function VariantDialog({ products, form: v, onSubmit, onImportNow
   }
 
   return (
-    <dialog id="variant_modal" className="modal">
+    <dialog id="variant_modal" className="modal" open={v.variantModalOpen}>
       <div className="modal-box ad-dialog max-w-xl max-h-[90vh] overflow-y-auto p-6">
         {createdVariantId ? (
           /* Post-create import prompt */
@@ -119,7 +119,7 @@ export default function VariantDialog({ products, form: v, onSubmit, onImportNow
           </>
         )}
       </div>
-      <form method="dialog" className="modal-backdrop"><button>close</button></form>
+      {/* backdrop click handled by modal class */}
     </dialog>
   )
 }
