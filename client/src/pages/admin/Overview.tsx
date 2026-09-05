@@ -4,7 +4,7 @@ import { useAdminQuery } from '../../hooks/useAdminQuery'
 import StatCard from '../../components/admin/StatCard'
 import DataTable from '../../components/admin/DataTable'
 import StatusChip from '../../components/admin/StatusChip'
-import TableSkeleton from '../../components/admin/TableSkeleton'
+import { SkeletonRows, SkeletonCards } from '../../components/admin/TableSkeleton'
 import { Refresh, Cube, Archive, ShoppingBag, GraphUp } from 'iconoir-react'
 import { AreaChart, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell, Area } from 'recharts'
 
@@ -76,7 +76,6 @@ export default function Overview() {
   const topProducts = useMemo(() => analytics?.topProducts ?? [], [analytics])
   const byStatus = useMemo(() => (analytics?.byStatus ?? []) as { status: string; count: number }[], [analytics])
 
-  if (loading) return <TableSkeleton rows={4} cols={4} />
   if (error) return <div className="ad-card-flat p-8 text-center"><div className="text-sm font-semibold text-red-600">Gagal memuat ringkasan</div><div className="text-xs text-[#6e6e73] mt-1">{error}</div><button onClick={fetchAll} className="ad-btn ad-btn-dark mt-4">Coba lagi</button></div>
 
   const values: Record<string, string> = {
@@ -106,11 +105,13 @@ export default function Overview() {
         </div>
       </div>
 
+      {loading ? <SkeletonCards count={4} /> : (
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {statDefs.map((c) => (
           <StatCard key={c.key} value={values[c.key]} label={c.label} sub={c.sub} icon={c.icon} />
         ))}
       </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         <div className="ad-card">
@@ -219,7 +220,11 @@ export default function Overview() {
             <div className="ad-card-title">Pesanan Terbaru</div>
             <span className="ad-card-hint ad-num">{orders.length} entri</span>
           </div>
-          {orders.length === 0 ? (
+          {loading ? (
+            <DataTable columns={[{ label: 'PRODUK' }, { label: 'JUMLAH' }, { label: 'STATUS' }]} empty={false}>
+              <SkeletonRows rows={3} cols={3} />
+            </DataTable>
+          ) : orders.length === 0 ? (
             <div className="p-8 text-center">
               <div className="text-sm font-medium">Belum ada pesanan</div>
               <div className="text-xs text-[#6e6e73] mt-1">Transaksi terbaru akan tercatat di sini.</div>
@@ -242,7 +247,11 @@ export default function Overview() {
             <div className="ad-card-title">Stok Menipis</div>
             <span className="ad-card-hint ad-num">ambang &lt; 5</span>
           </div>
-          {lowStock.length === 0 ? (
+          {loading ? (
+            <DataTable columns={[{ label: 'PRODUK' }, { label: 'SISA' }]} empty={false}>
+              <SkeletonRows rows={3} cols={2} />
+            </DataTable>
+          ) : lowStock.length === 0 ? (
             <div className="p-8 text-center">
               <div className="text-sm font-medium">Stok aman</div>
               <div className="text-xs text-[#6e6e73] mt-1">Tidak ada produk di bawah ambang.</div>

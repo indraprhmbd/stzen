@@ -8,7 +8,7 @@ import ConfirmDialog, { openConfirm } from '../../components/admin/ConfirmDialog
 import DeliverDialog, { openConfirm as openDialog } from '../../components/admin/DeliverDialog'
 import { printReceipt as printOrderReceipt } from '../../lib/receipt'
 import { Refresh, Plus, Search, NavArrowLeft, NavArrowRight } from 'iconoir-react'
-import TableSkeleton from '../../components/admin/TableSkeleton'
+import { SkeletonRows } from '../../components/admin/TableSkeleton'
 
 interface AdminOrder {
   id: string
@@ -244,7 +244,6 @@ export default function Orders() {
     }
   }
 
-  if (loading) return <TableSkeleton rows={8} cols={9} />
   if (error) return <div className="ad-card-flat p-8 text-center"><div className="text-sm font-semibold text-red-600">Gagal memuat</div><div className="text-xs text-[#6e6e73] mt-1">{error}</div><button onClick={fetchOrders} className="ad-btn ad-btn-dark mt-4">Coba lagi</button></div>
 
   return (
@@ -295,10 +294,10 @@ export default function Orders() {
             { label: 'STATUS' },
             { label: 'AKSI', className: 'text-right' },
           ]}
-          empty={orders.length === 0}
+          empty={!loading && orders.length === 0}
           emptyText={tab === 'butuh-tindakan' ? 'Antrian kosong: tidak ada pesanan menunggu tindakan.' : 'Belum ada pesanan di tab ini.'}
         >
-          {orders.map((o) => {
+          {loading ? <SkeletonRows rows={8} cols={9} /> : orders.map((o) => {
             const stockout = o.fulfillmentType !== 'on_demand' && o.vaultAvailable === 0
             const overdue = (o.status === 'PENDING' || o.status === 'PAID') && Date.now() - new Date(o.createdAt).getTime() > 24 * 3600 * 1000
             return (

@@ -1,29 +1,37 @@
-// Animated skeleton rows for DataTable loading state. Matches admin soft
-// theme: white card, hairline borders, gray pulse bars.
+// Skeleton rows for inline table loading. Renders <tr> elements only,
+// use inside existing <tbody>. No wrapper table needed.
 
-export default function TableSkeleton({ rows = 5, cols = 4 }: { rows?: number; cols?: number }) {
+export function SkeletonRows({ rows = 5, cols = 4 }: { rows?: number; cols?: number }) {
   return (
-    <div className="ad-card overflow-hidden">
-      <table className="ad-table table table-sm w-full">
-        <thead>
-          <tr>
-            {Array.from({ length: cols }).map((_, i) => (
-              <th key={i}><div className="h-2.5 bg-[#f1f1f4] rounded-full w-16 animate-pulse" /></th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {Array.from({ length: rows }).map((_, r) => (
-            <tr key={r}>
-              {Array.from({ length: cols }).map((_, c) => (
-                <td key={c}>
-                  <div className={`h-3 bg-[#f1f1f4] rounded-full animate-pulse ${c === 0 ? 'w-24' : c === cols - 1 ? 'w-10 ml-auto' : 'w-20'}`} style={{ animationDelay: `${r * 50}ms` }} />
-                </td>
-              ))}
-            </tr>
+    <>
+      {Array.from({ length: rows }).map((_, r) => (
+        <tr key={r} className="pointer-events-none">
+          {Array.from({ length: cols }).map((_, c) => (
+            <td key={c} className="py-3">
+              <div
+                className={`h-3 bg-[#f1f1f4] rounded-full animate-pulse ${c === 0 ? 'w-24' : c === cols - 1 ? 'w-10' : 'w-16'}`}
+                style={{ animationDelay: `${r * 40}ms` }}
+              />
+            </td>
           ))}
-        </tbody>
-      </table>
+        </tr>
+      ))}
+    </>
+  )
+}
+
+// Standalone skeleton for stat cards or non-table sections
+export function SkeletonCards({ count = 4 }: { count?: number }) {
+  return (
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      {Array.from({ length: count }).map((_, i) => (
+        <div key={i} className="ad-card-flat p-4 animate-pulse" style={{ animationDelay: `${i * 60}ms` }}>
+          <div className="h-7 bg-[#f1f1f4] rounded-full w-20 mb-2" />
+          <div className="h-2.5 bg-[#f1f1f4] rounded-full w-24" />
+        </div>
+      ))}
     </div>
   )
 }
+
+export default SkeletonRows
