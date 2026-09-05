@@ -1,6 +1,7 @@
 import { Fragment } from 'react'
 import DataTable from '../../../components/admin/DataTable'
 import StatusChip, { type ChipTone } from '../../../components/admin/StatusChip'
+import { SkeletonRows } from '../../../components/admin/TableSkeleton'
 import { NavArrowDown, Plus } from 'iconoir-react'
 import type { Variant, VariantGroup } from '../types'
 
@@ -19,9 +20,10 @@ interface Props {
   onCreateVariant: (productId?: string) => void
   onEditVariant: (v: Variant) => void
   onDeleteVariant: (v: Variant) => void
+  loading?: boolean
 }
 
-export default function VariantGroups({ groups, filteredCount, collapsedGroups, setCollapsedGroups, onCreateVariant, onEditVariant, onDeleteVariant }: Props) {
+export default function VariantGroups({ groups, filteredCount, collapsedGroups, setCollapsedGroups, onCreateVariant, onEditVariant, onDeleteVariant, loading }: Props) {
   function renderVariantRow(v: Variant) {
     return (
       <tr key={v.id}>
@@ -60,10 +62,10 @@ export default function VariantGroups({ groups, filteredCount, collapsedGroups, 
           { label: 'STATUS' },
           { label: 'AKSI', className: 'text-right' },
         ]}
-        empty={filteredCount === 0}
+        empty={!loading && filteredCount === 0}
         emptyText="Belum ada varian."
       >
-        {groups.map((g) => {
+        {loading ? <SkeletonRows rows={5} cols={6} /> : groups.map((g) => {
           const collapsed = collapsedGroups[g.key] ?? true
           return (
           <Fragment key={g.key}>
