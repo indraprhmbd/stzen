@@ -48,20 +48,21 @@ export default function BasisPanel({ products, variants, onCreate, onEdit, onDel
   }, [variants])
 
   const variantStats = useMemo(() => {
-    const map = new Map<string, { total: number; stock: number; types: Set<string>; durations: Set<string> }>()
+    const map = new Map<string, { vaultCount: number; stock: number; durations: Set<string> }>()
     for (const v of variants) {
       if (!v.productId) continue
       const existing = map.get(v.productId)
       if (existing) {
-        existing.total++
-        existing.stock += v.fulfillmentType !== 'on_demand' ? (v.stockCount ?? 0) : 0
-        existing.types.add(v.fulfillmentType)
+        if (v.fulfillmentType !== 'on_demand') {
+          existing.vaultCount++
+          existing.stock += v.stockCount ?? 0
+        }
         if (v.durationMonths) existing.durations.add(`${v.durationMonths} ${v.durationUnit === 'day' ? 'Hari' : v.durationUnit === 'week' ? 'Minggu' : 'Bulan'}`)
       } else {
+        const isVault = v.fulfillmentType !== 'on_demand'
         map.set(v.productId, {
-          total: 1,
-          stock: v.fulfillmentType !== 'on_demand' ? (v.stockCount ?? 0) : 0,
-          types: new Set([v.fulfillmentType]),
+          vaultCount: isVault ? 1 : 0,
+          stock: isVault ? (v.stockCount ?? 0) : 0,
           durations: new Set(v.durationMonths ? [`${v.durationMonths} ${v.durationUnit === 'day' ? 'Hari' : v.durationUnit === 'week' ? 'Minggu' : 'Bulan'}`] : []),
         })
       }
@@ -84,24 +85,20 @@ export default function BasisPanel({ products, variants, onCreate, onEdit, onDel
     </div>
     <div className="ad-card">
       <DataTable
-        columns={[{ label: 'INDUK' }, { label: 'KATEGORI' }, { label: 'VARIAN' }, { label: 'STOK' }, { label: 'TIPE' }, { label: 'DURASI' }, { label: 'AVG' }, { label: 'MEDIAN' }, { label: 'MODUS' }, { label: 'RENTANG' }, { label: 'STATUS' }, { label: 'AKSI', className: 'text-right' }]}
+        columns={[{ label: 'INDUK' }, { label: 'KATEGORI' }, { label: 'STOK' }, { label: 'DURASI' }, { label: 'AVG' }, { label: 'MEDIAN' }, { label: 'MODUS' }, { label: 'RENTANG' }, { label: 'STATUS' }, { label: 'AKSI', className: 'text-right' }]}
         empty={!loading && products.length === 0}
         emptyText="Belum ada induk."
       >
-        {loading ? <SkeletonRows rows={5} cols={12} /> : products.map((p) => {
+        {loading ? <SkeletonRows rows={5} cols={10} /> : products.map((p) => {
           const stats = priceMap.get(p.id)
           const vs = variantStats.get(p.id)
-          const types = vs?.types ?? new Set()
-          const typeLabel = types.size > 1 ? 'Mixed' : types.has('on_demand') ? 'On Demand' : 'Vault'
           const durArr = vs?.durations ?? new Set()
           const durLabel = durArr.size === 0 ? '-' : durArr.size === 1 ? [...durArr][0] : `${durArr.size} tipe`
           return (
           <tr key={p.id}>
             <td className="text-[13px] font-medium">{p.name}</td>
             <td className="text-xs text-[#6e6e73]">{p.category}</td>
-            <td className="text-[13px] ad-num">{vs?.total ?? 0}</td>
-            <td className="text-[13px] ad-num font-semibold">{vs?.stock ?? 0}</td>
-            <td className="text-xs text-[#6e6e73]">{typeLabel}</td>
+            <td className="text-[13px] ad-num font-semibold">{vs && vs.vaultCount > 0 ? `${vs.stock}/${vs.vaultCount} var` : vs ? '0 var' : '-'}</td>
             <td className="text-xs text-[#6e6e73]">{durLabel}</td>
             <td className="text-[13px] ad-num font-semibold">{stats ? `Rp ${stats.avg.toLocaleString('id-ID')}` : '-'}</td>
             <td className="text-[13px] ad-num text-[#6e6e73]">{stats ? `Rp ${stats.median.toLocaleString('id-ID')}` : '-'}</td>
