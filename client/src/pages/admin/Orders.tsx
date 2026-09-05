@@ -9,6 +9,7 @@ import DeliverDialog, { openConfirm as openDialog } from '../../components/admin
 import { printReceipt as printOrderReceipt } from '../../lib/receipt'
 import { Refresh, Plus, Search, NavArrowLeft, NavArrowRight } from 'iconoir-react'
 import { SkeletonRows } from '../../components/admin/TableSkeleton'
+import { useTableSort } from '../../hooks/useTableSort'
 
 interface AdminOrder {
   id: string
@@ -67,19 +68,23 @@ export default function Orders() {
   const [exportBusy, setExportBusy] = useState(false)
   const [exportErr, setExportErr] = useState<string | null>(null)
 
+  // Server-side sort: URL params drive API query
+  const { sortKey, sortDir, toggleSort } = useTableSort([], { urlKey: 'sort', defaultKey: 'createdAt', defaultDir: 'desc' })
+
   const { data, loading, error, fetchedAt, refetch: fetchOrders } = useAdminQuery(async () => {
     const query: Record<string, string> = { limit: String(limit), offset: String(offset) }
     if (activeTab.statuses) query.status = activeTab.statuses
     if (tab === 'butuh-tindakan') query.oldest = '1'
     if (q) query.q = q
+    if (sortKey) { query.sort = sortKey; query.sortDir = sortDir ?? 'desc' }
     const res = await authedApiRequest((c) => c.api.v1.admin.orders.$get({ query }))
     return (await res.json()) as { orders: AdminOrder[]; total: number; counts: Record<string, number> }
-  }, [tab, q, offset])
+  }, [tab, q, offset, sortKey, sortDir])
   const orders = data?.orders ?? []
   const total = data?.total ?? 0
   const counts = data?.counts ?? { ALL: 0 }
 
-  useEffect(() => { setOffset(0) }, [tab, q])
+  useEffect(() => { setOffset(0) }, [tab, q, sortKey, sortDir])
 
   function switchTab(key: TabKey) {
     setQ('')
@@ -285,16 +290,19 @@ export default function Orders() {
         <DataTable
           columns={[
             { label: 'ID' },
-            { label: 'TANGGAL' },
+            { label: 'TANGGAL', sortKey: 'createdAt' },
             { label: 'UMUR' },
             { label: 'PRODUK' },
             { label: 'ALUR' },
             { label: 'PELANGGAN' },
-            { label: 'JUMLAH' },
-            { label: 'STATUS' },
+            { label: 'JUMLAH', sortKey: 'amount' },
+            { label: 'STATUS', sortKey: 'status' },
             { label: 'AKSI', className: 'text-right' },
           ]}
           empty={!loading && orders.length === 0}
+          sortKey={sortKey}
+          sortDir={sortDir}
+          onSort={toggleSort}
           emptyText={tab === 'butuh-tindakan' ? 'Antrian kosong: tidak ada pesanan menunggu tindakan.' : 'Belum ada pesanan di tab ini.'}
         >
           {loading ? <SkeletonRows rows={8} cols={9} /> : orders.map((o) => {

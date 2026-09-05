@@ -136,9 +136,12 @@ export default function VaultList({ variants, fetchedAt, initialVariantId, onVar
           {v.variantId && !v.error && (
             <div className="ad-card">
               <DataTable
-                columns={[{ label: 'KREDENSIAL' }, { label: 'STATUS' }, { label: 'ORDER' }, { label: 'TANGGAL' }, { label: '', className: 'text-right' }]}
+                columns={[{ label: 'KREDENSIAL' }, { label: 'STATUS', sortKey: 'status' }, { label: 'ORDER' }, { label: 'TANGGAL', sortKey: 'createdAt' }, { label: '', className: 'text-right' }]}
                 empty={items.length === 0}
                 emptyText="Tidak ada kredensial untuk varian ini."
+                sortKey={v.sortKey}
+                sortDir={v.sortDir}
+                onSort={v.toggleSort}
               >
                 {items.map((item) => (
                   <tr key={item.id}>

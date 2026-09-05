@@ -5,6 +5,7 @@ import DataTable from '../../components/admin/DataTable'
 import StatusChip from '../../components/admin/StatusChip'
 import { Refresh, Search, NavArrowLeft, NavArrowRight } from 'iconoir-react'
 import { SkeletonRows } from '../../components/admin/TableSkeleton'
+import { useTableSort } from '../../hooks/useTableSort'
 
 interface Log {
   id: string
@@ -34,10 +35,13 @@ export default function History() {
   const [offset, setOffset] = useState(0)
   const limit = 20
 
+  const { sortKey, sortDir, toggleSort } = useTableSort([], { urlKey: 'sort', defaultKey: 'createdAt', defaultDir: 'desc' })
+
   const { data, loading, error, fetchedAt, refetch: fetchLogs } = useAdminQuery(async () => {
     const params: Record<string, string> = { limit: String(limit), offset: String(offset) }
     if (type !== 'all') params.type = type
     if (q) params.q = q
+    if (sortKey) { params.sort = sortKey; params.sortDir = sortDir ?? 'desc' }
     const res = await authedApiRequest((c) =>
       (c.api.v1.admin.history as unknown as { $get: (a: { query: Record<string, string> }) => Promise<Response> }).$get({ query: params })
     )
@@ -54,7 +58,7 @@ export default function History() {
   const logs = data?.logs ?? []
   const total = data?.total ?? 0
 
-  useEffect(() => { setOffset(0) }, [type, q])
+  useEffect(() => { setOffset(0) }, [type, q, sortKey, sortDir])
 
   if (error) return <div className="ad-card-flat p-8 text-center"><div className="text-sm font-semibold text-red-600">Gagal memuat</div><div className="text-xs text-[#6e6e73] mt-1">{error}</div><button onClick={fetchLogs} className="ad-btn ad-btn-dark mt-4">Coba lagi</button></div>
 
@@ -85,9 +89,12 @@ export default function History() {
 
       <div className="ad-card">
         <DataTable
-          columns={[{ label: 'WAKTU' }, { label: 'AKTOR' }, { label: 'AKSI' }, { label: 'TEKS' }]}
+          columns={[{ label: 'WAKTU', sortKey: 'createdAt' }, { label: 'AKTOR' }, { label: 'AKSI', sortKey: 'action' }, { label: 'TEKS' }]}
           empty={!loading && logs.length === 0}
           emptyText="Belum ada riwayat."
+          sortKey={sortKey}
+          sortDir={sortDir}
+          onSort={toggleSort}
         >
           {loading ? <SkeletonRows rows={10} cols={4} /> : logs.map((l) => (
             <tr key={l.id}>

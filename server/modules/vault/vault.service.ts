@@ -79,7 +79,7 @@ export const vaultService = {
 
   // Paginated vault rows for one variant, plaintext included. Caller must
   // enforce the unlock gate. SOLD rows carry their order pointer for rotate.
-  async listByVariant(variantPublicId: string, page: number, orderQuery?: string) {
+  async listByVariant(variantPublicId: string, page: number, orderQuery?: string, sort?: string, sortDir?: string) {
     const limit = 50
     const offset = Math.max(0, page) * limit
     const [variant] = await db
@@ -105,7 +105,8 @@ export const vaultService = {
       .from(vaultItems)
       .leftJoin(orders, eq(orders.vaultItemId, vaultItems.id))
       .where(and(...conditions))
-      .orderBy(desc(vaultItems.createdAt))
+      .orderBy(sort === 'status' ? (sortDir === 'asc' ? sql`${vaultItems.status} asc` : desc(vaultItems.status))
+        : sortDir === 'asc' ? sql`${vaultItems.createdAt} asc` : desc(vaultItems.createdAt))
       .limit(limit + 1)
       .offset(offset)
 

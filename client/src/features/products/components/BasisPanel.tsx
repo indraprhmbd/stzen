@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import DataTable from '../../../components/admin/DataTable'
 import StatusChip from '../../../components/admin/StatusChip'
 import { SkeletonRows } from '../../../components/admin/TableSkeleton'
+import { useTableSort } from '../../../hooks/useTableSort'
 import { Plus } from 'iconoir-react'
 import type { Product, Variant } from '../types'
 
@@ -15,6 +16,7 @@ interface Props {
 }
 
 export default function BasisPanel({ products, variants, onCreate, onEdit, onDelete, loading }: Props) {
+  const { sorted, sortKey, sortDir, toggleSort } = useTableSort(products, { defaultKey: 'name', defaultDir: 'asc' })
   const priceMap = useMemo(() => {
     const map = new Map<string, { min: number; max: number; avg: number; median: number; mode: number; count: number }>()
     for (const v of variants) {
@@ -85,11 +87,25 @@ export default function BasisPanel({ products, variants, onCreate, onEdit, onDel
     </div>
     <div className="ad-card">
       <DataTable
-        columns={[{ label: 'INDUK' }, { label: 'KATEGORI' }, { label: 'STOK' }, { label: 'DURASI' }, { label: 'AVG' }, { label: 'MEDIAN' }, { label: 'MODUS' }, { label: 'RENTANG' }, { label: 'STATUS' }, { label: 'AKSI', className: 'text-right' }]}
+        columns={[
+          { label: 'INDUK', sortKey: 'name' },
+          { label: 'KATEGORI', sortKey: 'category' },
+          { label: 'STOK' },
+          { label: 'DURASI' },
+          { label: 'AVG', sortKey: 'avg' },
+          { label: 'MEDIAN', sortKey: 'median' },
+          { label: 'MODUS', sortKey: 'mode' },
+          { label: 'RENTANG' },
+          { label: 'STATUS', sortKey: 'isActive' },
+          { label: 'AKSI', className: 'text-right' },
+        ]}
         empty={!loading && products.length === 0}
         emptyText="Belum ada induk."
+        sortKey={sortKey}
+        sortDir={sortDir}
+        onSort={toggleSort}
       >
-        {loading ? <SkeletonRows rows={5} cols={10} /> : products.map((p) => {
+        {loading ? <SkeletonRows rows={5} cols={10} /> : sorted.map((p) => {
           const stats = priceMap.get(p.id)
           const vs = variantStats.get(p.id)
           const durArr = vs?.durations ?? new Set()

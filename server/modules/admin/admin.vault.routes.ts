@@ -15,6 +15,8 @@ const ListQuerySchema = z.object({
   variant: z.string().min(1),
   page: z.coerce.number().int().min(0).optional().default(0),
   q: z.string().optional(),
+  sort: z.string().optional(),
+  sortDir: z.string().optional(),
 })
 
 const CredentialSchema = z.object({
@@ -44,7 +46,7 @@ export const adminVaultRoutes = new Hono<AuthEnv>()
   .get('/', zValidator('query', ListQuerySchema), async (c) => {
     await unlockGuard(c)
     const q = c.req.valid('query')
-    return c.json(await vaultService.listByVariant(q.variant, q.page, q.q))
+    return c.json(await vaultService.listByVariant(q.variant, q.page, q.q, q.sort, q.sortDir))
   })
 
   // PUT /:id — in place edit, re-encrypt overwrite (unlock required)

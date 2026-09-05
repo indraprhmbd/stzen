@@ -1,9 +1,12 @@
 import { Children, Fragment, isValidElement, cloneElement, type ReactNode, type ReactElement } from 'react'
+import { NavArrowDown } from 'iconoir-react'
 import EmptyState from './EmptyState'
 
 interface Column {
   label: string
   className?: string
+  /** Field name to sort by. Omit for non-sortable columns (e.g. AKSI). */
+  sortKey?: string
 }
 
 interface DataTableProps {
@@ -12,6 +15,12 @@ interface DataTableProps {
   empty?: boolean
   emptyText?: string
   colSpan?: number
+  /** Current sort key (from useTableSort). */
+  sortKey?: string | null
+  /** Current sort direction (from useTableSort). */
+  sortDir?: 'asc' | 'desc' | null
+  /** Sort toggle callback (from useTableSort). */
+  onSort?: (key: string) => void
 }
 
 // Recursively walks table rows (through Fragments, e.g. Products' grouped
@@ -37,9 +46,6 @@ function withMobileLabels(children: ReactNode, labels: string[]): ReactNode {
         const span = cellEl.props.colSpan ?? 1
         const label = labels[colIndex]
         colIndex += span
-        // colSpan cells are section/group headers, not per-column data — leave
-        // untouched, but still advance the index so later single-column cells
-        // in the same row (e.g. a trailing action button) get the right label.
         if (cellEl.props.colSpan) return cellEl
         return cloneElement(cellEl, { 'data-label': label } as Record<string, unknown>)
       })
@@ -50,18 +56,36 @@ function withMobileLabels(children: ReactNode, labels: string[]): ReactNode {
   })
 }
 
-export default function DataTable({ columns, children, empty, emptyText = 'Belum ada data.', colSpan }: DataTableProps) {
+export default function DataTable({ columns, children, empty, emptyText = 'Belum ada data.', colSpan, sortKey, sortDir, onSort }: DataTableProps) {
   const labels = columns.map((c) => c.label)
   return (
     <div className="overflow-x-auto">
       <table className="admin-table ad-table table table-sm w-full">
         <thead>
           <tr>
-            {columns.map((c) => (
-              <th key={c.label} className={c.className ?? ''}>
-                {c.label}
-              </th>
-            ))}
+            {columns.map((c) => {
+              const isSortable = !!c.sortKey && !!onSort
+              const isActive = isSortable && sortKey === c.sortKey
+              return (
+                <th
+                  key={c.label}
+                  className={`${c.className ?? ''} ${isSortable ? 'cursor-pointer select-none' : ''}`}
+                  onClick={isSortable ? () => onSort(c.sortKey!) : undefined}
+                >
+                  <span className="inline-flex items-center gap-1.5">
+                    {c.label}
+                    {isSortable && (
+                      <NavArrowDown
+                        width={12}
+                        height={12}
+                        strokeWidth={2}
+                        className={`transition-transform ${isActive ? 'text-[#1d1d1f]' : 'text-[#d1d1d6]'} ${isActive && sortDir === 'asc' ? 'rotate-180' : ''}`}
+                      />
+                    )}
+                  </span>
+                </th>
+              )
+            })}
           </tr>
         </thead>
         <tbody>

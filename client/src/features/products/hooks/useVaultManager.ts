@@ -41,6 +41,7 @@ export function useVaultManager(variants: Variant[]) {
   const [page, setPage] = useState(0)
   const [q, setQ] = useState('')
   const debouncedQ = useDebounce(q, 300)
+  const [sort, setSort] = useState<{ key: string; dir: 'asc' | 'desc' }>({ key: 'createdAt', dir: 'desc' })
   const [data, setData] = useState<VaultListResponse | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -89,8 +90,9 @@ export function useVaultManager(variants: Variant[]) {
     if (!token || !variantId) return
     setLoading(true); setError(null)
     try {
-      const query: { variant: string; page?: number; q?: string } = { variant: variantId, page }
+      const query: { variant: string; page?: number; q?: string; sort?: string; sortDir?: string } = { variant: variantId, page }
       if (debouncedQ) query.q = debouncedQ
+      if (sort) { query.sort = sort.key; query.sortDir = sort.dir }
       const res = await authedApiRequest(
         (c) => c.api.v1.admin.vault.$get({ query }),
         { headers: { 'X-Vault-Token': token } }
@@ -105,7 +107,7 @@ export function useVaultManager(variants: Variant[]) {
     if (!token || !variantId) return
     const id = ++fetchRef.current
     fetchList().then(() => { if (id !== fetchRef.current) return })
-  }, [token, variantId, page, debouncedQ])
+  }, [token, variantId, page, debouncedQ, sort])
 
   // Re-lock on tab/page visibility hidden (soft: only if token present)
   useEffect(() => {
@@ -171,6 +173,17 @@ export function useVaultManager(variants: Variant[]) {
     setVariantId(id); setPage(0); setQ(''); setData(null)
   }
 
+  function toggleSort(key: string) {
+    setPage(0)
+    setSort((prev) => {
+      if (prev.key === key) {
+        if (prev.dir === 'asc') return { key, dir: 'desc' }
+        return { key: 'createdAt', dir: 'desc' } // reset to default
+      }
+      return { key, dir: 'asc' }
+    })
+  }
+
   const isUnlocked = !!token && Date.now() < expiresAt
   const vaultOptions = variants
     .filter((v) => v.fulfillmentType !== 'on_demand')
@@ -186,5 +199,6 @@ export function useVaultManager(variants: Variant[]) {
     // actions
     actionLoading, editCred, deleteCred, revokeCred, rotateCred,
     fetchList, toast, showToast,
+    sortKey: sort.key, sortDir: sort.dir, toggleSort,
   }
 }

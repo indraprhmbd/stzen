@@ -253,8 +253,8 @@ export const ordersService = {
       .where(eq(orders.id, internalOrderId))
   },
 
-  async listAll(params: { status?: string; q?: string; limit?: number; offset?: number; oldest?: boolean } = {}) {
-    const { status, q, limit = 50, offset = 0, oldest = false } = params
+  async listAll(params: { status?: string; q?: string; limit?: number; offset?: number; oldest?: boolean; sort?: string; sortDir?: string } = {}) {
+    const { status, q, limit = 50, offset = 0, oldest = false, sort, sortDir } = params
     const conditions = []
     // Comma-separated statuses power the combined action queue (PENDING,PAID).
     if (status) {
@@ -297,7 +297,9 @@ export const ordersService = {
         .leftJoin(products, eq(orders.productId, products.id))
         .leftJoin(productVariants, eq(orders.variantId, productVariants.id))
         .where(whereClause)
-        .orderBy(oldest ? sql`${orders.createdAt} asc` : desc(orders.createdAt))
+        .orderBy(sort === 'amount' ? (sortDir === 'asc' ? sql`${orders.amount} asc` : desc(orders.amount))
+          : sort === 'status' ? (sortDir === 'asc' ? sql`${orders.status} asc` : desc(orders.status))
+          : oldest ? sql`${orders.createdAt} asc` : desc(orders.createdAt))
         .limit(limit)
         .offset(offset),
       db

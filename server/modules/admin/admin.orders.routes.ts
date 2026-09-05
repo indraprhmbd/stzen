@@ -32,13 +32,17 @@ export const adminOrderRoutes = new Hono<AdminOrderEnv>()
     limit: z.string().optional(),
     offset: z.string().optional(),
     oldest: z.string().optional(),
+    sort: z.string().optional(),
+    sortDir: z.string().optional(),
   })), async (c) => {
   const status = c.req.query('status') || undefined
   const q = c.req.query('q') || undefined
   const limit = Math.min(parseInt(c.req.query('limit') || '20', 10) || 20, 100)
   const offset = Math.max(parseInt(c.req.query('offset') || '0', 10) || 0, 0)
   const oldest = c.req.query('oldest') === '1'
-  const result = await ordersService.listAll({ status, q, limit, offset, oldest })
+  const sort = c.req.query('sort') || undefined
+  const sortDir = c.req.query('sortDir') || undefined
+  const result = await ordersService.listAll({ status, q, limit, offset, oldest, sort, sortDir })
   return c.json(result)
 })
 
