@@ -266,8 +266,8 @@
     width: 100%;
   }
   .admin-table tbody tr {
-    border: 1px solid #e4e4e7; /* zinc-200 */
-    border-radius: 2px;
+    border: 1px solid #e8e8ed;
+    border-radius: 12px;
     margin-bottom: 0.5rem;
     padding: 0.25rem 0.75rem;
   }

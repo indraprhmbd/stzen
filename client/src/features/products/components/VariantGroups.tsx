@@ -1,6 +1,7 @@
 import { Fragment } from 'react'
 import DataTable from '../../../components/admin/DataTable'
 import StatusChip, { type ChipTone } from '../../../components/admin/StatusChip'
+import { NavArrowDown, Plus } from 'iconoir-react'
 import type { Variant, VariantGroup } from '../types'
 
 function stockTone(v: { fulfillmentType: string; stockCount: number }): { tone: ChipTone; label: string } {
@@ -23,18 +24,18 @@ interface Props {
 export default function VariantGroups({ groups, filteredCount, collapsedGroups, setCollapsedGroups, onCreateVariant, onEditVariant, onDeleteVariant }: Props) {
   function renderVariantRow(v: Variant) {
     return (
-      <tr key={v.id} className="border-b border-zinc-100 last:border-0 hover:bg-zinc-50/50">
-        <td className="py-3">
-          <div className="text-[13px] font-semibold">{v.name}</div>
+      <tr key={v.id}>
+        <td>
+          <div className="text-[13px] font-medium">{v.name}</div>
         </td>
-        <td className="text-xs font-mono">{v.sku}</td>
-        <td className="text-sm font-mono font-semibold">Rp {Number(v.price).toLocaleString('id-ID')}{v.compareAtPrice != null && Number(v.compareAtPrice) > Number(v.price) && (<><br /><s className="text-[11px] font-normal text-zinc-400">Rp {Number(v.compareAtPrice).toLocaleString('id-ID')}</s></>)}</td>
+        <td className="text-xs ad-num text-[#6e6e73]">{v.sku}</td>
+        <td className="text-[13px] ad-num font-semibold">Rp {Number(v.price).toLocaleString('id-ID')}{v.compareAtPrice != null && Number(v.compareAtPrice) > Number(v.price) && (<><br /><s className="text-[11px] font-normal text-[#aeaeb2]">Rp {Number(v.compareAtPrice).toLocaleString('id-ID')}</s></>)}</td>
         <td><StatusChip tone={stockTone(v).tone}>{stockTone(v).label}</StatusChip></td>
-        <td><StatusChip tone={v.isActive ? 'zinc' : 'zinc'} className={v.isActive ? 'border-zinc-900 text-zinc-900' : 'bg-zinc-100 border-zinc-200 text-zinc-500'}>{v.isActive ? 'AKTIF' : 'NONAKTIF'}</StatusChip></td>
+        <td><StatusChip tone="zinc" className={v.isActive ? '' : 'opacity-60'}>{v.isActive ? 'AKTIF' : 'NONAKTIF'}</StatusChip></td>
         <td className="text-right">
           <div className="flex justify-end gap-1.5">
-            <button onClick={() => onEditVariant(v)} className="text-xs font-semibold border border-zinc-200 px-3 py-1 hover:bg-zinc-900 hover:text-white">Edit</button>
-            <button onClick={() => onDeleteVariant(v)} className="text-xs font-semibold border border-zinc-200 px-3 py-1 hover:bg-red-600 hover:text-white">Hapus</button>
+            <button onClick={() => onEditVariant(v)} className="ad-btn">Edit</button>
+            <button onClick={() => onDeleteVariant(v)} className="ad-btn ad-btn-danger">Hapus</button>
           </div>
         </td>
       </tr>
@@ -42,13 +43,13 @@ export default function VariantGroups({ groups, filteredCount, collapsedGroups, 
   }
 
   return (
-    <div className="bg-white border border-zinc-200 overflow-hidden">
-      <div className="px-4 py-2 border-b border-zinc-200 flex items-center justify-between gap-3">
+    <div className="ad-card">
+      <div className="ad-card-head">
         <div>
-          <div className="text-[11px] font-bold tracking-[0.12em] uppercase">Varian per Induk</div>
-          <div className="text-[11px] text-zinc-500 mt-0.5">Klik baris induk untuk membuka atau menutup daftar variannya</div>
+          <div className="ad-card-title">Varian per Induk</div>
+          <div className="text-[11px] text-[#6e6e73] mt-0.5">Klik baris induk untuk membuka atau menutup daftar variannya</div>
         </div>
-        <button onClick={() => onCreateVariant()} className="text-xs font-semibold bg-zinc-900 text-white px-4 py-1.5 hover:bg-black">+ Varian</button>
+        <button onClick={() => onCreateVariant()} className="ad-btn ad-btn-dark"><Plus width={15} height={15} strokeWidth={1.5} />Varian</button>
       </div>
       <DataTable
         columns={[
@@ -66,26 +67,26 @@ export default function VariantGroups({ groups, filteredCount, collapsedGroups, 
           const collapsed = collapsedGroups[g.key] ?? true
           return (
           <Fragment key={g.key}>
-            <tr onClick={() => setCollapsedGroups((s) => ({ ...s, [g.key]: !collapsed }))} className="bg-zinc-50 border-b border-zinc-200 cursor-pointer hover:bg-zinc-100">
-              <td colSpan={5} className="py-2">
+            <tr onClick={() => setCollapsedGroups((s) => ({ ...s, [g.key]: !collapsed }))} className="cursor-pointer" style={{ background: '#f5f5f7' }}>
+              <td colSpan={5}>
                 <span className="inline-flex items-center gap-2">
-                  <svg className={`w-3.5 h-3.5 transition-transform ${collapsed ? '-rotate-90' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
-                  <span className="text-[13px] text-zinc-700">{g.label} ({g.items.length})</span>
+                  <NavArrowDown width={15} height={15} strokeWidth={1.5} className={`text-[#6e6e73] transition-transform ${collapsed ? '-rotate-90' : ''}`} />
+                  <span className="text-[13px] text-[#1d1d1f]">{g.label} ({g.items.length})</span>
                 </span>
               </td>
-              <td className="text-right py-2">
-                <button onClick={(e) => { e.stopPropagation(); onCreateVariant(g.productId ?? undefined) }} className="text-xs font-semibold border border-zinc-200 bg-white px-3 py-1 hover:bg-zinc-900 hover:text-white">+ Varian</button>
+              <td className="text-right">
+                <button onClick={(e) => { e.stopPropagation(); onCreateVariant(g.productId ?? undefined) }} className="ad-btn"><Plus width={14} height={14} strokeWidth={1.5} />Varian</button>
               </td>
             </tr>
             {!collapsed && g.items.map((v) => renderVariantRow(v))}
             {!collapsed && (
-              <tr className="bg-zinc-50/60 border-b border-zinc-200">
-                <td colSpan={6} className="py-2 text-center">
+              <tr style={{ background: '#fafafa' }}>
+                <td colSpan={6} className="text-center">
                   <button
                     onClick={() => setCollapsedGroups((s) => ({ ...s, [g.key]: true }))}
-                    className="text-[11px] font-semibold text-zinc-500 hover:text-zinc-900 inline-flex items-center gap-1.5"
+                    className="text-[11px] font-semibold text-[#6e6e73] hover:text-[#1d1d1f] inline-flex items-center gap-1.5"
                   >
-                    <svg className="w-3.5 h-3.5 rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
+                    <NavArrowDown width={14} height={14} strokeWidth={1.5} className="rotate-180" />
                     Tutup {g.label}
                   </button>
                 </td>

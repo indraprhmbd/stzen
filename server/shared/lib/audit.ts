@@ -2,8 +2,9 @@ import { db } from '../db'
 import { sql } from 'drizzle-orm'
 
 export type AuditAction =
-  | 'order:create' | 'order:approve' | 'order:reject' | 'order:deliver' | 'order:refund'
+  | 'order:create' | 'order:approve' | 'order:reject' | 'order:deliver' | 'order:refund' | 'order:replace'
   | 'stock:import'
+  | 'vault:unlock' | 'vault:update' | 'vault:delete' | 'vault:revoke'
   | 'product:create' | 'product:update' | 'product:delete'
   | 'variant:create' | 'variant:update' | 'variant:delete'
   | 'settings:update'

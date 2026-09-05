@@ -18,33 +18,40 @@ export function useVariantForm(products: Product[], fetchAll: () => void, showTo
   const [vIsActive, setVIsActive] = useState(true)
   const [vOverview, setVOverview] = useState('')
   const [vDescription, setVDescription] = useState('')
+  // Explicit blank: user pressed Kosongkan. '' persists and hides the field
+  // in the catalog. Without it, empty input means inherit (null).
+  const [vOverviewBlank, setVOverviewBlank] = useState(false)
+  const [vDescriptionBlank, setVDescriptionBlank] = useState(false)
 
   function openCreateVariant(presetProductId?: string) {
     const baseId = presetProductId ?? products[0]?.id ?? ''
     const base = products.find((p) => p.id === baseId)
     setEditingVariantId(null); setEditingVariantSku(null); setVProductId(baseId); setVPrice(''); setVCompareAt(''); setVDuration(''); setVAccountType(''); setVConditions(''); setVBadge(''); setVFulfillmentType('vault'); setVIsActive(true)
     setVOverview(base?.overview ?? ''); setVDescription(base?.description ?? '')
+    setVOverviewBlank(false); setVDescriptionBlank(false)
     ;(document.getElementById('variant_modal') as HTMLDialogElement)?.showModal()
   }
   function openEditVariant(v: Variant) {
     setEditingVariantId(v.id); setEditingVariantSku(v.sku); setVProductId(v.productId ?? ''); setVPrice(String(v.price)); setVCompareAt(v.compareAtPrice ? String(v.compareAtPrice) : ''); setVDuration(v.durationMonths ? String(v.durationMonths) : ''); setVAccountType(v.accountType ?? ''); setVConditions(v.conditions ?? ''); setVBadge(v.badge ?? ''); setVFulfillmentType(v.fulfillmentType === 'on_demand' ? 'on_demand' : 'vault'); setVIsActive(v.isActive)
     const base = products.find((p) => p.id === (v.productId ?? ''))
     setVOverview(v.overview ?? base?.overview ?? ''); setVDescription(v.description ?? base?.description ?? '')
+    setVOverviewBlank(v.overview === ''); setVDescriptionBlank(v.description === '')
     ;(document.getElementById('variant_modal') as HTMLDialogElement)?.showModal()
   }
   // Switching induk refills content fields only when the user hasn't typed
-  // their own — custom text is never clobbered.
+  // their own and hasn't explicitly blanked them.
   function handleVariantBaseChange(newId: string) {
     setVProductId(newId)
     const base = products.find((p) => p.id === newId)
-    setVOverview((prev) => (prev.trim() === '' ? (base?.overview ?? '') : prev))
-    setVDescription((prev) => (prev.trim() === '' ? (base?.description ?? '') : prev))
+    if (!vOverviewBlank) setVOverview((prev) => (prev.trim() === '' ? (base?.overview ?? '') : prev))
+    if (!vDescriptionBlank) setVDescription((prev) => (prev.trim() === '' ? (base?.description ?? '') : prev))
   }
 
   async function handleVariantSubmit(e: React.FormEvent) {
     e.preventDefault()
     // Link-preserving save: text identical to the induk stays null (live
-    // fallback, no stale copies); only real edits become variant overrides.
+    // fallback, no stale copies); explicit blank stays '' (hidden in
+    // catalog); only real edits become variant overrides.
     const base = products.find((p) => p.id === vProductId)
     const trimmedOverview = vOverview.trim()
     const trimmedDescription = vDescription.trim()
@@ -58,8 +65,8 @@ export function useVariantForm(products: Product[], fetchAll: () => void, showTo
       conditions: vConditions || null,
       fulfillmentType: vFulfillmentType,
       isActive: vIsActive,
-      overview: trimmedOverview === '' || trimmedOverview === (base?.overview ?? '').trim() ? null : trimmedOverview,
-      description: trimmedDescription === '' || trimmedDescription === (base?.description ?? '').trim() ? null : vDescription,
+      overview: vOverviewBlank ? '' : trimmedOverview === '' || trimmedOverview === (base?.overview ?? '').trim() ? null : trimmedOverview,
+      description: vDescriptionBlank ? '' : trimmedDescription === '' || trimmedDescription === (base?.description ?? '').trim() ? null : vDescription,
     }
     try {
       if (editingVariantId) {
@@ -77,8 +84,10 @@ export function useVariantForm(products: Product[], fetchAll: () => void, showTo
   return {
     vProductId, vPrice, vCompareAt, vDuration, vAccountType, vConditions, vBadge,
     editingVariantId, editingVariantSku, vFulfillmentType, vIsActive, vOverview, vDescription,
+    vOverviewBlank, vDescriptionBlank,
     setVProductId, setVPrice, setVCompareAt, setVDuration, setVAccountType, setVConditions, setVBadge,
     setVFulfillmentType, setVIsActive, setVOverview, setVDescription,
+    setVOverviewBlank, setVDescriptionBlank,
     openCreateVariant, openEditVariant, handleVariantBaseChange, handleVariantSubmit,
   }
 }

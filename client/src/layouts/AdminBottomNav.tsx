@@ -1,46 +1,41 @@
 import { NavLink } from 'react-router-dom'
-import { House, Package, Receipt, ClockCounterClockwise, GearSix } from '@phosphor-icons/react'
+import { Dashboard, Cube, ShoppingBag, ClockRotateRight, Settings } from 'iconoir-react'
 
 // ─── Admin Bottom Nav (mobile) ──────────────────────────────────────────────
-// Mirrors the storefront's BottomNav pattern for the admin dashboard. Unlike
-// the storefront (3 items, all fit), admin has 5 sections — each item is
-// pinned to exactly 1/4 of the bar's width (basis-1/4 shrink-0), so 4 are
-// always visible and the 5th pushes the row to 125% width. overflow-x-auto
-// then scrolls, starting flush left (no snap/centering), so nothing shifts
-// on load and the 5th item is one swipe away.
-
+// 5 sections pinned to 1/4 width each with horizontal scroll, same pattern as
+// before. Soft light bar with blur, active tab ink plus dot.
 const tabs = [
-  { to: '/admin', label: 'Ringkasan', icon: House, end: true },
-  { to: '/admin/products', label: 'Produk', icon: Package, end: false },
-  { to: '/admin/orders', label: 'Pesanan', icon: Receipt, end: false },
-  { to: '/admin/history', label: 'Riwayat', icon: ClockCounterClockwise, end: false },
-  { to: '/admin/settings', label: 'Pengaturan', icon: GearSix, end: false },
+  { to: '/admin', label: 'Ringkasan', Icon: Dashboard, end: true },
+  { to: '/admin/products', label: 'Produk', Icon: Cube, end: false },
+  { to: '/admin/orders', label: 'Pesanan', Icon: ShoppingBag, end: false },
+  { to: '/admin/history', label: 'Riwayat', Icon: ClockRotateRight, end: false },
+  { to: '/admin/settings', label: 'Pengaturan', Icon: Settings, end: false },
 ]
 
 export default function AdminBottomNav() {
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-50 bg-[#0f172a] border-t border-white/10 lg:hidden"
+      className="fixed bottom-0 left-0 right-0 z-50 bg-white/85 backdrop-blur-md border-t border-[#e8e8ed] lg:hidden"
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
       <div className="flex overflow-x-auto no-scrollbar">
         {tabs.map((tab) => {
-          const Icon = tab.icon
+          const Icon = tab.Icon
           return (
             <NavLink
               key={tab.to}
               to={tab.to}
               end={tab.end}
               className={({ isActive }) =>
-                `flex-none basis-1/4 shrink-0 flex flex-col items-center justify-center gap-0.5 h-14 transition-colors ${
-                  isActive ? 'text-white' : 'text-white/50'
+                `flex-none basis-1/4 shrink-0 flex flex-col items-center justify-center gap-1 h-14 transition-colors ${
+                  isActive ? 'text-[#1d1d1f]' : 'text-[#aeaeb2]'
                 }`
               }
             >
               {({ isActive }) => (
                 <>
-                  <Icon size={20} weight={isActive ? 'fill' : 'regular'} />
-                  <span className="font-semibold text-[10px] uppercase tracking-wide leading-none">{tab.label}</span>
+                  <Icon width={22} height={22} strokeWidth={isActive ? 2 : 1.5} />
+                  <span className={`text-[10px] leading-none tracking-wide ${isActive ? 'font-semibold' : 'font-medium'}`}>{tab.label}</span>
                 </>
               )}
             </NavLink>

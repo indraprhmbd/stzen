@@ -54,11 +54,11 @@ export default function DataTable({ columns, children, empty, emptyText = 'Belum
   const labels = columns.map((c) => c.label)
   return (
     <div className="overflow-x-auto">
-      <table className="admin-table table table-sm">
+      <table className="admin-table ad-table table table-sm w-full">
         <thead>
-          <tr className="border-b border-zinc-900 bg-zinc-50">
+          <tr>
             {columns.map((c) => (
-              <th key={c.label} className={`text-[11px] tracking-[0.12em] font-bold text-zinc-500 ${c.className ?? ''}`}>
+              <th key={c.label} className={c.className ?? ''}>
                 {c.label}
               </th>
             ))}

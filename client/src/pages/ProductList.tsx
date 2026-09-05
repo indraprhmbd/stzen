@@ -84,6 +84,8 @@ export default function ProductList() {
     if (sort !== 'newest') query.sort = sort
     if (page > 1) query.page = String(page)
     if (search) query.search = search
+    // Guests only ever see 8: cap server-side so the API never ships 24.
+    if (!session) query.limit = '8'
 
     const key = listKey(query)
     const cached = getCachedList<PaginatedResult>(key)
@@ -111,11 +113,12 @@ export default function ProductList() {
     }).catch(() => { if (!cancelled) setLoading(false) })
 
     return () => { cancelled = true }
-  }, [category, sort, page, search])
+  }, [category, sort, page, search, session])
 
   // Pre-warm page+1 while the pager is on screen (Pagination calls this once
-  // per page via viewport observer). Same query shape as the fetch above.
+  // per page via viewport observer). Guests get no pager — nothing to warm.
   const prefetchNextPage = useCallback(() => {
+    if (!session) return
     const totalPages = result?.totalPages ?? 1
     if (page >= totalPages) return
     const query: Record<string, string> = {}
@@ -124,7 +127,7 @@ export default function ProductList() {
     query.page = String(page + 1)
     if (search) query.search = search
     prefetchList(query)
-  }, [category, sort, page, search, result?.totalPages])
+  }, [category, sort, page, search, session, result?.totalPages])
 
   // Ctrl+K shortcut
   useEffect(() => {
@@ -161,7 +164,8 @@ export default function ProductList() {
   const categoryCounts: Record<string, number> = { all: allTotal, ...catData.counts }
 
   const visibleProducts = !session && result ? result.products.slice(0, 8) : (result?.products ?? [])
-  const capped = !session && result != null && result.products.length > 8
+  // Server caps guests at 8 — banner shows whenever more exist beyond the cap.
+  const capped = !session && (result?.total ?? 0) > (result?.products.length ?? 0)
 
   const handleCopy = useCallback((text: string) => {
     navigator.clipboard.writeText(text)

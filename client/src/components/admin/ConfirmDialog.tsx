@@ -32,16 +32,16 @@ export default function ConfirmDialog({ id, title, message, confirmLabel = 'Ya, 
   }, [id, onConfirm])
   return (
     <dialog id={id} ref={ref} className="modal">
-      <div className="modal-box max-w-sm bg-white rounded-none border border-zinc-900 p-6">
-        <h3 className="font-black text-base tracking-tight" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+      <div className="modal-box ad-dialog max-w-sm p-6">
+        <h3 className="font-semibold text-[17px] tracking-tight text-[#1d1d1f]">
           {title}
         </h3>
-        <p className="text-sm text-zinc-600 mt-2">{message}</p>
+        <p className="text-sm text-[#6e6e73] mt-2">{message}</p>
         <div className="flex justify-end gap-2 mt-5">
-          <button onClick={() => closeConfirm(id)} className="border border-zinc-200 px-5 py-2 text-sm font-semibold">
+          <button onClick={() => closeConfirm(id)} className="ad-btn">
             Batal
           </button>
-          <button data-confirm className="bg-red-600 text-white px-5 py-2 text-sm font-semibold hover:bg-red-700">
+          <button data-confirm className="ad-btn ad-btn-dark" style={{ background: '#c81e1e', borderColor: '#c81e1e' }}>
             {confirmLabel}
           </button>
         </div>

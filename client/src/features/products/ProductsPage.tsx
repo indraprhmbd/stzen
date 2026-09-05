@@ -2,13 +2,13 @@ import { useState, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { authedApiRequest } from '../../lib/api'
 import ConfirmDialog, { openConfirm } from '../../components/admin/ConfirmDialog'
+import { Refresh, Search } from 'iconoir-react'
 import { useProducts } from './hooks/useProducts'
 import { useProductForm } from './hooks/useProductForm'
 import { useVariantForm } from './hooks/useVariantForm'
-import { useStockImport } from './hooks/useStockImport'
 import VariantGroups from './components/VariantGroups'
 import BasisPanel from './components/BasisPanel'
-import StockPanel from './components/StockPanel'
+import VaultList from './components/VaultList'
 import IndukDialog from './components/IndukDialog'
 import VariantDialog from './components/VariantDialog'
 import type { Variant, Product } from './types'
@@ -18,7 +18,6 @@ export default function ProductsPage() {
   const { products, variants, loading, error, fetchedAt, toast, fetchAll, showToast, categories } = useProducts()
   const productForm = useProductForm(fetchAll, showToast)
   const variantForm = useVariantForm(products, fetchAll, showToast)
-  const stock = useStockImport(variants, fetchAll, showToast)
 
   const [q, setQ] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('ALL')
@@ -93,30 +92,38 @@ export default function ProductsPage() {
   }
 
   if (loading) return <div className="flex justify-center py-16"><span className="loading loading-spinner loading-lg"></span></div>
-  if (error) return <div className="bg-white border border-red-200 p-8 text-center"><div className="text-sm font-bold text-red-600">Gagal memuat</div><div className="text-xs text-zinc-500 mt-1">{error}</div><button onClick={fetchAll} className="btn btn-sm bg-zinc-900 text-white rounded-sm mt-4">Coba lagi</button></div>
+  if (error) return <div className="ad-card-flat p-8 text-center"><div className="text-sm font-semibold text-red-600">Gagal memuat</div><div className="text-xs text-[#6e6e73] mt-1">{error}</div><button onClick={fetchAll} className="ad-btn ad-btn-dark mt-4">Coba lagi</button></div>
+
+  const vaultUnits = variants.filter((v) => v.fulfillmentType !== 'on_demand').reduce((s, v) => s + (v.stockCount ?? 0), 0)
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="border-b border-zinc-200 pb-5 flex flex-wrap items-end justify-between gap-4">
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-[22px] font-black tracking-tight" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>Produk</h1>
-          <p className="text-sm text-zinc-500 mt-1"><span className="font-mono text-zinc-900 font-semibold">{products.length}</span> induk · <span className="font-mono">{variants.length}</span> varian · <span className="font-mono">{variants.filter((v) => v.fulfillmentType !== 'on_demand').reduce((s,v)=>s+(v.stockCount??0),0)}</span> stok{fetchedAt && <span className="font-mono text-zinc-400"> · Disinkron {new Date(fetchedAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>}</p>
+          <h1 className="text-[22px] font-semibold tracking-tight">Produk</h1>
+          <p className="text-[13px] text-[#6e6e73] mt-0.5 ad-num"><span className="text-[#1d1d1f] font-semibold">{products.length}</span> induk · {variants.length} varian · {vaultUnits} stok{fetchedAt && <span className="text-[#aeaeb2]"> · Disinkron {new Date(fetchedAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>}</p>
         </div>
-        <div role="tablist" aria-label="Produk" className="flex gap-1 overflow-x-auto">
-          {tabs.map(([key, label]) => (
-            <button key={key} role="tab" id={`tab-${key}`} aria-selected={tab === key} aria-controls={`panel-${key}`} onClick={() => setTab(key)} className={`px-4 py-2 text-sm font-bold tracking-wide uppercase whitespace-nowrap ${tab === key ? 'bg-zinc-900 text-white' : 'text-zinc-500 hover:text-zinc-900 bg-white border border-zinc-200'}`}>
-              {label}
-            </button>
-          ))}
+        <div className="flex items-center gap-2">
+          <div role="tablist" aria-label="Produk" className="ad-seg">
+            {tabs.map(([key, label]) => (
+              <button key={key} role="tab" id={`tab-${key}`} aria-selected={tab === key} aria-controls={`panel-${key}`} onClick={() => setTab(key)}>
+                {label}
+              </button>
+            ))}
+          </div>
+          <button onClick={fetchAll} title="Muat ulang" className="ad-btn">
+            <Refresh width={15} height={15} strokeWidth={1.5} />
+            Muat ulang
+          </button>
         </div>
       </div>
 
-      <div className="bg-white border border-zinc-200 p-3 flex flex-col sm:flex-row gap-3">
-        <label className="flex items-center gap-2 flex-1 border border-zinc-200 px-3 py-2 bg-zinc-50">
-          <span className="text-[11px] font-bold tracking-widest text-zinc-400">CARI</span>
-          <input placeholder="nama varian, sku..." value={q} onChange={(e) => setQ(e.target.value)} className="grow bg-transparent text-sm outline-none placeholder:text-zinc-400" />
+      <div className="ad-card-flat p-3 flex flex-col sm:flex-row gap-3">
+        <label className="ad-input flex items-center gap-2 flex-1">
+          <Search width={15} height={15} strokeWidth={1.5} className="shrink-0 text-[#aeaeb2]" />
+          <input placeholder="nama varian, sku..." value={q} onChange={(e) => setQ(e.target.value)} className="grow bg-transparent text-sm outline-none" />
         </label>
-        <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className="border border-zinc-200 bg-white px-3 py-2 text-sm font-mono w-full sm:w-52">
+        <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className="ad-input w-full sm:w-52">
           <option value="ALL">Semua kategori</option>
           {categories.map((c) => <option key={c} value={c}>{c}</option>)}
         </select>
@@ -149,13 +156,7 @@ export default function ProductsPage() {
 
       {tab === 'stok' && (
       <div role="tabpanel" id="panel-stok" aria-labelledby="tab-stok" className="flex flex-col gap-6">
-        <StockPanel
-          products={products}
-          variants={variants}
-          collapsedGroups={collapsedGroups}
-          setCollapsedGroups={setCollapsedGroups}
-          stock={stock}
-        />
+        <VaultList variants={variants} fetchedAt={fetchedAt} />
       </div>
       )}
 
@@ -180,7 +181,7 @@ export default function ProductsPage() {
         onConfirm={confirmDelete}
       />
 
-      {toast && <div className="toast toast-end mb-14 lg:mb-0"><div className={`border px-4 py-3 text-sm font-medium ${toast.type === 'success' ? 'bg-white border-zinc-900 text-zinc-900' : 'bg-red-50 border-red-200 text-red-700'}`}>{toast.msg}</div></div>}
+      {toast && <div className="toast toast-end mb-14 lg:mb-0"><div className={`rounded-[12px] px-4 py-3 text-sm font-medium ${toast.type === 'success' ? 'bg-[#1d1d1f] text-white' : 'bg-[#fdecec] text-[#b91c1c]'}`} style={toast.type === 'success' ? undefined : { border: '1px solid #f5c2c2' }}>{toast.msg}</div></div>}
     </div>
   )
 }

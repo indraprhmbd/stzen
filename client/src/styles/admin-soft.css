@@ -1,0 +1,240 @@
+/* ─── Admin Soft theme ───────────────────────────────────────────────
+   Monochrome light dashboard theme, Apple-quiet. Scoped under
+   `.admin-soft` (applied on AdminLayout root) so the brutalist
+   storefront is untouched. System type stack, hairline borders,
+   soft layered shadows. Only functional color: muted status dots. */
+
+.admin-soft {
+  --ad-bg: #fafafa;
+  --ad-card: #ffffff;
+  --ad-line: #e8e8ed;
+  --ad-line-soft: #f1f1f4;
+  --ad-ink: #1d1d1f;
+  --ad-sub: #6e6e73;
+  --ad-faint: #aeaeb2;
+  --ad-fill: #f5f5f7;
+  --ad-active: #e8e8ed;
+  --ad-font: -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, system-ui, "Segoe UI", sans-serif;
+  font-family: var(--ad-font);
+  color: var(--ad-ink);
+  background: var(--ad-bg);
+}
+
+.admin-soft .ad-num {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Cards */
+.admin-soft .ad-card {
+  background: var(--ad-card);
+  border: 1px solid var(--ad-line);
+  border-radius: 14px;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.04), 0 8px 24px rgb(0 0 0 / 0.05);
+  overflow: hidden;
+}
+.admin-soft .ad-card-flat {
+  background: var(--ad-card);
+  border: 1px solid var(--ad-line);
+  border-radius: 14px;
+}
+.admin-soft .ad-card-head {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--ad-line-soft);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.admin-soft .ad-card-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.admin-soft .ad-card-hint {
+  font-size: 10px;
+  color: var(--ad-sub);
+}
+
+/* Icon squircle */
+.admin-soft .ad-squircle {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--ad-fill);
+  display: grid;
+  place-items: center;
+  color: var(--ad-ink);
+  flex-shrink: 0;
+}
+.admin-soft .ad-squircle-sm {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+}
+
+/* Buttons */
+.admin-soft .ad-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 7px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--ad-line);
+  background: var(--ad-card);
+  color: var(--ad-ink);
+  transition: background 120ms ease;
+  white-space: nowrap;
+}
+.admin-soft .ad-btn:hover {
+  background: var(--ad-fill);
+}
+.admin-soft .ad-btn:disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
+.admin-soft .ad-btn-dark {
+  background: var(--ad-ink);
+  border-color: var(--ad-ink);
+  color: #fff;
+}
+.admin-soft .ad-btn-dark:hover {
+  background: #000;
+}
+.admin-soft .ad-btn-danger:hover {
+  background: #c81e1e;
+  border-color: #c81e1e;
+  color: #fff;
+}
+
+/* Inputs */
+.admin-soft .ad-input {
+  width: 100%;
+  border: 1px solid var(--ad-line);
+  background: var(--ad-fill);
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: var(--ad-ink);
+  outline: none;
+}
+.admin-soft .ad-input:focus {
+  border-color: var(--ad-faint);
+  background: var(--ad-card);
+}
+.admin-soft .ad-input::placeholder {
+  color: var(--ad-faint);
+}
+.admin-soft .ad-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ad-sub);
+}
+
+/* Tables */
+.admin-soft .ad-table th {
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  font-weight: 700;
+  color: var(--ad-faint);
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--ad-line);
+  background: transparent;
+  padding: 10px 12px;
+}
+.admin-soft .ad-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--ad-line-soft);
+  font-size: 13px;
+}
+.admin-soft .ad-table tbody tr:last-child td {
+  border-bottom: none;
+}
+.admin-soft .ad-table tbody tr:hover td {
+  background: var(--ad-fill);
+}
+
+/* Status pills: tinted bg, 6px dot, semibold text */
+.admin-soft .ad-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.admin-soft .ad-chip::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: currentColor;
+}
+.admin-soft .ad-chip-amber { background: #fef3e2; color: #92400e; }
+.admin-soft .ad-chip-blue { background: #e8f1fd; color: #1d4ed8; }
+.admin-soft .ad-chip-green { background: #e7f6ec; color: #15803d; }
+.admin-soft .ad-chip-red { background: #fdecec; color: #b91c1c; }
+.admin-soft .ad-chip-zinc { background: var(--ad-fill); color: #52525b; }
+.admin-soft .ad-chip-violet { background: #f1eafe; color: #6d28d9; }
+
+/* Segmented control */
+.admin-soft .ad-seg {
+  display: inline-flex;
+  background: var(--ad-fill);
+  border-radius: 999px;
+  padding: 3px;
+  gap: 2px;
+}
+.admin-soft .ad-seg button {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 14px;
+  border-radius: 999px;
+  color: var(--ad-sub);
+  transition: all 120ms ease;
+  white-space: nowrap;
+}
+.admin-soft .ad-seg button[aria-selected="true"] {
+  background: var(--ad-card);
+  color: var(--ad-ink);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.12);
+}
+
+/* Sidebar nav rows */
+.admin-soft .ad-navlink {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ad-sub);
+  border-radius: 10px;
+  transition: background 120ms ease;
+}
+.admin-soft .ad-navlink:hover {
+  background: var(--ad-fill);
+  color: var(--ad-ink);
+}
+.admin-soft .ad-navlink-active {
+  background: var(--ad-active);
+  color: var(--ad-ink);
+  font-weight: 600;
+}
+
+/* Dialogs */
+.admin-soft dialog::backdrop {
+  background: rgb(0 0 0 / 0.3);
+}
+.admin-soft .ad-dialog {
+  background: var(--ad-card);
+  border: none;
+  border-radius: 16px;
+  box-shadow: 0 12px 48px rgb(0 0 0 / 0.18);
+}

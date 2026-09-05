@@ -3,6 +3,7 @@ import { authedApiRequest } from '../../lib/api'
 import { useAdminQuery } from '../../hooks/useAdminQuery'
 import DataTable from '../../components/admin/DataTable'
 import StatusChip from '../../components/admin/StatusChip'
+import { Refresh, Search, NavArrowLeft, NavArrowRight } from 'iconoir-react'
 
 interface Log {
   id: string
@@ -55,47 +56,53 @@ export default function History() {
   useEffect(() => { setOffset(0) }, [type, q])
 
   if (loading) return <div className="flex justify-center py-16"><span className="loading loading-spinner loading-lg"></span></div>
-  if (error) return <div className="bg-white border border-red-200 p-8 text-center"><div className="text-sm font-bold text-red-600">Gagal memuat</div><div className="text-xs text-zinc-500 mt-1">{error}</div><button onClick={fetchLogs} className="btn btn-sm bg-zinc-900 text-white rounded-sm mt-4">Coba lagi</button></div>
+  if (error) return <div className="ad-card-flat p-8 text-center"><div className="text-sm font-semibold text-red-600">Gagal memuat</div><div className="text-xs text-[#6e6e73] mt-1">{error}</div><button onClick={fetchLogs} className="ad-btn ad-btn-dark mt-4">Coba lagi</button></div>
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="border-b border-zinc-200 pb-5">
-        <h1 className="text-[22px] font-black tracking-tight" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>Riwayat</h1>
-        <p className="text-sm text-zinc-500 mt-1">Catatan immutable pesanan dan impor stok. Teks tidak terhubung dinamis.{fetchedAt && <span className="font-mono text-zinc-400"> Disinkron {new Date(fetchedAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>}</p>
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-[22px] font-semibold tracking-tight">Riwayat</h1>
+          <p className="text-[13px] text-[#6e6e73] mt-0.5">Catatan immutable pesanan dan impor stok. Teks tidak terhubung dinamis.{fetchedAt && <span className="text-[#aeaeb2]"> Disinkron {new Date(fetchedAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>}</p>
+        </div>
+        <button onClick={fetchLogs} title="Muat ulang" className="ad-btn">
+          <Refresh width={15} height={15} strokeWidth={1.5} />
+          Muat ulang
+        </button>
       </div>
 
-      <div className="bg-white border border-zinc-200 p-3 flex flex-col sm:flex-row gap-3">
-        <select value={type} onChange={(e) => setType(e.target.value)} className="border border-zinc-200 bg-white px-3 py-2 text-sm font-mono w-full sm:w-40">
+      <div className="ad-card-flat p-3 flex flex-col sm:flex-row gap-3">
+        <select value={type} onChange={(e) => setType(e.target.value)} className="ad-input w-full sm:w-40">
           <option value="all">Semua</option>
           <option value="order">Pesanan</option>
           <option value="stock">Stok</option>
         </select>
-        <label className="flex items-center gap-2 flex-1 border border-zinc-200 px-3 py-2 bg-zinc-50">
-          <span className="text-[11px] font-bold tracking-widest text-zinc-400">CARI</span>
-          <input placeholder="public id, teks, aktor..." value={q} onChange={(e) => setQ(e.target.value)} className="grow bg-transparent text-sm outline-none placeholder:text-zinc-400" />
+        <label className="ad-input flex items-center gap-2 flex-1">
+          <Search width={15} height={15} strokeWidth={1.5} className="shrink-0 text-[#aeaeb2]" />
+          <input placeholder="public id, teks, aktor..." value={q} onChange={(e) => setQ(e.target.value)} className="grow bg-transparent text-sm outline-none" />
         </label>
       </div>
 
-      <div className="bg-white border border-zinc-200 overflow-hidden">
+      <div className="ad-card">
         <DataTable
           columns={[{ label: 'WAKTU' }, { label: 'AKTOR' }, { label: 'AKSI' }, { label: 'TEKS' }]}
           empty={logs.length === 0}
           emptyText="Belum ada riwayat."
         >
           {logs.map((l) => (
-            <tr key={l.id} className="border-b border-zinc-100 last:border-0 hover:bg-zinc-50/50">
-              <td className="text-xs font-mono whitespace-nowrap py-3">{formatIdDate(l.created_at)}</td>
-              <td className="text-xs font-mono text-zinc-600">{l.actor_email ?? '-'}</td>
+            <tr key={l.id}>
+              <td className="text-xs ad-num whitespace-nowrap text-[#6e6e73]">{formatIdDate(l.created_at)}</td>
+              <td className="text-xs ad-num text-[#6e6e73]">{l.actor_email ?? '-'}</td>
               <td><StatusChip>{l.action}</StatusChip></td>
               <td className="text-[13px] max-w-[420px] truncate" title={l.snapshot_text}>{l.snapshot_text}</td>
             </tr>
           ))}
         </DataTable>
-        <div className="flex items-center justify-between px-4 py-3 border-t border-zinc-200 bg-zinc-50">
-          <span className="text-xs font-mono text-zinc-500">{total} entri</span>
-          <div className="flex gap-2">
-            <button disabled={offset === 0} onClick={() => setOffset((o) => Math.max(0, o - limit))} className="text-xs border border-zinc-200 bg-white px-3 py-1 disabled:opacity-40">Sebelumnya</button>
-            <button disabled={offset + limit >= total} onClick={() => setOffset((o) => o + limit)} className="text-xs border border-zinc-200 bg-white px-3 py-1 disabled:opacity-40">Selanjutnya</button>
+        <div className="flex items-center justify-between px-4 py-3 border-t border-[#f1f1f4]">
+          <span className="text-xs ad-num text-[#6e6e73]">{total} entri</span>
+          <div className="flex gap-1.5">
+            <button disabled={offset === 0} onClick={() => setOffset((o) => Math.max(0, o - limit))} title="Sebelumnya" aria-label="Halaman sebelumnya" className="ad-btn !px-2.5"><NavArrowLeft width={15} height={15} strokeWidth={1.5} /></button>
+            <button disabled={offset + limit >= total} onClick={() => setOffset((o) => o + limit)} title="Berikutnya" aria-label="Halaman berikutnya" className="ad-btn !px-2.5"><NavArrowRight width={15} height={15} strokeWidth={1.5} /></button>
           </div>
         </div>
       </div>

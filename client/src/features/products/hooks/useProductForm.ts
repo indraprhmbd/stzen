@@ -19,7 +19,9 @@ export function useProductForm(fetchAll: () => void, showToast: (msg: string, ty
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    const payload: any = { name: form.name, category: form.category, badge: form.badge || undefined, overview: form.overview || undefined, description: form.description || undefined, instructions: form.instructions || undefined, isActive: form.isActive }
+    // Empty text fields send '' so clearing a field persists. Price stays
+    // omitted when empty (optional on induk).
+    const payload: any = { name: form.name, category: form.category, badge: form.badge, overview: form.overview, description: form.description, instructions: form.instructions, isActive: form.isActive }
     // induk price optional, do not send empty
     if (form.price && form.price.trim() !== '') payload.price = form.price.trim()
     try {

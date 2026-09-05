@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { NavArrowDown, Search } from 'iconoir-react'
 
 // ─── Searchable Select ──────────────────────────────────────────────────────
 // Accessible single-select combobox (WAI-ARIA APG combobox pattern) with
@@ -122,7 +123,7 @@ export default function SearchableSelect({
         disabled={disabled}
         onClick={() => setOpen(true)}
         onKeyDown={onKeyDown}
-        className={`w-full flex items-start justify-between gap-2 border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-left disabled:opacity-50 disabled:cursor-not-allowed hover:border-zinc-400 focus:outline-none focus:border-zinc-900 ${open ? 'invisible' : ''}`}
+        className={`ad-input flex items-start justify-between gap-2 text-left disabled:opacity-50 disabled:cursor-not-allowed ${open ? 'invisible' : ''}`}
       >
         {selected ? (
           <span className="flex flex-col min-w-0">
@@ -134,12 +135,12 @@ export default function SearchableSelect({
         ) : (
           <span className="text-zinc-400">{placeholder}</span>
         )}
-        <svg className="w-3.5 h-3.5 shrink-0 text-zinc-400 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
+        <NavArrowDown width={16} height={16} strokeWidth={1.5} className="shrink-0 text-[#aeaeb2] mt-0.5" />
       </button>
       {open && (
-        <div className="border border-zinc-900 bg-white absolute left-0 right-0 top-0 z-30 shadow-[0_4px_16px_rgba(0,0,0,0.12)]">
-          <div className="flex items-center gap-2 px-3 py-2 border-b border-zinc-200">
-            <svg className="w-3.5 h-3.5 shrink-0 text-zinc-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="7" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
+        <div className="bg-white border border-[#e8e8ed] rounded-[14px] absolute left-0 right-0 top-0 z-30 overflow-hidden" style={{ boxShadow: '0 12px 48px rgb(0 0 0 / 0.12)' }}>
+          <div className="flex items-center gap-2 px-3 py-2 border-b border-[#f1f1f4]">
+            <Search width={15} height={15} strokeWidth={1.5} className="shrink-0 text-[#aeaeb2]" />
             <input
               ref={inputRef}
               value={query}
@@ -168,7 +169,7 @@ export default function SearchableSelect({
                 onMouseEnter={() => setActiveIndex(i)}
                 onClick={() => commit(o)}
                 className={`px-3 py-2 text-sm cursor-pointer flex flex-col gap-0.5 ${
-                  o.disabled ? 'opacity-40 cursor-not-allowed' : i === activeIndex ? 'bg-zinc-900 text-white' : 'hover:bg-zinc-100'
+                  o.disabled ? 'opacity-40 cursor-not-allowed' : i === activeIndex ? 'bg-[#1d1d1f] text-white' : 'hover:bg-[#f5f5f7]'
                 }`}
               >
                 {o.groupLabel && (

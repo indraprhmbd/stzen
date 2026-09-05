@@ -123,27 +123,23 @@ export const productsService = {
       .innerJoin(products, eq(productVariants.productId, products.id))
       .where(whereClause)
 
-    // Page rows only — LIMIT now applies to sellable rows, not pre-filter rows
+    // Page rows only — LIMIT now applies to sellable rows, not pre-filter rows.
+    // Minimal card projection: cards render name/description/category/price/
+    // badge/stock only. Everything else (sku, timestamps, duration, account
+    // type, conditions, baseName, instructions) is detail-endpoint data —
+    // never ship it to list callers, guest or not.
     const rows = await db
       .select({
         internalId: productVariants.id,
         id: productVariants.publicId,
-        sku: productVariants.sku,
         name: productVariants.name,
         description: products.description,
         category: products.category,
         price: productVariants.price,
         compareAtPrice: productVariants.compareAtPrice,
         badge: productVariants.badge,
-        instructions: products.instructions,
         isActive: productVariants.isActive,
-        createdAt: productVariants.createdAt,
-        updatedAt: productVariants.updatedAt,
-        durationMonths: productVariants.durationMonths,
-        accountType: productVariants.accountType,
-        conditions: productVariants.conditions,
         fulfillmentType: productVariants.fulfillmentType,
-        baseName: products.name,
       })
       .from(productVariants)
       .innerJoin(products, eq(productVariants.productId, products.id))
@@ -153,11 +149,9 @@ export const productsService = {
       .offset(offset)
 
     // Stock counts for the page only (single batched query over ≤limit ids).
-    // instructions stay gated: post-delivery credentials endpoint only, same
-    // as getById — list responses must never carry seller instructions.
     const stock = await getStockCounts(rows.map((r) => (r as any).internalId))
     const paginatedProducts: ProductWithStock[] = rows.map((row) => {
-      const { internalId, instructions: _gated, ...rest } = row as any
+      const { internalId, ...rest } = row as any
       return { ...rest, stockCount: stock.get(internalId) ?? 0 }
     })
 

@@ -66,6 +66,13 @@ const credentialsRoutes = new Hono<CredentialsEnv>()
     throw new NotFoundError('Credential record not found')
   }
 
+  // Revoked after a failed-cred report: buyer sees a contact message, never
+  // stale or dead plaintext. Replacement (if any) arrives via order:replace
+  // which repoints vaultItemId, so this same card picks it up next open.
+  if (vaultItem.status === 'REVOKED') {
+    throw new ConflictError('Kredensial ini dicabut karena laporan kendala, hubungi admin untuk penggantian')
+  }
+
   // 4. Decrypt credential payload
   const credentials = await vaultService.decryptCredential(
     vaultItem.credentialPayload

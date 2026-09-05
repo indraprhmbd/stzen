@@ -17,6 +17,7 @@ export const vaultStatusEnum = pgEnum('vault_status', [
   'AVAILABLE',
   'SOLD',
   'RESERVED',
+  'REVOKED',
 ])
 
 export const orderStatusEnum = pgEnum('order_status', [

@@ -29,29 +29,29 @@ export default function DeliverDialog({ id, productName, onConfirm }: DeliverDia
 
   return (
     <dialog id={id} className="modal">
-      <div className="modal-box max-w-md bg-white rounded-none border border-zinc-900 p-6">
-        <h3 className="font-black text-base tracking-tight" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+      <div className="modal-box ad-dialog max-w-md p-6">
+        <h3 className="font-semibold text-[17px] tracking-tight text-[#1d1d1f]">
           Kirim on-demand
         </h3>
-        <p className="text-sm text-zinc-600 mt-2">
+        <p className="text-sm text-[#6e6e73] mt-2">
           {productName} — kredensial diimpor ke vault lalu dialokasikan ke pesanan ini dalam satu aksi.
         </p>
-        <label className="block mt-4 text-xs font-bold tracking-widest uppercase text-zinc-500">
+        <label className="ad-label block mt-4">
           Kredensial
           <textarea
             value={credential}
             onChange={(e) => setCredential(e.target.value)}
             placeholder="email:password | PIN | instruksi..."
             rows={4}
-            className="mt-1 w-full border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm font-mono normal-case tracking-normal"
+            className="ad-input mt-1.5 font-mono normal-case"
           />
         </label>
         {error && <p className="text-xs font-semibold text-red-600 mt-2">{error}</p>}
         <div className="flex justify-end gap-2 mt-5">
-          <button onClick={() => { setCredential(''); setError(null); closeConfirm(id) }} className="border border-zinc-200 px-5 py-2 text-sm font-semibold">
+          <button onClick={() => { setCredential(''); setError(null); closeConfirm(id) }} className="ad-btn">
             Batal
           </button>
-          <button onClick={handleConfirm} className="bg-zinc-900 text-white px-5 py-2 text-sm font-semibold hover:bg-black">
+          <button onClick={handleConfirm} className="ad-btn ad-btn-dark">
             Kirim + alokasikan
           </button>
         </div>

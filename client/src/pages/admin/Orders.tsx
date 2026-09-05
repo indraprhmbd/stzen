@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { authedApiRequest } from '../../lib/api'
 import { useAdminQuery } from '../../hooks/useAdminQuery'
@@ -7,6 +7,7 @@ import StatusChip from '../../components/admin/StatusChip'
 import ConfirmDialog, { openConfirm } from '../../components/admin/ConfirmDialog'
 import DeliverDialog, { openConfirm as openDialog } from '../../components/admin/DeliverDialog'
 import { printReceipt as printOrderReceipt } from '../../lib/receipt'
+import { Refresh, Plus, Search, NavArrowLeft, NavArrowRight } from 'iconoir-react'
 
 interface AdminOrder {
   id: string
@@ -78,20 +79,6 @@ export default function Orders() {
   const counts = data?.counts ?? { ALL: 0 }
 
   useEffect(() => { setOffset(0) }, [tab, q])
-
-  // Auto-refresh the action queue every 30s; archives stay manual.
-  // Skips ticks while the browser tab is hidden (hot-reload safe: HMR keeps
-  // the interval, visibility guard keeps it from polling in background).
-  const fetchRef = useRef(fetchOrders)
-  fetchRef.current = fetchOrders
-  useEffect(() => {
-    if (tab !== 'butuh-tindakan') return
-    const t = setInterval(() => {
-      if (document.hidden) return
-      fetchRef.current()
-    }, 30000)
-    return () => clearInterval(t)
-  }, [tab])
 
   function switchTab(key: TabKey) {
     setQ('')
@@ -254,45 +241,44 @@ export default function Orders() {
   }
 
   if (loading) return <div className="flex justify-center py-16"><span className="loading loading-spinner loading-lg"></span></div>
-  if (error) return <div className="bg-white border border-red-200 p-8 text-center"><div className="text-sm font-bold text-red-600">Gagal memuat</div><div className="text-xs text-zinc-500 mt-1">{error}</div><button onClick={fetchOrders} className="btn btn-sm bg-zinc-900 text-white rounded-sm mt-4">Coba lagi</button></div>
+  if (error) return <div className="ad-card-flat p-8 text-center"><div className="text-sm font-semibold text-red-600">Gagal memuat</div><div className="text-xs text-[#6e6e73] mt-1">{error}</div><button onClick={fetchOrders} className="ad-btn ad-btn-dark mt-4">Coba lagi</button></div>
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="border-b border-zinc-200 pb-5 flex flex-wrap items-end justify-between gap-3">
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-[22px] font-black tracking-tight" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>Pesanan</h1>
-          <p className="text-sm text-zinc-500 mt-1"><span className="font-mono text-zinc-900 font-semibold">{counts.ALL ?? 0}</span> total · <span className="font-mono">{counts.PENDING ?? 0}</span> pending · <span className="font-mono">{counts.PAID ?? 0}</span> dibayar{fetchedAt && <span className="font-mono text-zinc-400"> · Disinkron {new Date(fetchedAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>}</p>
+          <h1 className="text-[22px] font-semibold tracking-tight">Pesanan</h1>
+          <p className="text-[13px] text-[#6e6e73] mt-0.5 ad-num"><span className="text-[#1d1d1f] font-semibold">{counts.ALL ?? 0}</span> total · {counts.PENDING ?? 0} pending · {counts.PAID ?? 0} dibayar{fetchedAt && <span className="text-[#aeaeb2]"> · Disinkron {new Date(fetchedAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {exportErr && <span className="text-xs font-semibold text-red-600">{exportErr}</span>}
-          <button onClick={() => fetchOrders()} className="text-xs font-semibold border border-zinc-200 bg-white px-4 py-1.5 hover:bg-zinc-900 hover:text-white">Muat ulang</button>
-          <button onClick={exportCsv} disabled={exportBusy} className="text-xs font-semibold border border-zinc-200 bg-white px-4 py-1.5 hover:bg-zinc-900 hover:text-white disabled:opacity-40">{exportBusy ? 'Mengekspor...' : 'Ekspor CSV'}</button>
-          <button onClick={openManual} className="text-xs font-semibold bg-zinc-900 text-white px-4 py-1.5 hover:bg-black">+ Manual</button>
+          <button onClick={() => fetchOrders()} className="ad-btn"><Refresh width={15} height={15} strokeWidth={1.5} />Muat ulang</button>
+          <button onClick={exportCsv} disabled={exportBusy} className="ad-btn">{exportBusy ? 'Mengekspor...' : 'Ekspor CSV'}</button>
+          <button onClick={openManual} className="ad-btn ad-btn-dark"><Plus width={15} height={15} strokeWidth={1.5} />Manual</button>
         </div>
       </div>
 
-      <div className="bg-white border border-zinc-200 p-3 flex flex-col gap-3">
-        <div role="tablist" aria-label="Antrian pesanan" className="flex flex-wrap gap-1.5">
+      <div className="ad-card-flat p-3 flex flex-col gap-3">
+        <div role="tablist" aria-label="Antrian pesanan" className="ad-seg self-start max-w-full overflow-x-auto">
           {TABS.map((t) => (
             <button
               key={t.key}
               role="tab"
               aria-selected={tab === t.key}
               onClick={() => switchTab(t.key)}
-              className={`text-xs font-bold px-4 py-2 border ${tab === t.key ? 'bg-zinc-900 text-white border-zinc-900' : 'bg-white text-zinc-600 border-zinc-200 hover:border-zinc-900'}`}
             >
-              {t.label} <span className="font-mono opacity-70">({tabCount(t.key)})</span>
+              {t.label} <span className="ad-num opacity-70">({tabCount(t.key)})</span>
             </button>
           ))}
         </div>
-        <label className="flex items-center gap-2 border border-zinc-200 px-3 py-2 bg-zinc-50">
-          <span className="text-[11px] font-bold tracking-widest text-zinc-400">CARI</span>
-          <input placeholder="produk / ref bayar..." value={q} onChange={(e) => setQ(e.target.value)} className="grow bg-transparent text-sm outline-none placeholder:text-zinc-400" />
+        <label className="ad-input flex items-center gap-2">
+          <Search width={15} height={15} strokeWidth={1.5} className="shrink-0 text-[#aeaeb2]" />
+          <input placeholder="produk / ref bayar..." value={q} onChange={(e) => setQ(e.target.value)} className="grow bg-transparent text-sm outline-none" />
         </label>
       </div>
-      {actionErr && <div className="bg-red-50 border border-red-200 px-4 py-2.5 text-xs font-semibold text-red-700">{actionErr}</div>}
+      {actionErr && <div className="bg-[#fdecec] rounded-[10px] px-4 py-2.5 text-xs font-semibold text-[#b91c1c]">{actionErr}</div>}
 
-      <div className="bg-white border border-zinc-200 overflow-hidden">
+      <div className="ad-card">
         <DataTable
           columns={[
             { label: 'ID' },
@@ -312,85 +298,83 @@ export default function Orders() {
             const stockout = o.fulfillmentType !== 'on_demand' && o.vaultAvailable === 0
             const overdue = (o.status === 'PENDING' || o.status === 'PAID') && Date.now() - new Date(o.createdAt).getTime() > 24 * 3600 * 1000
             return (
-            <tr key={o.id} className="border-b border-zinc-100 last:border-0 hover:bg-zinc-50/50">
-              <td className="font-mono text-xs font-bold tracking-wide py-3.5">{o.id.slice(0, 8).toUpperCase()}</td>
-              <td className="text-xs font-mono text-zinc-600 whitespace-nowrap">{new Date(o.createdAt).toLocaleDateString('id-ID', { day:'2-digit', month:'short', year:'numeric' })}</td>
-              <td className={`text-xs font-mono whitespace-nowrap ${overdue ? 'text-red-600 font-bold' : 'text-zinc-600'}`}>{formatAge(o.createdAt)}</td>
-              <td className="text-[13px] font-semibold max-w-[180px] truncate">{o.productName}</td>
+            <tr key={o.id}>
+              <td className="ad-num text-xs font-semibold">{o.id.slice(0, 8).toUpperCase()}</td>
+              <td className="text-xs ad-num text-[#6e6e73] whitespace-nowrap">{new Date(o.createdAt).toLocaleDateString('id-ID', { day:'2-digit', month:'short', year:'numeric' })}</td>
+              <td className={`text-xs ad-num whitespace-nowrap ${overdue ? 'text-red-600 font-semibold' : 'text-[#6e6e73]'}`}>{formatAge(o.createdAt)}</td>
+              <td className="text-[13px] font-medium max-w-[180px] truncate">{o.productName}</td>
               <td className="whitespace-nowrap">
-                <span className={`inline-block text-[10px] font-bold tracking-widest px-2 py-0.5 border ${o.fulfillmentType === 'on_demand' ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-zinc-100 text-zinc-600 border-zinc-200'}`}>
-                  {o.fulfillmentType === 'on_demand' ? 'ON-DEMAND' : 'VAULT'}
-                </span>
-                {stockout && <span className="inline-block ml-1 text-[10px] font-bold tracking-widest px-2 py-0.5 border bg-red-600 text-white border-red-600">STOK HABIS</span>}
+                <StatusChip tone={o.fulfillmentType === 'on_demand' ? 'amber' : 'zinc'}>{o.fulfillmentType === 'on_demand' ? 'ON-DEMAND' : 'VAULT'}</StatusChip>
+                {stockout && <StatusChip tone="red" className="ml-1">STOK HABIS</StatusChip>}
               </td>
-              <td className="font-mono text-xs text-zinc-600">{o.userId.slice(0, 8)}</td>
-              <td className="text-sm font-mono font-semibold">Rp {Number(o.amount).toLocaleString('id-ID')}</td>
+              <td className="ad-num text-xs text-[#6e6e73]">{o.userId.slice(0, 8)}</td>
+              <td className="text-[13px] ad-num font-semibold">Rp {Number(o.amount).toLocaleString('id-ID')}</td>
               <td><StatusChip status={o.status}>{o.status}</StatusChip></td>
               <td className="text-right">
                 <div className="flex justify-end gap-1.5">
                   {o.status === 'PENDING' && (
                     <>
-                      <button disabled={actionLoading === o.id} onClick={() => handleAction(o.id, 'approve')} className="text-xs font-semibold border border-zinc-900 bg-zinc-900 text-white px-3 py-1 hover:bg-black disabled:opacity-40">Setujui</button>
-                          <button disabled={actionLoading === o.id} onClick={() => askReject(o)} className="text-xs font-semibold border border-zinc-200 px-3 py-1 hover:bg-red-600 hover:text-white hover:border-red-600 disabled:opacity-40">Tolak</button>
+                      <button disabled={actionLoading === o.id} onClick={() => handleAction(o.id, 'approve')} className="ad-btn ad-btn-dark">Setujui</button>
+                          <button disabled={actionLoading === o.id} onClick={() => askReject(o)} className="ad-btn ad-btn-danger">Tolak</button>
                     </>
                   )}
                   {o.status === 'PAID' && (
                     <>
-                      <button disabled={actionLoading === o.id} onClick={() => askDeliver(o)} className="text-xs font-semibold border border-zinc-900 bg-zinc-900 text-white px-3 py-1 hover:bg-black disabled:opacity-40">Kirim</button>
-                      <button disabled={actionLoading === o.id} onClick={() => askRefund(o)} className="text-xs font-semibold border border-zinc-200 px-3 py-1 hover:bg-red-600 hover:text-white hover:border-red-600 disabled:opacity-40">Refund</button>
+                      <button disabled={actionLoading === o.id} onClick={() => askDeliver(o)} className="ad-btn ad-btn-dark">Kirim</button>
+                      <button disabled={actionLoading === o.id} onClick={() => askRefund(o)} className="ad-btn ad-btn-danger">Refund</button>
                     </>
                   )}
                   {actionLoading === o.id && <span className="loading loading-spinner loading-xs"></span>}
                   {o.status !== 'PENDING' && (
-                    <button onClick={() => openReceipt(o)} className="text-xs font-semibold border border-zinc-200 px-3 py-1 hover:bg-zinc-900 hover:text-white disabled:opacity-40">Struk</button>
+                    <button onClick={() => openReceipt(o)} className="ad-btn">Struk</button>
                   )}
-                  {!['PENDING','PAID'].includes(o.status) && <span className="text-xs text-zinc-400">-</span>}
+                  {!['PENDING','PAID'].includes(o.status) && <span className="text-xs text-[#aeaeb2]">-</span>}
                 </div>
               </td>
             </tr>
             )
           })}
         </DataTable>
-        <div className="flex items-center justify-between px-4 py-3 border-t border-zinc-200 bg-zinc-50">
-          <span className="text-xs font-mono text-zinc-500">{total} pesanan</span>
-          <div className="flex gap-2">
-            <button onClick={() => { setOffset((o) => Math.max(0, o - limit)); }} className="text-xs font-semibold text-zinc-900 hover:text-black disabled:opacity-40" disabled={offset === 0}>← Kembali</button>
-            <button onClick={() => { setOffset((o) => o + limit); }} className="text-xs font-semibold text-zinc-900 hover:text-black disabled:opacity-40" disabled={offset + limit >= total}>Lanjut →</button>
+        <div className="flex items-center justify-between px-4 py-3 border-t border-[#f1f1f4]">
+          <span className="text-xs ad-num text-[#6e6e73]">{total} pesanan</span>
+          <div className="flex gap-1.5">
+            <button onClick={() => { setOffset((o) => Math.max(0, o - limit)); }} title="Sebelumnya" aria-label="Halaman sebelumnya" className="ad-btn !px-2.5" disabled={offset === 0}><NavArrowLeft width={15} height={15} strokeWidth={1.5} /></button>
+            <button onClick={() => { setOffset((o) => o + limit); }} title="Berikutnya" aria-label="Halaman berikutnya" className="ad-btn !px-2.5" disabled={offset + limit >= total}><NavArrowRight width={15} height={15} strokeWidth={1.5} /></button>
           </div>
         </div>
       </div>
       <dialog id="receipt_modal" className="modal">
-        <div className="modal-box max-w-md bg-white rounded-none border border-zinc-900 p-6">
-          <h3 className="font-black text-base tracking-tight" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>Struk</h3>
+        <div className="modal-box ad-dialog max-w-md p-6">
+          <h3 className="font-semibold text-[17px] tracking-tight">Struk</h3>
           {receipt && (
-            <div className="mt-4 text-sm font-mono flex flex-col gap-1.5">
-              <div className="flex justify-between"><span className="text-zinc-500">ID</span><span className="font-bold">{receipt.id.slice(0, 8).toUpperCase()}</span></div>
-              <div className="flex justify-between"><span className="text-zinc-500">Tanggal</span><span>{new Date(receipt.createdAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}</span></div>
-              <div className="flex justify-between gap-4"><span className="text-zinc-500">Produk</span><span className="text-right font-semibold">{receipt.productName}</span></div>
-              <div className="flex justify-between"><span className="text-zinc-500">Jumlah</span><span className="font-bold">Rp {Number(receipt.amount).toLocaleString('id-ID')}</span></div>
-              <div className="flex justify-between"><span className="text-zinc-500">Status</span><span>{receipt.status}</span></div>
-              <div className="flex justify-between"><span className="text-zinc-500">Ref</span><span>{receipt.paymentRef ?? '-'}</span></div>
+            <div className="mt-4 text-sm ad-num flex flex-col gap-1.5">
+              <div className="flex justify-between"><span className="text-[#6e6e73]">ID</span><span className="font-semibold">{receipt.id.slice(0, 8).toUpperCase()}</span></div>
+              <div className="flex justify-between"><span className="text-[#6e6e73]">Tanggal</span><span>{new Date(receipt.createdAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}</span></div>
+              <div className="flex justify-between gap-4"><span className="text-[#6e6e73]">Produk</span><span className="text-right font-medium">{receipt.productName}</span></div>
+              <div className="flex justify-between"><span className="text-[#6e6e73]">Jumlah</span><span className="font-semibold">Rp {Number(receipt.amount).toLocaleString('id-ID')}</span></div>
+              <div className="flex justify-between"><span className="text-[#6e6e73]">Status</span><span>{receipt.status}</span></div>
+              <div className="flex justify-between"><span className="text-[#6e6e73]">Ref</span><span>{receipt.paymentRef ?? '-'}</span></div>
             </div>
           )}
           <div className="flex justify-end gap-2 mt-5">
-            <button onClick={() => (document.getElementById('receipt_modal') as HTMLDialogElement | null)?.close()} className="border border-zinc-200 px-5 py-2 text-sm font-semibold">Tutup</button>
-            <button onClick={printReceipt} className="bg-zinc-900 text-white px-5 py-2 text-sm font-semibold">Cetak</button>
+            <button onClick={() => (document.getElementById('receipt_modal') as HTMLDialogElement | null)?.close()} className="ad-btn">Tutup</button>
+            <button onClick={printReceipt} className="ad-btn ad-btn-dark">Cetak</button>
           </div>
         </div>
         <form method="dialog" className="modal-backdrop"><button>close</button></form>
       </dialog>
 
       <dialog id="manual_modal" className="modal">
-        <div className="modal-box max-w-md bg-white rounded-none border border-zinc-900 p-6">
-          <h3 className="font-black text-base tracking-tight" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>Buat Pesanan Manual</h3>
+        <div className="modal-box ad-dialog max-w-md p-6">
+          <h3 className="font-semibold text-[17px] tracking-tight">Buat Pesanan Manual</h3>
           <form onSubmit={submitManual} className="flex flex-col gap-4 mt-5">
-            <label className="text-xs font-bold tracking-widest uppercase text-zinc-500">Email Pelanggan<input type="email" required value={mEmail} onChange={(e) => setMEmail(e.target.value)} placeholder="pelanggan@email.com" className="mt-1 w-full border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm" /></label>
-            <label className="text-xs font-bold tracking-widest uppercase text-zinc-500">Varian<select value={mVariantId} onChange={(e) => setMVariantId(e.target.value)} required className="mt-1 w-full border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm"><option value="">Pilih varian</option>{manualVariants.map((v) => <option key={v.id} value={v.id}>{v.name} - Rp {Number(v.price).toLocaleString('id-ID')}</option>)}</select></label>
-            <label className="text-xs font-bold tracking-widest uppercase text-zinc-500">Ref Bayar (opsional)<input type="text" value={mPaymentRef} onChange={(e) => setMPaymentRef(e.target.value)} placeholder="tunai / transfer ..." className="mt-1 w-full border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm" /></label>
+            <label className="ad-label">Email Pelanggan<input type="email" required value={mEmail} onChange={(e) => setMEmail(e.target.value)} placeholder="pelanggan@email.com" className="ad-input mt-1.5 normal-case" /></label>
+            <label className="ad-label">Varian<select value={mVariantId} onChange={(e) => setMVariantId(e.target.value)} required className="ad-input mt-1.5"><option value="">Pilih varian</option>{manualVariants.map((v) => <option key={v.id} value={v.id}>{v.name} - Rp {Number(v.price).toLocaleString('id-ID')}</option>)}</select></label>
+            <label className="ad-label">Ref Bayar (opsional)<input type="text" value={mPaymentRef} onChange={(e) => setMPaymentRef(e.target.value)} placeholder="tunai / transfer ..." className="ad-input mt-1.5 normal-case" /></label>
             {mError && <p className="text-xs font-semibold text-red-600">{mError}</p>}
             <div className="flex justify-end gap-2 mt-2">
-              <button type="button" onClick={() => (document.getElementById('manual_modal') as HTMLDialogElement | null)?.close()} className="border border-zinc-200 px-5 py-2 text-sm font-semibold">Batal</button>
-              <button type="submit" disabled={mSaving} className="bg-zinc-900 text-white px-6 py-2 text-sm font-semibold disabled:opacity-40">{mSaving ? 'Menyimpan...' : 'Buat Pesanan'}</button>
+              <button type="button" onClick={() => (document.getElementById('manual_modal') as HTMLDialogElement | null)?.close()} className="ad-btn">Batal</button>
+              <button type="submit" disabled={mSaving} className="ad-btn ad-btn-dark">{mSaving ? 'Menyimpan...' : 'Buat Pesanan'}</button>
             </div>
           </form>
         </div>
