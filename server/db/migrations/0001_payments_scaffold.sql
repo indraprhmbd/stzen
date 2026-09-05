@@ -71,7 +71,7 @@ BEGIN
   UPDATE vault_items
   SET status = 'SOLD',
       allocated_at = NOW()
-  WHERE id = v_item.id;
+  WHERE vault_items.id = v_item.id;
 
   UPDATE orders
   SET vault_item_id = v_item.id

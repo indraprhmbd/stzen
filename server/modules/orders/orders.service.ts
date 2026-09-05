@@ -85,6 +85,23 @@ export const ordersService = {
     } as any
   },
 
+  // ─── Buyer self-cancel ────────────────────────────────────────────────────
+  // Owner-only hard delete of a dead PENDING row (e.g. gateway initiate
+  // failed, invoice never minted). Blocked once payment_ref exists — a live
+  // gateway invoice is outstanding, admin must void it. Audit trail stays in
+  // audit_logs (order:create + initiate attempts); nothing payable is lost.
+  async deleteOwnOrder(publicId: string, userId: string) {
+    const order = await this.getById(publicId, userId)
+    if (order.status !== 'PENDING') {
+      throw new ConflictError('Only PENDING orders can be cancelled')
+    }
+    if (order.paymentRef) {
+      throw new ConflictError('Order already invoiced, contact admin to cancel')
+    }
+    await db.delete(orders).where(eq(orders.publicId, publicId))
+    return { ok: true }
+  },
+
   async create(data: { userId: string; productId?: string | null; variantId?: string; amount: string | number; variantSnapshot?: any }) {
     const publicId = generatePublicId()
     const amountInt = typeof data.amount === 'string' ? parseInt(data.amount, 10) : data.amount
@@ -200,7 +217,9 @@ export const ordersService = {
       })
       .from(orders)
       .leftJoin(productVariants, eq(orders.variantId, productVariants.id))
-      .where(eq(orders.paymentRef, providerRef))
+      // Gateways echo back OUR order id (e.g. SumoPod data.order_id), not the
+      // gateway-side payment_id stored in payment_ref — match either.
+      .where(or(eq(orders.paymentRef, providerRef), eq(orders.publicId, providerRef)))
 
     return (row as PayableOrder) ?? null
   },

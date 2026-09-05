@@ -35,3 +35,23 @@ export interface PaymentProvider {
   // c.req.json() upstream, it re-serializes and breaks signature checks.
   parseWebhook(c: Context): Promise<WebhookResult>
 }
+
+// ─── Webhook Capture Signal ─────────────────────────────────────────────────
+// Thrown by a provider's parseWebhook when it has no verification credentials
+// configured yet (sandbox onboarding: the gateway only issues secrets AFTER a
+// successful test delivery — chicken-and-egg). webhooks.routes.ts catches this
+// and answers 200 { ok: true, captured: true } so the gateway's test passes.
+// NOTHING is trusted: no order lookup, no state change, payload only lands in
+// server logs for shape inspection. Once the secret/token env is set, the
+// provider must verify for real and never throw this.
+export class WebhookCaptureError extends Error {
+  raw: string
+  headers: Record<string, string>
+
+  constructor(provider: string, raw: string, headers: Record<string, string>) {
+    super(`[${provider}] webhook captured (unverified — no credentials configured)`)
+    this.name = 'WebhookCaptureError'
+    this.raw = raw
+    this.headers = headers
+  }
+}

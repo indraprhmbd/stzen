@@ -51,6 +51,35 @@ export const productsService = {
     return withStock.filter(item => item.stockCount > 0)
   },
 
+  // Category counts without fetching rows — the /categories endpoint only
+  // needs names + counts. Same sellable filter as listPaginated (active +
+  // on_demand-or-in-stock) so badges match list results. Never select
+  // instruction payloads here.
+  async getCategoryCounts(): Promise<{ categories: string[]; counts: Record<string, number> }> {
+    const hasStock = exists(
+      db.select({ one: sql`1` }).from(vaultItems).where(
+        and(eq(vaultItems.variantId, productVariants.id), eq(vaultItems.status, 'AVAILABLE'))
+      )
+    )
+    const rows = await db
+      .select({
+        category: products.category,
+        count: sql<number>`cast(count(*) as int)`,
+      })
+      .from(productVariants)
+      .innerJoin(products, eq(productVariants.productId, products.id))
+      .where(
+        and(
+          eq(productVariants.isActive, true),
+          or(eq(productVariants.fulfillmentType, 'on_demand'), hasStock)!
+        )
+      )
+      .groupBy(products.category)
+    const counts: Record<string, number> = {}
+    for (const r of rows) counts[r.category] = r.count
+    return { categories: Object.keys(counts), counts }
+  },
+
   // Paginated storefront: server-side sort/filter/search
   async listPaginated(params: ProductQueryParams): Promise<PaginatedProducts> {
     const { category, sort = 'newest', page = 1, limit = 24, search } = params
@@ -123,10 +152,12 @@ export const productsService = {
       .limit(limit)
       .offset(offset)
 
-    // Stock counts for the page only (single batched query over ≤limit ids)
+    // Stock counts for the page only (single batched query over ≤limit ids).
+    // instructions stay gated: post-delivery credentials endpoint only, same
+    // as getById — list responses must never carry seller instructions.
     const stock = await getStockCounts(rows.map((r) => (r as any).internalId))
     const paginatedProducts: ProductWithStock[] = rows.map((row) => {
-      const { internalId, ...rest } = row as any
+      const { internalId, instructions: _gated, ...rest } = row as any
       return { ...rest, stockCount: stock.get(internalId) ?? 0 }
     })
 

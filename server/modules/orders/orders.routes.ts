@@ -24,5 +24,12 @@ export const orderRoutes = new Hono<OrderEnv>()
   return c.json(order)
 })
 
+// DELETE /:id — Buyer cancels own dead PENDING order (see deleteOwnOrder)
+  .delete('/:id', async (c) => {
+  const user = c.get('user')
+  const result = await ordersService.deleteOwnOrder(c.req.param('id'), user.sub)
+  return c.json(result)
+})
+
 // GET /:id/credentials — Decrypt vault item for this order
   .route('/:id/credentials', credentialsRoutes)

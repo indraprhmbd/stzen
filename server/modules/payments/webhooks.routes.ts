@@ -1,5 +1,6 @@
 import { Hono } from 'hono'
 import { paymentsService } from './payments.service'
+import { WebhookCaptureError } from './payments.types'
 
 // ─── Webhook Routes (PUBLIC) ─────────────────────────────────────────────────
 // No authMiddleware — gateways call these directly, they can't send a
@@ -14,6 +15,16 @@ import { paymentsService } from './payments.service'
 
 export const webhooksRoutes = new Hono()
   .post('/:provider', async (c) => {
-  const result = await paymentsService.handleWebhook(c.req.param('provider'), c)
-  return c.json(result)
+  try {
+    const result = await paymentsService.handleWebhook(c.req.param('provider'), c)
+    return c.json(result)
+  } catch (e) {
+    // Sandbox onboarding capture — acknowledge test deliveries with 200.
+    // Trusts nothing (see WebhookCaptureError in payments.types.ts).
+    if (e instanceof WebhookCaptureError) {
+      console.warn(`[webhook-capture] ${e.message} headers=${JSON.stringify(e.headers)} body=${e.raw.slice(0, 2000)}`)
+      return c.json({ ok: true, captured: true })
+    }
+    throw e
+  }
 })
