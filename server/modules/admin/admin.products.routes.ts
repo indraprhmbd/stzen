@@ -102,6 +102,16 @@ export const adminProductRoutes = new Hono<AdminProductEnv>()
     if (!updated) {
       return c.json({ error: 'Product not found' }, 404)
     }
+
+    // Cascade isActive to all variants of this product
+    if (data.isActive !== undefined) {
+      const internalId = (updated as any).id
+      await db
+        .update(productVariants)
+        .set({ isActive: data.isActive })
+        .where(eq(productVariants.productId, internalId))
+    }
+
     const { publicId: pid, ...rest } = updated as any
     const user = c.get('user')
     await appendAudit({

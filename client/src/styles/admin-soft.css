@@ -117,6 +117,7 @@
   border-radius: 10px;
   padding: 8px 12px;
   font-size: 13px;
+  font-weight: 400;
   color: var(--ad-ink);
   outline: none;
 }

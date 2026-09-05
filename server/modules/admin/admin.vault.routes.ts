@@ -6,7 +6,6 @@ import { requireRole } from '../../shared/middleware/require-role'
 import { ForbiddenError } from '../../shared/errors/http'
 import { vaultService } from '../vault/vault.service'
 import { mintUnlockToken, verifyUnlockToken } from '../../shared/lib/unlockToken'
-import { appendAudit } from '../../shared/lib/audit'
 
 // ─── Admin Vault Routes ─────────────────────────────────────────────────────
 // Plaintext credential management behind a soft unlock gate. List, edit,
@@ -38,13 +37,6 @@ export const adminVaultRoutes = new Hono<AuthEnv>()
   .post('/unlock', async (c) => {
     const user = c.get('user')
     const { token, expiresAt } = await mintUnlockToken(user.sub)
-    await appendAudit({
-      action: 'vault:unlock',
-      resourceType: 'stock',
-      snapshotText: `Vault dibuka oleh ${user.email ?? user.sub}`,
-      actorId: user.sub,
-      actorEmail: user.email ?? null,
-    }).catch(() => {})
     return c.json({ token, expiresAt })
   })
 
