@@ -1,4 +1,4 @@
-import { RefObject } from 'react'
+import { RefObject, useEffect, useRef, useState } from 'react'
 import { useCopy } from '../hooks/useCopy'
 
 interface FilterBarProps {
@@ -38,6 +38,27 @@ function getCategoryColor(category: string, index: number) {
 export default function FilterBar({ categories, active, onChange, counts = {}, sort, onSortChange, view, onViewChange, searchQuery, onSearchChange, searchRef }: FilterBarProps) {
   const { t } = useCopy()
 
+  // Debounced search: typing updates the local draft instantly, the URL (and
+  // its API fetch) follows 250ms after the last keystroke. Draft re-syncs
+  // when the URL changes externally (e.g. clear-filters).
+  const [draft, setDraft] = useState(searchQuery)
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(() => {
+    setDraft(searchQuery)
+  }, [searchQuery])
+  useEffect(() => () => {
+    if (timer.current) clearTimeout(timer.current)
+  }, [])
+  function handleSearch(value: string) {
+    // Allowlist: unicode letters/numbers, spaces, - _ . , & '. Everything
+    // else (quotes, slashes, brackets, symbols) is dropped before it hits
+    // state, URL, or the API. Cap 64 chars.
+    const clean = value.replace(/[^\p{L}\p{N}\s\-_.,&']/gu, '').slice(0, 64)
+    setDraft(clean)
+    if (timer.current) clearTimeout(timer.current)
+    timer.current = setTimeout(() => onSearchChange(clean), 300)
+  }
+
   return (
     <div className="sticky top-16 z-40 -mx-4 px-4 py-2 mb-4">
       {/* Mobile: 2 rows */}
@@ -52,8 +73,8 @@ export default function FilterBar({ categories, active, onChange, counts = {}, s
               ref={searchRef}
               type="text"
               placeholder={t.hero.searchPlaceholder}
-              value={searchQuery}
-              onChange={(e) => onSearchChange(e.target.value)}
+              value={draft}
+              onChange={(e) => handleSearch(e.target.value)}
               className="w-full bg-surface-container border-comic font-black text-[10px] uppercase pl-6 pr-1.5 py-1.5 shadow-comic-sm text-on-surface placeholder:text-on-surface/40 focus:outline-none focus:ring-2 focus:ring-primary-container"
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
             />
@@ -127,8 +148,8 @@ export default function FilterBar({ categories, active, onChange, counts = {}, s
             ref={searchRef}
             type="text"
             placeholder={t.hero.searchPlaceholder}
-            value={searchQuery}
-            onChange={(e) => onSearchChange(e.target.value)}
+            value={draft}
+            onChange={(e) => handleSearch(e.target.value)}
             className="bg-surface-container border-comic font-black text-xs uppercase pl-7 pr-12 py-2 shadow-comic-sm text-on-surface placeholder:text-on-surface/40 focus:outline-none focus:ring-2 focus:ring-primary-container w-52"
             style={{ fontFamily: "'Space Grotesk', sans-serif" }}
           />

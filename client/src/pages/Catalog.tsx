@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { useCopy } from '../hooks/useCopy'
 import Layout from '../components/Layout'
@@ -6,6 +7,33 @@ import ShopCtaCardSlim from '../components/ShopCtaCardSlim'
 
 function Catalog() {
   const { t } = useCopy()
+  const stripRef = useRef<HTMLDivElement>(null)
+
+  // Desktop has no carousel buttons: vertical wheel over the strip scrolls
+  // it horizontally instead of moving the page.
+  useEffect(() => {
+    const el = stripRef.current
+    if (!el) return
+    let snapTimer: ReturnType<typeof setTimeout> | null = null
+    const onWheel = (e: WheelEvent) => {
+      if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return
+      if (el.scrollWidth <= el.clientWidth) return
+      e.preventDefault()
+      // Snap (even proximity) grabs between ticks and reads as stuck —
+      // suspend it while wheeling, restore 200ms after the last tick.
+      el.style.scrollSnapType = 'none'
+      el.scrollLeft += e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY
+      if (snapTimer) clearTimeout(snapTimer)
+      snapTimer = setTimeout(() => {
+        el.style.scrollSnapType = ''
+      }, 200)
+    }
+    el.addEventListener('wheel', onWheel, { passive: false })
+    return () => {
+      if (snapTimer) clearTimeout(snapTimer)
+      el.removeEventListener('wheel', onWheel)
+    }
+  }, [])
 
   return (
     <Layout>
@@ -85,7 +113,7 @@ function Catalog() {
           {t.howItWorks.steps.map((step, i) => {
             const badgeColors = ['bg-secondary text-white', 'bg-primary text-neutral', 'bg-accent text-neutral', 'bg-neutral text-primary']
             return (
-              <div key={step.num} className="bg-white border-comic shadow-comic p-2.5 flex gap-2 items-start">
+              <div key={step.num} className="bg-white border-comic shadow-comic p-2.5 flex gap-2 items-start transition-all duration-[60ms] ease-out md:hover:-translate-x-[2px] md:hover:-translate-y-[2px] md:hover:shadow-[7px_7px_0px_0px_#0D110F]">
                 <span className={`inline-flex items-center justify-center w-7 h-7 ${badgeColors[i]} border-2 border-black font-black text-xs shrink-0 -rotate-2`}>
                   {step.num}
                 </span>
@@ -119,7 +147,7 @@ function Catalog() {
           ].map((cfg, i) => {
             const item = t.whyUs.items[i]
             return (
-              <div key={item.title} className={`${cfg.accent} border-comic shadow-comic p-3 flex gap-2.5 items-start`}>
+              <div key={item.title} className={`${cfg.accent} border-comic shadow-comic p-3 flex gap-2.5 items-start transition-all duration-[60ms] ease-out md:hover:-translate-x-[2px] md:hover:-translate-y-[2px] md:hover:shadow-[7px_7px_0px_0px_#0D110F]`}>
                 <span className={`material-symbols-outlined text-lg ${(cfg as any).iconColor || cfg.text} bg-white border-2 border-black w-8 h-8 grid place-items-center shrink-0 -rotate-2`}>{cfg.icon}</span>
                 <div>
                   <h3 className={`font-black text-xs uppercase tracking-tight ${cfg.text === 'text-white' ? 'text-white' : 'text-neutral'}`} style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
@@ -143,9 +171,9 @@ function Catalog() {
           </h2>
           <div className="flex-1 h-[3px] bg-black" />
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+        <div ref={stripRef} className="flex gap-2 overflow-x-auto pb-2 -mx-4 pl-6 pr-4 scroll-pl-6 snap-x snap-proximity md:mx-0 md:px-0 md:scroll-px-0">
           {t.testimonials.items.map((item) => (
-            <div key={item.name} className="bg-white border-comic shadow-comic p-3">
+            <div key={item.name} className="bg-white border-comic shadow-comic p-3 shrink-0 w-[270px] md:w-[300px] snap-start transition-all duration-[60ms] ease-out md:hover:-translate-x-[2px] md:hover:-translate-y-[2px] md:hover:shadow-[7px_7px_0px_0px_#0D110F]">
               <div className="flex gap-0.5 mb-1.5">
                 {Array.from({ length: 5 }).map((_, i) => (
                   <span key={i} className="material-symbols-outlined text-[10px] text-accent">star</span>

@@ -88,14 +88,6 @@ export default function Header() {
                 >
                   <span className="material-symbols-outlined text-sm">search</span>
                 </button>
-                <button
-                  onClick={toggle}
-                  className="h-8 px-2 border-2 border-black bg-white text-black font-black text-[10px] flex items-center justify-center hover:bg-black hover:text-white transition-colors"
-                  style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-                  aria-label="Switch language"
-                >
-                  {lang === 'id' ? 'EN' : 'ID'}
-                </button>
               </div>
             </div>
 

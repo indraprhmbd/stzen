@@ -6,6 +6,7 @@ const tabs = [
   { to: '/', icon: 'house', labelKey: 'home' as const },
   { to: '/products', icon: 'storefront', labelKey: 'shop' as const },
   { to: '/dashboard', icon: 'receipt_long', labelKey: 'myOrders' as const },
+  { to: '/profile', icon: 'person', labelKey: 'profile' as const },
 ]
 
 export default function BottomNav() {

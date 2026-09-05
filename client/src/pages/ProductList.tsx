@@ -1,6 +1,7 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, startTransition } from 'react'
 import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { apiV1 } from '../lib/api'
+import { listKey, getCachedList, setCachedList, prefetchList } from '../lib/prefetch'
 import { useAuth } from '../hooks/useAuth'
 import { useBrand } from '../hooks/useBrand'
 import { useCopy } from '../hooks/useCopy'
@@ -73,10 +74,10 @@ export default function ProductList() {
     }).catch(() => {})
   }, [])
 
-  // Fetch products on every URL param change
+  // Fetch products on every URL param change — cache-first: back-nav and
+  // prefetched pages paint instantly, then revalidate silently.
   useEffect(() => {
     let cancelled = false
-    setLoading(true)
 
     const query: Record<string, string> = {}
     if (category !== 'all') query.category = category
@@ -84,22 +85,46 @@ export default function ProductList() {
     if (page > 1) query.page = String(page)
     if (search) query.search = search
 
+    const key = listKey(query)
+    const cached = getCachedList<PaginatedResult>(key)
+    const hit = cached && Array.isArray((cached as any).products) ? cached : null
+    if (hit) {
+      setResult(hit)
+      setLoading(false)
+    } else {
+      setLoading(true)
+    }
+
     apiV1.products.$get({ query }).then(async (res) => {
       if (cancelled) return
       if (res.ok) {
-        const data = await res.json()
-        // Check if paginated (has .products array) or legacy flat array
-        if (Array.isArray(data)) {
-          setResult({ products: data as Product[], total: (data as Product[]).length, page: 1, limit: 24, totalPages: 1 })
-        } else {
-          setResult(data as PaginatedResult)
-        }
+        const data = (await res.json()) as PaginatedResult
+        // Normalize once: any shape drift (proxy error page, validator union,
+        // stale cache entry) becomes an empty list instead of a render crash.
+        const products = Array.isArray((data as any)?.products) ? (data as any).products : []
+        if (!Array.isArray((data as any)?.products)) console.warn('[products] unexpected list shape', key)
+        const normalized = { ...(data as object), products } as PaginatedResult
+        setCachedList(key, normalized)
+        setResult(normalized)
       }
       setLoading(false)
     }).catch(() => { if (!cancelled) setLoading(false) })
 
     return () => { cancelled = true }
   }, [category, sort, page, search])
+
+  // Pre-warm page+1 while the pager is on screen (Pagination calls this once
+  // per page via viewport observer). Same query shape as the fetch above.
+  const prefetchNextPage = useCallback(() => {
+    const totalPages = result?.totalPages ?? 1
+    if (page >= totalPages) return
+    const query: Record<string, string> = {}
+    if (category !== 'all') query.category = category
+    if (sort !== 'newest') query.sort = sort
+    query.page = String(page + 1)
+    if (search) query.search = search
+    prefetchList(query)
+  }, [category, sort, page, search, result?.totalPages])
 
   // Ctrl+K shortcut
   useEffect(() => {
@@ -113,9 +138,11 @@ export default function ProductList() {
     return () => window.removeEventListener('keydown', handler)
   }, [])
 
-  // Helper: update URL params, reset to page 1 on filter change
+  // Helper: update URL params, reset to page 1 on filter change.
+  // Transition keeps typing/filter taps responsive while the fetch runs.
   function updateParam(key: string, value: string) {
-    setSearchParams((prev) => {
+    startTransition(() => {
+      setSearchParams((prev) => {
       const params = new URLSearchParams(prev)
       if (!value || value === 'all' || (key === 'sort' && value === 'newest') || (key === 'search' && !value)) {
         params.delete(key)
@@ -125,6 +152,7 @@ export default function ProductList() {
       // Reset page on filter change (except when changing page itself)
       if (key !== 'page') params.delete('page')
       return params
+      })
     })
   }
 
@@ -238,7 +266,7 @@ export default function ProductList() {
       )}
 
       {/* ═══ PAGINATION ═══ */}
-      {result && session && <Pagination currentPage={result.page} totalPages={result.totalPages} />}
+      {result && session && <Pagination currentPage={result.page} totalPages={result.totalPages} onPrefetchNext={prefetchNextPage} />}
 
       {/* ═══ TOAST ═══ */}
       {toastMsg && <CopyToast message={toastMsg} onDone={() => setToastMsg('')} />}

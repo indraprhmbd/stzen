@@ -3,7 +3,6 @@ import { Routes, Route } from 'react-router-dom'
 import { BrandProvider } from './hooks/useBrand'
 import { RequireAuth } from './components/RequireAuth'
 import { RequireAdmin } from './components/RequireAdmin'
-import AdminLayout from './layouts/AdminLayout'
 
 const Catalog = lazy(() => import('./pages/Catalog'))
 const ProductList = lazy(() => import('./pages/ProductList'))
@@ -13,6 +12,10 @@ const PaymentMethods = lazy(() => import('./pages/PaymentMethods'))
 const FAQ = lazy(() => import('./pages/FAQ'))
 const Login = lazy(() => import('./pages/Login'))
 const Dashboard = lazy(() => import('./pages/Dashboard'))
+const Profile = lazy(() => import('./pages/Profile'))
+// Admin shell stays out of the main bundle — loads only on /admin visits.
+const AdminLayout = lazy(() => import('./layouts/AdminLayout'))
+const PaymentReturn = lazy(() => import('./pages/PaymentReturn'))
 const Overview = lazy(() => import('./pages/admin/Overview'))
 const AdminProducts = lazy(() => import('./pages/admin/Products'))
 const AdminOrders = lazy(() => import('./pages/admin/Orders'))
@@ -41,6 +44,8 @@ function App() {
           <Route path="/faq" element={<FAQ />} />
           <Route path="/login" element={<Login />} />
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/payment/return" element={<PaymentReturn />} />
 
           {/* Admin — POS shell */}
           <Route

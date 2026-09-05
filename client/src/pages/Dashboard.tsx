@@ -1,10 +1,14 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { Link } from 'react-router-dom'
+import { Tray, Lock } from '@phosphor-icons/react'
 import { useAuth } from '../hooks/useAuth'
 import { useBrand } from '../hooks/useBrand'
 import { useCopy } from '../hooks/useCopy'
 import { authedApiRequest } from '../lib/api'
+import { initiatePayment, deleteOrder } from '../lib/pay'
 import { printReceipt } from '../lib/receipt'
+import { useToast } from '../hooks/useToast'
+import ToastStack from '../components/Toast'
 import Layout from '../components/Layout'
 import OrderCard from '../components/OrderCard'
 
@@ -41,7 +45,8 @@ export default function Dashboard() {
   const [credentials, setCredentials] = useState<Credentials | null>(null)
   const [loadingCredentials, setLoadingCredentials] = useState(false)
   const [credentialsError, setCredentialsError] = useState('')
-  const [toast, setToast] = useState('')
+  const [payingId, setPayingId] = useState<string | null>(null)
+  const { toasts, showToast, dismissToast } = useToast()
 
   const fetchOrders = useCallback(async () => {
     try {
@@ -63,6 +68,41 @@ export default function Dashboard() {
     }
   }, [session, fetchOrders])
 
+  // Orders mutate server-side after we leave (webhook fulfills while the buyer
+  // is on the SumoPod page). Refetch on focus + poll while anything is PENDING
+  // so BAYAR disappears the moment the order moves.
+  useEffect(() => {
+    if (!session) return
+    const onFocus = () => fetchOrders()
+    window.addEventListener('focus', onFocus)
+    const id = setInterval(() => {
+      setOrders((prev) => {
+        if (prev.some((o) => o.status === 'PENDING')) fetchOrders()
+        return prev
+      })
+    }, 10000)
+    return () => {
+      window.removeEventListener('focus', onFocus)
+      clearInterval(id)
+    }
+  }, [session, fetchOrders])
+
+  // Verification notifications: toast once when a previously-PENDING order
+  // moves (webhook landed while polling). First population never fires.
+  const prevStatuses = useRef<Record<string, string>>({})
+  useEffect(() => {
+    const prev = prevStatuses.current
+    for (const o of orders) {
+      const was = prev[o.id]
+      if (was === 'PENDING' && o.status !== 'PENDING') {
+        if (o.status === 'PAID') showToast(t.dashboard.paymentVerified, 'success')
+        else if (o.status === 'DELIVERED') showToast(t.dashboard.accountDelivered, 'success')
+        else showToast(t.dashboard.paymentFailed, 'error')
+      }
+      prev[o.id] = o.status
+    }
+  }, [orders, showToast, t])
+
   const filteredOrders =
     activeTab === 'ALL'
       ? orders
@@ -78,6 +118,34 @@ export default function Dashboard() {
 
   const tabKeys: FilterTab[] = ['ALL', 'PENDING', 'PAID', 'DELIVERED', 'REJECTED']
   const tabLabels = t.dashboard.tabs
+
+  async function handlePay(orderId: string) {
+    if (payingId) return
+    setPayingId(orderId)
+    try {
+      const checkoutUrl = await initiatePayment(orderId)
+      if (checkoutUrl) {
+        window.location.href = checkoutUrl
+      } else {
+        fetchOrders()
+      }
+    } catch (e: any) {
+      showToast(e?.message || 'Gagal membuat pembayaran', 'error')
+    } finally {
+      setPayingId(null)
+    }
+  }
+
+  async function handleCancel(orderId: string) {
+    if (!window.confirm(t.dashboard.cancelConfirm)) return
+    try {
+      await deleteOrder(orderId)
+      showToast(t.dashboard.orderCancelled, 'success')
+      fetchOrders()
+    } catch (e: any) {
+      showToast(e?.message || 'Gagal membatalkan order', 'error')
+    }
+  }
 
   async function handleViewCredentials(orderId: string) {
     const order = orders.find((o) => o.id === orderId)
@@ -103,8 +171,7 @@ export default function Dashboard() {
 
   function handleCopy(text: string) {
     navigator.clipboard.writeText(text)
-    setToast('Disalin ke clipboard')
-    setTimeout(() => setToast(''), 2000)
+    showToast(t.common.copiedToClipboard, 'success')
   }
 
   function getWhatsAppUrl(orderId: string) {
@@ -136,7 +203,7 @@ export default function Dashboard() {
 
       {!session && (
         <div className="text-center py-12 bg-surface-container border-[3px] border-on-surface shadow-brutal p-8">
-          <span className="material-symbols-outlined text-5xl text-on-surface-variant/30 mb-3">lock</span>
+          <span className="text-on-surface-variant/30 mb-3 flex justify-center"><Lock size={48} weight="duotone" /></span>
           <p className="font-bold text-on-surface mb-1">
             {user ? 'Loading your orders...' : 'Sign in to view your orders'}
           </p>
@@ -157,25 +224,25 @@ export default function Dashboard() {
 
       {session && (
         <>
-          <div className="flex gap-2 mb-6 flex-wrap">
+          <div className="sticky top-12 z-30 -mx-4 px-4 py-2 mb-4 flex gap-1.5 flex-nowrap overflow-x-auto md:flex-wrap md:overflow-visible">
             {tabKeys.map((tab, i) => {
               const tabColors: Record<string, string> = {
-                ALL: 'bg-on-surface text-primary-container',
-                PENDING: 'bg-warning text-white',
-                PAID: 'bg-info text-white',
-                DELIVERED: 'bg-primary-container text-black',
+                ALL: 'bg-neutral text-primary',
+                PENDING: 'bg-warning text-black',
+                PAID: 'bg-info text-black',
+                DELIVERED: 'bg-primary text-black',
                 REJECTED: 'bg-error text-white',
               }
               const isActive = activeTab === tab
               return (
                 <button
                   key={tab}
-                  className={`border-[3px] border-on-surface font-bold uppercase text-xs px-3 py-1.5 transition-all ${isActive ? `${tabColors[tab]} shadow-brutal translate-x-[1px] translate-y-[1px]` : 'bg-surface-container text-on-surface shadow-brutal-sm hover:-translate-x-[1px] hover:-translate-y-[1px]'}`}
+                  className={`shrink-0 border-[3px] border-on-surface font-bold uppercase text-[10px] px-2 py-1 md:text-xs md:px-3 md:py-1.5 transition-all ${isActive ? `${tabColors[tab]} shadow-brutal translate-x-[1px] translate-y-[1px]` : 'bg-surface-container text-on-surface shadow-brutal-sm hover:-translate-x-[1px] hover:-translate-y-[1px]'}`}
                   style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                   onClick={() => setActiveTab(tab)}
                 >
                   {tabLabels[i]}
-                  {tabCounts[tab] > 0 && <span className="ml-1.5 font-mono text-[10px] opacity-70">{tabCounts[tab]}</span>}
+                  {tabCounts[tab] > 0 && <span className="ml-1 font-mono text-[9px] md:text-[10px] opacity-70">{tabCounts[tab]}</span>}
                 </button>
               )
             })}
@@ -187,7 +254,7 @@ export default function Dashboard() {
             </div>
           ) : filteredOrders.length === 0 ? (
             <div className="text-center py-12 bg-surface-container border-[3px] border-on-surface shadow-brutal p-8">
-              <span className="material-symbols-outlined text-4xl text-on-surface-variant/30 mb-2">inbox</span>
+              <span className="text-on-surface-variant/30 mb-2 flex justify-center"><Tray size={40} weight="duotone" /></span>
               <p className="text-on-surface-variant/50 font-bold">{t.dashboard.noOrders}</p>
             </div>
           ) : (
@@ -197,6 +264,9 @@ export default function Dashboard() {
                   key={order.id}
                   order={order}
                   onViewCredentials={order.status === 'DELIVERED' ? () => handleViewCredentials(order.id) : undefined}
+                  onPay={order.status === 'PENDING' ? () => handlePay(order.id) : undefined}
+                  paying={payingId === order.id}
+                  onCancel={order.status === 'PENDING' ? () => handleCancel(order.id) : undefined}
                   onReport={() => window.open(getWhatsAppUrl(order.id), '_blank')}
                   onReceipt={() => printReceipt(order)}
                 />
@@ -256,7 +326,7 @@ export default function Dashboard() {
         </form>
       </dialog>
 
-      {toast && <div className="toast toast-end"><div className="alert bg-zinc-900 text-white text-sm border border-zinc-700">{toast}</div></div>}
+      <ToastStack toasts={toasts} onDone={dismissToast} />
     </Layout>
   )
 }

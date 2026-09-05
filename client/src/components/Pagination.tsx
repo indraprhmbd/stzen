@@ -1,12 +1,35 @@
+import { useEffect, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
 
 interface PaginationProps {
   currentPage: number
   totalPages: number
+  // Called once when the pager scrolls into view — parent pre-warms page+1.
+  onPrefetchNext?: () => void
 }
 
-export default function Pagination({ currentPage, totalPages }: PaginationProps) {
+export default function Pagination({ currentPage, totalPages, onPrefetchNext }: PaginationProps) {
   const [searchParams, setSearchParams] = useSearchParams()
+  const navRef = useRef<HTMLElement | null>(null)
+  const firedFor = useRef(0)
+
+  useEffect(() => {
+    if (!onPrefetchNext || currentPage === firedFor.current) return
+    const el = navRef.current
+    if (!el) return
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          firedFor.current = currentPage
+          onPrefetchNext()
+          observer.disconnect()
+        }
+      },
+      { rootMargin: '400px' }
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [onPrefetchNext, currentPage])
 
   if (totalPages <= 1) return null
 
@@ -34,7 +57,7 @@ export default function Pagination({ currentPage, totalPages }: PaginationProps)
   }
 
   return (
-    <nav className="flex items-center justify-center gap-1 mt-4" aria-label="Pagination">
+    <nav ref={navRef} className="flex items-center justify-center gap-1 mt-4" aria-label="Pagination">
       {/* Prev */}
       <button
         onClick={() => goToPage(currentPage - 1)}

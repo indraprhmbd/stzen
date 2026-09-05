@@ -1,5 +1,5 @@
 export interface Copy {
-  nav: { home: string; shop: string; myOrders: string; admin: string }
+  nav: { home: string; shop: string; myOrders: string; admin: string; profile: string }
   auth: { signIn: string; signOut: string; signInWithGoogle: string; email: string; password: string; or: string; backToStore: string }
   hero: { title1: string; title2: string; tagline: string; cta: string; statusPill: string; searchPlaceholder: string; searchHint: string }
   marquee: string[]
@@ -9,7 +9,9 @@ export interface Copy {
   testimonials: { title: string; items: { quote: string; name: string; product: string }[] }
   footer: { rights: string; howToOrder: string; paymentMethods: string; faq: string; myOrders: string }
   filter: { all: string }
-  dashboard: { title: string; subtitle: string; tabs: string[]; noOrders: string; selectOrder: string }
+  dashboard: { title: string; subtitle: string; tabs: string[]; noOrders: string; selectOrder: string; payNow: string; cancelOrder: string; viewCredentials: string; receipt: string; reportIssue: string; cancelConfirm: string; paymentVerified: string; accountDelivered: string; paymentFailed: string; orderCancelled: string }
+  profile: { title: string; guest: string; guestHint: string; language: string; quickLinks: string }
+  payment: { waiting: string; paid: string; failed: string; cancelled: string; waitingHint: string; paidHint: string; deliveredHint: string; failedHint: string; toDashboard: string }
   common: { noProducts: string; copiedToClipboard: string }
   info: {
     howToOrder: { title: string; desc: string; steps: { num: string; title: string; desc: string }[] }
@@ -25,7 +27,7 @@ export interface Copy {
 }
 
 const id: Copy = {
-  nav: { home: 'Beranda', shop: 'Belanja', myOrders: 'Pesanan Saya', admin: 'Admin' },
+  nav: { home: 'Beranda', shop: 'Belanja', myOrders: 'Pesanan Saya', admin: 'Admin', profile: 'Akun' },
   auth: { signIn: 'Masuk', signOut: 'Keluar', signInWithGoogle: 'Masuk dengan Google', email: 'EMAIL', password: 'PASSWORD', or: 'ATAU', backToStore: 'Kembali ke toko' },
   hero: {
     title1: 'AKSES INSTAN',
@@ -81,12 +83,19 @@ const id: Copy = {
       { quote: 'Prosesnya cepat, langsung dapat akses setelah bayar. Recommended!', name: 'Rizky A.', product: 'Netflix Premium' },
       { quote: 'Aman dan terpercaya. Kredensialnya work semua.', name: 'Diana P.', product: 'ChatGPT Plus' },
       { quote: 'Pertama beli di sini, hasilnya memuaskan. Akan beli lagi.', name: 'Fajar M.', product: 'Spotify Family' },
+      { quote: 'CS fast respon, akun bermasalah langsung diganti baru.', name: 'Sinta W.', product: 'Canva Pro' },
+      { quote: 'Harga paling miring dibanding tempat lain, mantap.', name: 'Bagas R.', product: 'YouTube Premium' },
+      { quote: 'Sudah langganan 3x, tidak pernah kecewa.', name: 'Nadia L.', product: 'Disney+ Hotstar' },
+      { quote: 'Bayar pakai QRIS, 2 menit langsung masuk akunnya.', name: 'Yoga P.', product: 'CapCut Pro' },
+      { quote: 'Garansinya beneran, akun error diganti tanpa drama.', name: 'Putri H.', product: 'Viu Premium' },
     ],
   },
   footer: { rights: 'Hak cipta dilindungi', howToOrder: 'Cara Pesan', paymentMethods: 'Metode Pembayaran', faq: 'FAQ', myOrders: 'Pesanan Saya' },
   filter: { all: 'Semua' },
-  dashboard: { title: 'PEMBELIAN AKTIF', subtitle: 'Lihat dan kelola pesanan kredensialmu', tabs: ['Semua', 'Menunggu', 'Dibayar', 'Dikirim', 'Ditolak'], noOrders: 'Belum ada pesanan', selectOrder: 'Pilih pesanan yang sudah dikirim untuk melihat kredensial' },
+  dashboard: { title: 'PEMBELIAN AKTIF', subtitle: 'Lihat dan kelola pesanan kredensialmu', tabs: ['Semua', 'Menunggu', 'Dibayar', 'Dikirim', 'Ditolak'], noOrders: 'Belum ada pesanan', selectOrder: 'Pilih pesanan yang sudah dikirim untuk melihat kredensial', payNow: 'BAYAR', cancelOrder: 'BATAL', viewCredentials: 'KREDENSIAL', receipt: 'STRUK', reportIssue: 'LAPOR', cancelConfirm: 'Batalkan order ini? Order PENDING yang belum dibayar akan dihapus.', paymentVerified: 'Pembayaran terverifikasi', accountDelivered: 'Akun terkirim, cek kredensial', paymentFailed: 'Pembayaran gagal', orderCancelled: 'Order dibatalkan' },
+  payment: { waiting: 'Menunggu Pembayaran', paid: 'Pembayaran Berhasil', failed: 'Pembayaran Gagal', cancelled: 'Pembayaran Dibatalkan', waitingHint: 'Selesaikan QRIS di tab pembayaran, status terupdate otomatis…', paidHint: 'Lunas, akun sedang disiapkan, cek dashboard.', deliveredHint: 'Akun sudah terkirim, cek kredensial di dashboard.', failedHint: 'Order masih PENDING, ulangi pembayaran dari dashboard.', toDashboard: 'Ke Dashboard' },
   common: { noProducts: 'Belum ada produk tersedia', copiedToClipboard: 'Disalin ke clipboard!' },
+  profile: { title: 'AKUN', guest: 'Belum masuk', guestHint: 'Masuk untuk lacak pesanan dan lihat kredensial', language: 'BAHASA', quickLinks: 'PINTASAN' },
   info: {
     howToOrder: {
       title: 'CARA PESAN',
@@ -131,7 +140,7 @@ const id: Copy = {
 }
 
 const en: Copy = {
-  nav: { home: 'Home', shop: 'Shop', myOrders: 'My Orders', admin: 'Admin' },
+  nav: { home: 'Home', shop: 'Shop', myOrders: 'My Orders', admin: 'Admin', profile: 'Account' },
   auth: { signIn: 'Sign In', signOut: 'Sign Out', signInWithGoogle: 'Sign in with Google', email: 'EMAIL', password: 'PASSWORD', or: 'OR', backToStore: 'Back to store' },
   hero: {
     title1: 'INSTANT ACCESS',
@@ -187,11 +196,18 @@ const en: Copy = {
       { quote: 'Fast process, got access right after paying. Recommended!', name: 'Rizky A.', product: 'Netflix Premium' },
       { quote: 'Safe and trustworthy. All credentials work perfectly.', name: 'Diana P.', product: 'ChatGPT Plus' },
       { quote: 'First time buying here, very satisfied. Will buy again.', name: 'Fajar M.', product: 'Spotify Family' },
+      { quote: 'Fast support, broken account replaced immediately.', name: 'Sinta W.', product: 'Canva Pro' },
+      { quote: 'Cheapest price around, awesome.', name: 'Bagas R.', product: 'YouTube Premium' },
+      { quote: 'Subscribed 3 times already, never disappointed.', name: 'Nadia L.', product: 'Disney+ Hotstar' },
+      { quote: 'Paid with QRIS, account arrived in 2 minutes.', name: 'Yoga P.', product: 'CapCut Pro' },
+      { quote: 'Warranty is real, faulty account replaced no questions asked.', name: 'Putri H.', product: 'Viu Premium' },
     ],
   },
   footer: { rights: 'All rights reserved', howToOrder: 'How to Order', paymentMethods: 'Payment Methods', faq: 'FAQ', myOrders: 'My Orders' },
   filter: { all: 'All' },
-  dashboard: { title: 'MY ACTIVE PURCHASES', subtitle: 'View and manage your credential orders', tabs: ['All', 'Pending', 'Paid', 'Delivered', 'Rejected'], noOrders: 'No orders found', selectOrder: 'Select a delivered order to view credentials' },
+  profile: { title: 'ACCOUNT', guest: 'Not signed in', guestHint: 'Sign in to track orders and view credentials', language: 'LANGUAGE', quickLinks: 'SHORTCUTS' },
+  dashboard: { title: 'MY ACTIVE PURCHASES', subtitle: 'View and manage your credential orders', tabs: ['All', 'Pending', 'Paid', 'Delivered', 'Rejected'], noOrders: 'No orders found', selectOrder: 'Select a delivered order to view credentials', payNow: 'PAY', cancelOrder: 'CANCEL', viewCredentials: 'CREDENTIALS', receipt: 'RECEIPT', reportIssue: 'REPORT', cancelConfirm: 'Cancel this order? Unpaid PENDING orders will be deleted.', paymentVerified: 'Payment verified', accountDelivered: 'Account delivered, check credentials', paymentFailed: 'Payment failed', orderCancelled: 'Order cancelled' },
+  payment: { waiting: 'Waiting for Payment', paid: 'Payment Successful', failed: 'Payment Failed', cancelled: 'Payment Cancelled', waitingHint: 'Finish the QRIS in the payment tab, status updates automatically…', paidHint: 'Paid, account is being prepared, check dashboard.', deliveredHint: 'Account delivered, check credentials in dashboard.', failedHint: 'Order still PENDING, retry payment from dashboard.', toDashboard: 'To Dashboard' },
   common: { noProducts: 'No products available', copiedToClipboard: 'Copied to clipboard!' },
   info: {
     howToOrder: {

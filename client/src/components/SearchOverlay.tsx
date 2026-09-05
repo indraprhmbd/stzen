@@ -61,7 +61,7 @@ export default function SearchOverlay({ open, onClose }: SearchOverlayProps) {
         const res = await apiV1.products.$get({ query: { search: query } })
         if (res.ok) {
           const data = await res.json()
-          const products = Array.isArray(data) ? data : data.products || []
+          const products = Array.isArray(data) ? data : Array.isArray((data as any)?.products) ? (data as any).products : []
           setResults(products.slice(0, 8))
         }
       } catch {
@@ -94,7 +94,7 @@ export default function SearchOverlay({ open, onClose }: SearchOverlayProps) {
             type="text"
             placeholder={t.hero.searchPlaceholder}
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => setQuery(e.target.value.replace(/[^\p{L}\p{N}\s\-_.,&']/gu, '').slice(0, 64))}
             className="flex-1 bg-transparent font-black text-sm uppercase text-black placeholder:text-black/30 focus:outline-none"
             style={{ fontFamily: "'Space Grotesk', sans-serif" }}
           />

@@ -1,6 +1,10 @@
 import { useEffect, useState, useRef } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { apiV1, authedApiRequest } from '../lib/api'
+import { initiatePayment, deleteOrder } from '../lib/pay'
+import { getCachedDetail } from '../lib/prefetch'
+import { useToast } from '../hooks/useToast'
+import ToastStack from '../components/Toast'
 import Layout from '../components/Layout'
 import ProductCard from '../components/ProductCard'
 import { useBrand } from '../hooks/useBrand'
@@ -25,18 +29,27 @@ export default function ProductDetail() {
   const navigate = useNavigate()
   const brand = useBrand()
   const { t } = useCopy()
-  const [product, setProduct] = useState<Product | null>(null)
+  const [product, setProduct] = useState<Product | null>(() => (id ? getCachedDetail<Product>(id) : null))
   const [related, setRelated] = useState<Product[]>([])
-  const [loading, setLoading] = useState(true)
+  // Prefetched hit paints instantly — skip the skeleton, revalidate silently.
+  const [loading, setLoading] = useState(() => !(id && getCachedDetail<Product>(id)))
   const [purchasing, setPurchasing] = useState(false)
   const [msg, setMsg] = useState('')
+  const { toasts, showToast, dismissToast } = useToast()
   const [showStickyBar, setShowStickyBar] = useState(false)
   const [descOpen, setDescOpen] = useState(false)
   const ctaRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
     if (!id) return
-    setLoading(true)
+    // Same-component id change (related click): swap to cache or blank first.
+    const hit = getCachedDetail<Product>(id)
+    if (hit) {
+      setProduct(hit)
+    } else {
+      setProduct(null)
+      setLoading(true)
+    }
     apiV1.products[':id'].$get({ param: { id } }).then(async (res) => {
       if (res.ok) {
         const data = (await res.json()) as Product
@@ -78,21 +91,38 @@ export default function ProductDetail() {
     // One key per buy-intent: double-clicks and network retries reuse it, so
     // the server returns the original order instead of minting duplicates.
     const idempotencyKey = crypto.randomUUID()
+    let oid = ''
     try {
       const res = await authedApiRequest(
         (c) => c.api.v1.checkout.$post({ json: { productId: product.id } }),
         { headers: { 'Idempotency-Key': idempotencyKey } }
       )
-      if (res.ok) {
-        const data = await res.json() as any
-        const oid = typeof data.orderId === 'string' ? data.orderId : data.orderId?.id ?? ''
-        setMsg(`Order #${oid} dibuat!`)
-      } else {
+      if (!res.ok) {
         const err = await res.json() as any
-        alert(err.error || 'Gagal')
+        showToast(err.error || 'Gagal', 'error')
+        return
       }
-    } catch {
-      navigate('/login')
+      const data = await res.json() as any
+      oid = typeof data.orderId === 'string' ? data.orderId : data.orderId?.id ?? ''
+      // SumoPod-only: mint the invoice, then leave for the payment link.
+      setMsg('Membuat pembayaran…')
+      const checkoutUrl = await initiatePayment(oid)
+      if (checkoutUrl) {
+        window.location.href = checkoutUrl
+      } else {
+        navigate('/dashboard')
+      }
+    } catch (e: any) {
+      if (e?.message && e.message !== 'Not authenticated') {
+        // Initiate failed after checkout: remove the dead PENDING row so the
+        // dashboard stays clean (server refuses when already invoiced — then
+        // the order is real and dashboard BAYAR retries it).
+        if (oid) await deleteOrder(oid).catch(() => null)
+        setMsg('')
+        showToast(e.message, 'error')
+      } else {
+        navigate('/login')
+      }
     } finally { setPurchasing(false) }
   }
 
@@ -306,6 +336,7 @@ export default function ProductDetail() {
           </button>
         </div>
       )}
+      <ToastStack toasts={toasts} onDone={dismissToast} />
     </Layout>
   )
 }

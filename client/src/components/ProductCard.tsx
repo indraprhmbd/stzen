@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useBrand } from '../hooks/useBrand'
 import { useCopy } from '../hooks/useCopy'
+import { prefetchDetailChunk, prefetchDetailData } from '../lib/prefetch'
 
 interface Product {
   id: string
@@ -46,6 +47,13 @@ function badgeList(badge: string | null): string[] {
 }
 
 export default function ProductCard({ product, index = 0, onBuy, view = 'grid' }: ProductCardProps) {
+  // Warm the detail route ahead of the tap: chunk for every card, API data
+  // for above-the-fold cards only (index < 4). Hover (desktop), touch-start
+  // (mobile, fires before click), focus (keyboard via the buy button).
+  function warmDetail() {
+    prefetchDetailChunk()
+    if (index < 4) prefetchDetailData(product.id)
+  }
   const brand = useBrand()
   const { t } = useCopy()
   const isMobile = useIsMobile()
@@ -66,6 +74,8 @@ export default function ProductCard({ product, index = 0, onBuy, view = 'grid' }
       <div
         className="bg-white border-comic shadow-comic relative overflow-hidden group flex flex-col"
         onClick={onBuy}
+        onMouseEnter={warmDetail}
+        onTouchStart={warmDetail}
       >
         {/* Content */}
         <div className="p-2.5 flex flex-col flex-1 min-w-0">
@@ -120,6 +130,7 @@ export default function ProductCard({ product, index = 0, onBuy, view = 'grid' }
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
               disabled={!inStock}
               onClick={(e) => { e.stopPropagation(); onBuy() }}
+              onFocus={warmDetail}
             >
               {inStock ? t.products.buy : t.products.soldOut}
             </button>
@@ -135,6 +146,8 @@ export default function ProductCard({ product, index = 0, onBuy, view = 'grid' }
       <div
       className="col-span-1 bg-white border-comic shadow-comic relative overflow-hidden group hover:-translate-y-0.5 transition-all duration-200 cursor-pointer"
       onClick={onBuy}
+      onMouseEnter={warmDetail}
+      onTouchStart={warmDetail}
     >
         <div className="flex items-center gap-4 p-3">
           <div className="flex flex-col items-center gap-1 shrink-0">
@@ -185,6 +198,7 @@ export default function ProductCard({ product, index = 0, onBuy, view = 'grid' }
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
               disabled={!inStock}
               onClick={(e) => { e.stopPropagation(); onBuy() }}
+              onFocus={warmDetail}
             >
               {inStock ? t.products.buy : t.products.soldOut}
             </button>
@@ -205,6 +219,8 @@ export default function ProductCard({ product, index = 0, onBuy, view = 'grid' }
         transition-all duration-200 flex flex-col cursor-pointer
       "
       onClick={onBuy}
+      onMouseEnter={warmDetail}
+      onTouchStart={warmDetail}
     >
       <div className="p-3 flex flex-col h-full">
         <h3 className="font-black uppercase tracking-tight text-neutral mb-1 leading-tight text-sm" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
