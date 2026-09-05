@@ -148,6 +148,7 @@ export default function ProductsPage() {
       <div role="tabpanel" id="panel-basis" aria-labelledby="tab-basis" className="flex flex-col gap-6">
         <BasisPanel
           products={products}
+          variants={variants}
           onCreate={productForm.openCreate}
           onEdit={productForm.openEdit}
           onDelete={askDeleteProduct}
