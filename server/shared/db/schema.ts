@@ -10,4 +10,5 @@ export {
   userRoleEnum,
   vaultStatusEnum,
   orderStatusEnum,
+  durationUnitEnum,
 } from '../../db/schema'

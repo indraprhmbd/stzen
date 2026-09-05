@@ -20,6 +20,7 @@ const VariantCreateSchema = z.object({
   overview: z.string().max(200).nullable().optional(),
   description: z.string().nullable().optional(),
   durationMonths: z.number().int().nullable().optional(),
+  durationUnit: z.enum(['day', 'week', 'month']).optional().default('month'),
   accountType: z.string().nullable().optional(),
   conditions: z.string().nullable().optional(),
   fulfillmentType: z.enum(['vault', 'on_demand']).optional().default('vault'),
@@ -34,6 +35,7 @@ const VariantUpdateSchema = z.object({
   overview: z.string().max(200).nullable().optional(),
   description: z.string().nullable().optional(),
   durationMonths: z.number().int().nullable().optional(),
+  durationUnit: z.enum(['day', 'week', 'month']).optional(),
   accountType: z.string().nullable().optional(),
   conditions: z.string().nullable().optional(),
   fulfillmentType: z.enum(['vault', 'on_demand']).optional(),
@@ -64,6 +66,7 @@ export const adminVariantRoutes = new Hono<VariantEnv>()
       compareAtPrice: productVariants.compareAtPrice,
       badge: productVariants.badge,
       durationMonths: productVariants.durationMonths,
+      durationUnit: productVariants.durationUnit,
       accountType: productVariants.accountType,
       conditions: productVariants.conditions,
       fulfillmentType: productVariants.fulfillmentType,
@@ -94,8 +97,8 @@ export const adminVariantRoutes = new Hono<VariantEnv>()
     const [p2] = await db.select({ id: products.id, name: products.name }).from(products).where(eq(products.id, data.productId))
     if (p2) { baseName = p2.name; baseId = p2.id }
   }
-  const name = composeVariantName(baseName, data.durationMonths, data.accountType, data.conditions)
-  const sku = generateSku(baseName, data.durationMonths, data.accountType)
+  const name = composeVariantName(baseName, data.durationMonths, data.durationUnit, data.accountType, data.conditions)
+  const sku = generateSku(baseName, data.durationMonths, data.durationUnit, data.accountType)
   const publicId = generatePublicId()
   const priceInt = parseInt(data.price, 10)
   let compareAt: number | null = null
@@ -155,16 +158,17 @@ export const adminVariantRoutes = new Hono<VariantEnv>()
     data.productId = p?.id ?? null
   }
   // recompose name if relevant fields changed (including a move to another induk)
-  if (data.durationMonths !== undefined || data.accountType !== undefined || data.conditions !== undefined || data.productId) {
+  if (data.durationMonths !== undefined || data.durationUnit !== undefined || data.accountType !== undefined || data.conditions !== undefined || data.productId) {
     const [cur] = await db.select().from(productVariants).where(eq(productVariants.publicId, publicId))
     if (cur) {
       const targetBaseId = (data.productId as string | undefined) ?? (cur as any).productId
       const [base] = targetBaseId ? await db.select({ name: products.name }).from(products).where(eq(products.id, targetBaseId)) : [{ name: cur.name }]
       const baseName = base?.name ?? cur.name
-      const newName = composeVariantName(baseName, data.durationMonths ?? (cur as any).durationMonths, data.accountType ?? (cur as any).accountType, data.conditions ?? (cur as any).conditions)
+      const unit = data.durationUnit ?? (cur as any).durationUnit ?? 'month'
+      const newName = composeVariantName(baseName, data.durationMonths ?? (cur as any).durationMonths, unit, data.accountType ?? (cur as any).accountType, data.conditions ?? (cur as any).conditions)
       data.name = newName
-      if (data.durationMonths !== undefined || data.accountType !== undefined || data.productId) {
-        data.sku = generateSku(baseName, data.durationMonths ?? (cur as any).durationMonths, data.accountType ?? (cur as any).accountType)
+      if (data.durationMonths !== undefined || data.durationUnit !== undefined || data.accountType !== undefined || data.productId) {
+        data.sku = generateSku(baseName, data.durationMonths ?? (cur as any).durationMonths, unit, data.accountType ?? (cur as any).accountType)
       }
     }
   }

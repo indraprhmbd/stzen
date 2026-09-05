@@ -21,6 +21,7 @@ export interface Variant {
   compareAtPrice?: number | null
   badge: string | null
   durationMonths: number | null
+  durationUnit: string
   accountType: string | null
   conditions: string | null
   fulfillmentType: string

@@ -2,6 +2,8 @@ import type { Product } from '../types'
 import type { useVariantForm } from '../hooks/useVariantForm'
 import { Xmark } from 'iconoir-react'
 
+const unitLabel: Record<string, string> = { day: 'Hari', week: 'Minggu', month: 'Bulan' }
+
 interface Props {
   products: Product[]
   form: ReturnType<typeof useVariantForm>
@@ -36,10 +38,11 @@ export default function VariantDialog({ products, form: v, onSubmit }: Props) {
         )}
         <form onSubmit={onSubmit} className="flex flex-col gap-4 mt-5">
           <label className="ad-label">Induk<select value={v.vProductId} onChange={(e) => v.handleVariantBaseChange(e.target.value)} required className="ad-input mt-1.5 normal-case"><option value="">Pilih induk</option>{products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
-          <div className="grid grid-cols-2 gap-3">
-            <label className="ad-label">Durasi (bulan)<input type="number" value={v.vDuration} onChange={(e) => v.setVDuration(e.target.value)} placeholder="1" className="ad-input mt-1.5 normal-case" /></label>
-            <label className="ad-label">Tipe Akun<input type="text" value={v.vAccountType} onChange={(e) => v.setVAccountType(e.target.value)} placeholder="Private, Shared" className="ad-input mt-1.5 normal-case" /></label>
+          <div className="grid grid-cols-3 gap-3">
+            <label className="ad-label">Durasi<input type="number" value={v.vDuration} onChange={(e) => v.setVDuration(e.target.value)} placeholder="7" className="ad-input mt-1.5 normal-case" /></label>
+            <label className="ad-label col-span-2">Unit<select value={v.vDurationUnit} onChange={(e) => v.setVDurationUnit(e.target.value as 'day' | 'week' | 'month')} className="ad-input mt-1.5 normal-case"><option value="day">Hari</option><option value="week">Minggu</option><option value="month">Bulan</option></select></label>
           </div>
+          <label className="ad-label">Tipe Akun<input type="text" value={v.vAccountType} onChange={(e) => v.setVAccountType(e.target.value)} placeholder="Private, Shared" className="ad-input mt-1.5 normal-case" /></label>
           <label className="ad-label">Kondisi<input type="text" value={v.vConditions} onChange={(e) => v.setVConditions(e.target.value)} placeholder="Garansi 30 hari" className="ad-input mt-1.5 normal-case" /></label>
           <div>
             <label className="ad-label">Ringkasan (maks 200)<input type="text" value={v.vOverview} onChange={(e) => { v.setVOverviewBlank(false); v.setVOverview(e.target.value) }} maxLength={200} placeholder={baseOverview || 'Tulis ringkasan...'} className="ad-input mt-1.5 normal-case" /></label>
@@ -73,7 +76,7 @@ export default function VariantDialog({ products, form: v, onSubmit }: Props) {
             <div className="bg-[#f5f5f7] rounded-[10px] px-3 py-2">
               <span className="ad-label">PREVIEW</span>
               <div className="text-sm font-medium text-[#1d1d1f] mt-1">
-                {products.find((p) => p.id === v.vProductId)?.name ?? 'Induk'}{v.vDuration ? ` - ${v.vDuration} Bulan` : ''}{v.vAccountType ? ` - ${v.vAccountType}` : ''}{v.vConditions ? ` (${v.vConditions})` : ''}
+                {products.find((p) => p.id === v.vProductId)?.name ?? 'Induk'}{v.vDuration ? ` - ${v.vDuration} ${unitLabel[v.vDurationUnit]}` : ''}{v.vAccountType ? ` - ${v.vAccountType}` : ''}{v.vConditions ? ` (${v.vConditions})` : ''}
               </div>
             </div>
           )}

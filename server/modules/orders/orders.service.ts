@@ -119,6 +119,7 @@ export const ordersService = {
         variantSkuSnapshot: vs?.sku ?? null,
         priceAtPurchase: amountInt,
         durationSnapshot: vs?.durationMonths ?? null,
+        durationSnapshotUnit: vs?.durationUnit ?? null,
         accountTypeSnapshot: vs?.accountType ?? null,
         conditionsSnapshot: vs?.conditions ?? null,
         baseNameSnapshot: vs?.baseName ?? (vs?.name ?? null),

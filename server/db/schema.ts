@@ -28,6 +28,12 @@ export const orderStatusEnum = pgEnum('order_status', [
   'REJECTED',
 ])
 
+export const durationUnitEnum = pgEnum('duration_unit', [
+  'day',
+  'week',
+  'month',
+])
+
 // ─── Profiles ───────────────────────────────────────────────────────────────
 // Extends Supabase auth.users — one row per authenticated user
 
@@ -97,6 +103,7 @@ export const productVariants = pgTable(
     compareAtPrice: integer('compare_at_price'),
     badge: text('badge'),
     durationMonths: integer('duration_months'),
+    durationUnit: durationUnitEnum('duration_unit').notNull().default('month'),
     accountType: text('account_type'),
     conditions: text('conditions'),
     fulfillmentType: text('fulfillment_type').notNull().default('vault'),
@@ -160,6 +167,7 @@ export const orders = pgTable(
     variantSkuSnapshot: text('variant_sku_snapshot'),
     priceAtPurchase: integer('price_at_purchase'),
     durationSnapshot: integer('duration_snapshot'),
+    durationSnapshotUnit: text('duration_snapshot_unit'),
     accountTypeSnapshot: text('account_type_snapshot'),
     conditionsSnapshot: text('conditions_snapshot'),
     baseNameSnapshot: text('base_name_snapshot'),
