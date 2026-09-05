@@ -8,11 +8,10 @@ const unitLabel: Record<string, string> = { day: 'Hari', week: 'Minggu', month: 
 interface Props {
   products: Product[]
   form: ReturnType<typeof useVariantForm>
-  onSubmit: (e: React.FormEvent) => void
   onImportNow?: (variantId: string) => void
 }
 
-export default function VariantDialog({ products, form: v, onSubmit, onImportNow }: Props) {
+export default function VariantDialog({ products, form: v, onImportNow }: Props) {
   const [createdVariantId, setCreatedVariantId] = useState<string | null>(null)
   const base = products.find((p) => p.id === v.vProductId)
   const baseOverview = base?.overview ?? ''

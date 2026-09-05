@@ -51,6 +51,8 @@ export function useVariantForm(products: Product[], fetchAll: () => void, showTo
 
   async function handleVariantSubmit(e: React.FormEvent, onCreateSuccess?: (id: string) => void) {
     e.preventDefault()
+    if ((e.target as HTMLFormElement).getAttribute('data-submitting') === 'true') return
+    ;(e.target as HTMLFormElement).setAttribute('data-submitting', 'true')
     // Link-preserving save: text identical to the induk stays null (live
     // fallback, no stale copies); explicit blank stays '' (hidden in
     // catalog); only real edits become variant overrides.
@@ -88,6 +90,7 @@ export function useVariantForm(products: Product[], fetchAll: () => void, showTo
       }
       fetchAll()
     } catch { showToast('Gagal menyimpan varian', 'error') }
+    finally { (e.target as HTMLFormElement)?.removeAttribute('data-submitting') }
   }
 
   return {
