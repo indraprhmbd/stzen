@@ -60,8 +60,6 @@ export const adminVariantRoutes = new Hono<VariantEnv>()
       internalProductId: productVariants.productId,
       sku: productVariants.sku,
       name: productVariants.name,
-      overview: productVariants.overview,
-      description: productVariants.description,
       price: productVariants.price,
       compareAtPrice: productVariants.compareAtPrice,
       badge: productVariants.badge,
@@ -82,6 +80,24 @@ export const adminVariantRoutes = new Hono<VariantEnv>()
   const map = new Map(counts.map((x) => [x.variantId, x.count]))
   const withStock = rows.map((r: any) => ({ ...r, stockCount: r.fulfillmentType === 'on_demand' ? 9999 : map.get(r.internalId) ?? 0 }))
   return c.json(withStock)
+})
+
+// GET /:id/detail — single variant with overview/description for edit form.
+// List query omits these fields to reduce payload; edit fetches on demand.
+  .get('/:id/detail', async (c) => {
+  const { sql } = await import('drizzle-orm')
+  const { vaultItems, products } = await import('../../shared/db/schema')
+  const publicId = c.req.param('id')
+  const [row] = await db
+    .select({
+      id: productVariants.publicId,
+      overview: productVariants.overview,
+      description: productVariants.description,
+    })
+    .from(productVariants)
+    .where(eq(productVariants.publicId, publicId))
+  if (!row) return c.json({ error: 'Variant not found' }, 404)
+  return c.json(row)
 })
 
 // POST / — create variant, composite name + auto sku
