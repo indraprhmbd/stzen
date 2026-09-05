@@ -128,12 +128,12 @@ export default function SearchableSelect({
         {selected ? (
           <span className="flex flex-col min-w-0">
             {selected.groupLabel && (
-              <span className="text-[10px] font-semibold uppercase tracking-wide text-zinc-400">{selected.groupLabel}</span>
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-[#aeaeb2]">{selected.groupLabel}</span>
             )}
-            <span className="text-zinc-900 whitespace-normal break-words">{selected.label}</span>
+            <span className="text-[#1d1d1f] whitespace-normal break-words">{selected.label}</span>
           </span>
         ) : (
-          <span className="text-zinc-400">{placeholder}</span>
+          <span className="text-[#aeaeb2]">{placeholder}</span>
         )}
         <NavArrowDown width={16} height={16} strokeWidth={1.5} className="shrink-0 text-[#aeaeb2] mt-0.5" />
       </button>
@@ -147,17 +147,17 @@ export default function SearchableSelect({
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={onKeyDown}
               placeholder="Cari nama, SKU..."
-              className="grow bg-transparent text-sm outline-none placeholder:text-zinc-400"
+              className="grow bg-transparent text-sm outline-none placeholder:text-[#aeaeb2]"
               role="combobox"
               aria-expanded="true"
               aria-controls="searchable-select-list"
               aria-activedescendant={filtered[activeIndex] ? `ss-opt-${filtered[activeIndex].value}` : undefined}
             />
-            <button type="button" onClick={() => setOpen(false)} className="text-[11px] font-semibold text-zinc-400 hover:text-zinc-900">Tutup</button>
+            <button type="button" onClick={() => setOpen(false)} className="text-[11px] font-semibold text-[#aeaeb2] hover:text-[#1d1d1f]">Tutup</button>
           </div>
           <ul ref={listRef} id="searchable-select-list" role="listbox" className="max-h-64 overflow-y-auto py-1">
             {filtered.length === 0 && (
-              <li className="px-3 py-3 text-sm text-zinc-400 text-center">{emptyText}</li>
+              <li className="px-3 py-3 text-sm text-[#aeaeb2] text-center">{emptyText}</li>
             )}
             {filtered.map((o, i) => (
               <li
@@ -173,11 +173,11 @@ export default function SearchableSelect({
                 }`}
               >
                 {o.groupLabel && (
-                  <span className={`text-[10px] font-semibold uppercase tracking-wide ${i === activeIndex ? 'text-zinc-400' : 'text-zinc-400'}`}>{o.groupLabel}</span>
+                  <span className="text-[10px] font-semibold uppercase tracking-wide text-[#aeaeb2]">{o.groupLabel}</span>
                 )}
                 <span className="whitespace-normal break-words">{o.label}</span>
                 {o.sublabel && (
-                  <span className={`text-[11px] font-mono ${i === activeIndex ? 'text-zinc-300' : 'text-zinc-400'}`}>{o.sublabel}</span>
+                  <span className={`text-[11px] font-mono ${i === activeIndex ? 'text-[#d1d1d6]' : 'text-[#aeaeb2]'}`}>{o.sublabel}</span>
                 )}
               </li>
             ))}
