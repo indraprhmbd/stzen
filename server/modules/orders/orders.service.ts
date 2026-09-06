@@ -286,6 +286,7 @@ export const ordersService = {
           customerEmail: profiles.email,
           productId: orders.productId,
           variantId: orders.variantId,
+          variantPublicId: productVariants.publicId,
           status: orders.status,
           amount: orders.amount,
           paymentRef: orders.paymentRef,

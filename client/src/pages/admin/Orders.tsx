@@ -17,6 +17,7 @@ interface AdminOrder {
   userId: string
   customerEmail: string | null
   variantId: string | null
+  variantPublicId: string | null
   amount: string
   paymentRef: string | null
   paymentProvider: string | null
@@ -331,8 +332,8 @@ export default function Orders() {
               <td><StatusChip status={o.status}>{o.status}</StatusChip></td>
               <td className="text-right">
                 <div className="flex justify-end gap-1.5">
-                  {o.variantId && o.fulfillmentType !== 'on_demand' && (
-                    <button onClick={() => navigate(`/admin/products?tab=stok&variant=${o.variantId}`)} title="Lihat stok varian" aria-label="Lihat stok varian" className="ad-btn !px-2.5"><Key width={15} height={15} strokeWidth={1.5} /></button>
+                  {o.variantPublicId && o.fulfillmentType !== 'on_demand' && (
+                    <button onClick={() => navigate(`/admin/products?tab=stok&variant=${o.variantPublicId}`)} title="Lihat stok varian" aria-label="Lihat stok varian" className="ad-btn !px-2.5"><Key width={15} height={15} strokeWidth={1.5} /></button>
                   )}
                   {o.status === 'PENDING' && (
                     <>
