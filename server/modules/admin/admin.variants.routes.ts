@@ -53,7 +53,22 @@ export const adminVariantRoutes = new Hono<VariantEnv>()
     const { data: variants, error } = await supabaseAdmin
       .from(PRODUCT_VARIANTS)
       .select(`
-        *,
+        id,
+        public_id,
+        sku,
+        name,
+        price,
+        compare_at_price,
+        badge,
+        duration_months,
+        duration_unit,
+        account_type,
+        conditions,
+        fulfillment_type,
+        is_active,
+        product_id,
+        created_at,
+        updated_at,
         ${PRODUCTS} (
           id,
           public_id,
@@ -259,6 +274,8 @@ export const adminVariantRoutes = new Hono<VariantEnv>()
       if (data.conditions !== undefined) updateData.conditions = data.conditions
       if (data.fulfillmentType !== undefined) updateData.fulfillment_type = data.fulfillmentType
       if (data.isActive !== undefined) updateData.is_active = data.isActive
+      if (data.name !== undefined) updateData.name = data.name
+      if (data.sku !== undefined) updateData.sku = data.sku
       for (const [key, value] of Object.entries(updateData)) {
         if (value === undefined) delete updateData[key]
       }
