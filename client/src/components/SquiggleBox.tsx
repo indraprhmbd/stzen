@@ -1,3 +1,5 @@
+import { useId } from 'react'
+
 // ─── SquiggleBox ──────────────────────────────────────────────────────────────
 // Hand-drawn wavy container: an absolutely positioned SVG perimeter whose
 // offsets complete whole sine cycles per edge (zero at corners, so the loop
@@ -11,6 +13,8 @@ interface SquiggleBoxProps {
   strokeWidth?: number
   amplitude?: number
   wavelength?: number
+  /** Crisp offset shadow color (brutal sticker look on transparent bg) */
+  shadow?: string
 }
 
 function squiggleRect(w: number, h: number, amp: number, wavelength: number): string {
@@ -52,8 +56,10 @@ export default function SquiggleBox({
   strokeWidth = 2.5,
   amplitude = 4,
   wavelength = 28,
+  shadow,
 }: SquiggleBoxProps) {
   const d = squiggleRect(W, H, amplitude, wavelength)
+  const filterId = useId()
   return (
     <div className={`relative ${className}`}>
       <svg
@@ -62,6 +68,13 @@ export default function SquiggleBox({
         preserveAspectRatio="none"
         aria-hidden="true"
       >
+        {shadow && (
+          <defs>
+            <filter id={filterId} x="-20%" y="-20%" width="140%" height="140%">
+              <feDropShadow dx="3" dy="3" stdDeviation="0" floodColor={shadow} />
+            </filter>
+          </defs>
+        )}
         <path
           d={d}
           fill="none"
@@ -70,6 +83,7 @@ export default function SquiggleBox({
           vectorEffect="non-scaling-stroke"
           strokeLinecap="round"
           strokeLinejoin="round"
+          {...(shadow ? { filter: `url(#${filterId})` } : {})}
         />
       </svg>
       <div className="relative px-5 py-3.5">{children}</div>
