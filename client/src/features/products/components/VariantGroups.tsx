@@ -4,7 +4,7 @@ import CopyCell from '../../../components/admin/CopyCell'
 import StatusChip, { type ChipTone } from '../../../components/admin/StatusChip'
 import { SkeletonRows } from '../../../components/admin/TableSkeleton'
 import { useTableSort, sortByKey } from '../../../hooks/useTableSort'
-import { NavArrowDown, Plus, Expand, Collapse } from 'iconoir-react'
+import { NavArrowDown, Plus, Expand, Collapse, EditPencil, Trash } from 'iconoir-react'
 import type { Variant, VariantGroup } from '../types'
 
 function stockTone(v: { fulfillmentType: string; stockCount: number }): { tone: ChipTone; label: string } {
@@ -60,8 +60,8 @@ export default function VariantGroups({ groups, filteredCount, collapsedGroups, 
         <td><StatusChip tone="zinc" className={v.isActive ? '' : 'opacity-60'}>{v.isActive ? 'AKTIF' : 'NONAKTIF'}</StatusChip></td>
         <td className="text-right">
           <div className="flex justify-end gap-1.5">
-            <button onClick={() => onEditVariant(v)} className="ad-btn">Edit</button>
-            <button onClick={() => onDeleteVariant(v)} className="ad-btn ad-btn-danger">Hapus</button>
+            <button onClick={() => onEditVariant(v)} className="ad-btn"><EditPencil width={14} height={14} strokeWidth={1.5} />Edit</button>
+            <button onClick={() => onDeleteVariant(v)} className="ad-btn ad-btn-danger"><Trash width={14} height={14} strokeWidth={1.5} />Hapus</button>
           </div>
         </td>
       </tr>

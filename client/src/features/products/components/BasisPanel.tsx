@@ -3,7 +3,7 @@ import DataTable from '../../../components/admin/DataTable'
 import StatusChip from '../../../components/admin/StatusChip'
 import { SkeletonRows } from '../../../components/admin/TableSkeleton'
 import { useTableSort } from '../../../hooks/useTableSort'
-import { Plus } from 'iconoir-react'
+import { Plus, EditPencil, Trash } from 'iconoir-react'
 import type { Product, Variant } from '../types'
 
 interface Props {
@@ -135,7 +135,7 @@ export default function BasisPanel({ products, variants, onCreate, onEdit, onDel
             <td className="text-[13px] ad-num text-[#6e6e73]">{p.mode != null ? `Rp ${p.mode.toLocaleString('id-ID')}` : '-'}</td>
             <td className="text-xs ad-num text-[#6e6e73]">{p.rentangLabel}</td>
             <td><StatusChip tone={p.isActive ? 'green' : 'zinc'}>{p.isActive ? 'AKTIF' : 'NONAKTIF'}</StatusChip></td>
-            <td className="text-right"><div className="flex justify-end gap-1.5"><button onClick={() => onEdit(p)} className="ad-btn">Edit</button><button onClick={() => onDelete(p)} className="ad-btn ad-btn-danger">Hapus</button></div></td>
+            <td className="text-right"><div className="flex justify-end gap-1.5"><button onClick={() => onEdit(p)} className="ad-btn"><EditPencil width={14} height={14} strokeWidth={1.5} />Edit</button><button onClick={() => onDelete(p)} className="ad-btn ad-btn-danger"><Trash width={14} height={14} strokeWidth={1.5} />Hapus</button></div></td>
           </tr>
           )
         })}

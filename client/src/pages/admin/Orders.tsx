@@ -8,7 +8,7 @@ import StatusChip from '../../components/admin/StatusChip'
 import ConfirmDialog, { openConfirm } from '../../components/admin/ConfirmDialog'
 import DeliverDialog, { openConfirm as openDialog } from '../../components/admin/DeliverDialog'
 import { printReceipt as printOrderReceipt } from '../../lib/receipt'
-import { Refresh, Plus, Search, NavArrowLeft, NavArrowRight, Key } from 'iconoir-react'
+import { Refresh, Plus, Search, NavArrowLeft, NavArrowRight, Key, EditPencil, Trash } from 'iconoir-react'
 import { SkeletonRows } from '../../components/admin/TableSkeleton'
 import { useTableSort } from '../../hooks/useTableSort'
 
@@ -350,14 +350,14 @@ export default function Orders() {
                   )}
                   {o.status === 'PENDING' && (
                     <>
-                      <button disabled={actionLoading === o.id} onClick={() => handleAction(o.id, 'approve')} className="ad-btn ad-btn-dark">Setujui</button>
-                          <button disabled={actionLoading === o.id} onClick={() => askReject(o)} className="ad-btn ad-btn-danger">Tolak</button>
+                      <button disabled={actionLoading === o.id} onClick={() => handleAction(o.id, 'approve')} className="ad-btn ad-btn-dark"><EditPencil width={14} height={14} strokeWidth={1.5} />Setujui</button>
+                          <button disabled={actionLoading === o.id} onClick={() => askReject(o)} className="ad-btn ad-btn-danger"><Trash width={14} height={14} strokeWidth={1.5} />Tolak</button>
                     </>
                   )}
                   {o.status === 'PAID' && (
                     <>
-                      <button disabled={actionLoading === o.id} onClick={() => askDeliver(o)} className="ad-btn ad-btn-dark">Kirim</button>
-                      <button disabled={actionLoading === o.id} onClick={() => askRefund(o)} className="ad-btn ad-btn-danger">Refund</button>
+                      <button disabled={actionLoading === o.id} onClick={() => askDeliver(o)} className="ad-btn ad-btn-dark"><EditPencil width={14} height={14} strokeWidth={1.5} />Kirim</button>
+                      <button disabled={actionLoading === o.id} onClick={() => askRefund(o)} className="ad-btn ad-btn-danger"><Trash width={14} height={14} strokeWidth={1.5} />Refund</button>
                     </>
                   )}
                   {actionLoading === o.id && <span className="loading loading-spinner loading-xs"></span>}

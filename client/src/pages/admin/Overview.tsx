@@ -7,7 +7,7 @@ import DataTable from '../../components/admin/DataTable'
 import StatusChip from '../../components/admin/StatusChip'
 import CopyCell from '../../components/admin/CopyCell'
 import { SkeletonRows, SkeletonCards } from '../../components/admin/TableSkeleton'
-import { Refresh, Cube, Archive, ShoppingBag, GraphUp, Plus, Eye, EyeClosed } from 'iconoir-react'
+import { Refresh, Cube, Archive, ShoppingBag, GraphUp, Plus, Eye, EyeClosed, EditPencil, Trash } from 'iconoir-react'
 import { AreaChart, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell, Area } from 'recharts'
 
 interface Stats {
