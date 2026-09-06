@@ -236,9 +236,10 @@ export default function VaultList({ variants, fetchedAt, initialVariantId, onVar
           <ConfirmDialog id="vault-rotate" title="Ganti kredensial?" message="Kredensial lama dicabut, yang baru dialokasikan ke order yang sama. Pelanggan akan melihat kredensial baru di dashboard." confirmLabel="Ya, ganti" onConfirm={async () => {
             if (!pendingRotate) return
             setPendingRotate(null)
-            await v.rotateCred(pendingRotate.orderId)
-            if (v.rotateError?.orderId === pendingRotate.orderId) {
-              setRotateFallback({ orderId: pendingRotate.orderId, message: v.rotateError.message })
+            try {
+              await v.rotateCred(pendingRotate.orderId)
+            } catch (e) {
+              setRotateFallback({ orderId: pendingRotate.orderId, message: e instanceof Error ? e.message : 'Gagal ganti' })
             }
           }} />
 

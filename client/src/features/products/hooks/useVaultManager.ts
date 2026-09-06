@@ -171,6 +171,7 @@ export function useVaultManager(variants: Variant[]) {
       const msg = e instanceof Error ? e.message : 'Gagal ganti'
       showToast(msg, 'error')
       setRotateError({ orderId, message: msg })
+      throw e
     } finally { setActionLoading(null) }
   }
 
