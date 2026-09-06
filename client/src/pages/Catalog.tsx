@@ -49,7 +49,7 @@ function Catalog() {
   return (
     <Layout>
       {announcement && (
-        <div className="mb-3 border-2 border-black bg-white px-3 py-2 text-center shadow-comic">
+        <div className="mb-3 border-[2.5px] border-[#FFD02F] bg-transparent px-3 py-2 text-center rounded-[255px_15px_225px_15px/15px_225px_15px_255px]">
           <p className="text-[13px] font-bold text-black">{announcement}</p>
         </div>
       )}
