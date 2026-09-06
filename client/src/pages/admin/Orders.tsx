@@ -282,7 +282,12 @@ export default function Orders() {
         </div>
         <label className="ad-input flex items-center gap-2">
           <Search width={15} height={15} strokeWidth={1.5} className="shrink-0 text-[#aeaeb2]" />
-          <input placeholder="produk / ref bayar..." value={q} onChange={(e) => setQ(e.target.value)} className="grow bg-transparent text-sm outline-none" />
+          <input placeholder="id / produk / ref / email pelanggan..." value={q} onChange={(e) => {
+            const v = e.target.value
+            setQ(v)
+            // Typing searches the whole dataset: jump to Semua tab.
+            if (v && tab !== 'semua') setSearchParams({ status: 'semua' })
+          }} className="grow bg-transparent text-sm outline-none" />
         </label>
       </div>
       {actionErr && <div className="bg-[#fdecec] rounded-[10px] px-4 py-2.5 text-xs font-semibold text-[#b91c1c]">{actionErr}</div>}

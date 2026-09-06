@@ -265,6 +265,8 @@ export const ordersService = {
       const like = `%${q}%`
       conditions.push(
         or(
+          ilike(orders.publicId, like),
+          ilike(sql`${orders.userId}::text`, like),
           ilike(orders.variantNameSnapshot, like),
           ilike(orders.baseNameSnapshot, like),
           ilike(orders.paymentRef, like),
