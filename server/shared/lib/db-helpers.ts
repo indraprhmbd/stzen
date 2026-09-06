@@ -31,8 +31,8 @@ export async function getStockCount(variantOrProductId: string): Promise<number>
 
 export async function allocateCredential(variantId: string, orderId: string): Promise<{ id: string; variantId: string | null; productId: string | null } | null> {
   const { data, error } = await supabaseAdmin.rpc('allocate_credential', {
-    variant_id: variantId,
-    order_id: orderId,
+    p_variant_id: variantId,
+    p_order_id: orderId,
   })
 
   if (error) {
