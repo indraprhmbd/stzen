@@ -24,14 +24,16 @@ export default function ProductsPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const tabParam = searchParams.get('tab')
   const tab = tabParam === 'basis' || tabParam === 'stok' ? tabParam : 'varian'
-  // Deep-link from orders: /admin/products?tab=stok&variant=<id> preselects
-  // the variant in the vault picker (same path as post-create import).
+  // Deep-link from orders: /admin/products?tab=stok&variant=<id>&order=<id>
+  // preselects the variant, mounts the order id into search, auto-unlocks.
   const urlVariant = searchParams.get('variant')
+  const urlOrder = searchParams.get('order')
   function clearUrlVariant() {
     setImportVariantId(null)
     setSearchParams((prev) => {
       const p = new URLSearchParams(prev)
       p.delete('variant')
+      p.delete('order')
       return p
     })
   }
@@ -170,7 +172,7 @@ export default function ProductsPage() {
 
       {tab === 'stok' && (
       <div role="tabpanel" id="panel-stok" aria-labelledby="tab-stok" className="flex flex-col gap-6">
-        <VaultList variants={variants} fetchedAt={fetchedAt} initialVariantId={importVariantId ?? urlVariant} autoImport={importVariantId != null} autoUnlock={urlVariant != null} onVariantSelected={clearUrlVariant} />
+        <VaultList variants={variants} fetchedAt={fetchedAt} initialVariantId={importVariantId ?? urlVariant} initialOrderId={urlOrder} autoImport={importVariantId != null} autoUnlock={urlVariant != null} onVariantSelected={clearUrlVariant} />
       </div>
       )}
 

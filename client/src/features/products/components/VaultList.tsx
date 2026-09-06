@@ -8,9 +8,9 @@ import { authedApiRequest } from '../../../lib/api'
 import type { Variant } from '../types'
 import { Lock, LockSlash, Refresh, Copy, EditPencil, Trash, Prohibition, Redo, Search, NavArrowLeft, NavArrowRight, Plus } from 'iconoir-react'
 
-interface Props { variants: Variant[]; fetchedAt: number | null; initialVariantId?: string | null; onVariantSelected?: () => void; /** Open import dialog on preselect (create flow). Deep-links only preselect. */ autoImport?: boolean; /** Unlock vault on mount (orders deep-link). Manual visits keep the gate. */ autoUnlock?: boolean }
+interface Props { variants: Variant[]; fetchedAt: number | null; initialVariantId?: string | null; onVariantSelected?: () => void; /** Prefill order search (orders deep-link: jump straight to that order's credential). */ initialOrderId?: string | null; /** Open import dialog on preselect (create flow). Deep-links only preselect. */ autoImport?: boolean; /** Unlock vault on mount (orders deep-link). Manual visits keep the gate. */ autoUnlock?: boolean }
 
-export default function VaultList({ variants, fetchedAt, initialVariantId, onVariantSelected, autoImport = true, autoUnlock = false }: Props) {
+export default function VaultList({ variants, fetchedAt, initialVariantId, onVariantSelected, initialOrderId, autoImport = true, autoUnlock = false }: Props) {
   const v = useVaultManager(variants)
   const [editing, setEditing] = useState<{ id: string; text: string } | null>(null)
   const [pendingDelete, setPendingDelete] = useState<{ id: string } | null>(null)
@@ -20,10 +20,13 @@ export default function VaultList({ variants, fetchedAt, initialVariantId, onVar
   const [importText, setImportText] = useState('')
   const [importLoading, setImportLoading] = useState(false)
 
-  // Pre-select variant when navigating from create dialog or orders deep-link
+  // Pre-select variant when navigating from create dialog or orders deep-link.
+  // Orders deep-link also mounts the order id into the search box so the
+  // list jumps straight to that order's credential.
   useEffect(() => {
     if (initialVariantId) {
       v.setVariantId(initialVariantId)
+      if (initialOrderId) v.setQ(initialOrderId)
       if (autoImport) setShowImport(true)
       onVariantSelected?.()
     }
