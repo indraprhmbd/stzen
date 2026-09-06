@@ -50,8 +50,8 @@ function Catalog() {
   return (
     <Layout>
       {announcement && (
-        <SquiggleBox className="mb-3" stroke="#FFFFFF" strokeWidth={3} shadow="#0D110F">
-          <p className="text-center text-base font-black tracking-wide text-white [text-shadow:2px_2px_0_#0D110F]">{announcement}</p>
+        <SquiggleBox className="mb-3" stroke="#FFFFFF" strokeWidth={3}>
+          <p className="text-center text-base font-black tracking-wide text-white">{announcement}</p>
         </SquiggleBox>
       )}
       {/* ═══ HERO 2/3 + FEATURED CARD 1/3 ═══ */}
