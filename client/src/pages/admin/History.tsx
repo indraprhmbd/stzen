@@ -101,7 +101,7 @@ export default function History() {
               <td className="text-xs ad-num whitespace-nowrap text-[#6e6e73]">{formatIdDate(l.created_at)}</td>
               <td className="text-xs ad-num text-[#6e6e73]">{l.actor_email ?? '-'}</td>
               <td><StatusChip>{l.action}</StatusChip></td>
-              <td className="text-[13px] max-w-[420px] truncate" title={l.snapshot_text}>{l.snapshot_text}</td>
+              <td><div className="ad-scrollx text-[13px]" title={l.snapshot_text}>{l.snapshot_text}</div></td>
             </tr>
           ))}
         </DataTable>

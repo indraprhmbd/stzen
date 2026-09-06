@@ -239,3 +239,18 @@
   border-radius: 16px;
   box-shadow: 0 12px 48px rgb(0 0 0 / 0.18);
 }
+
+/* Horizontal-scroll cell content. Wrap long cell text in
+   <div className="ad-scrollx"> so the cell scrolls internally while the
+   column header stays fixed — no truncation, desktop + mobile. */
+.admin-soft .ad-scrollx {
+  overflow-x: auto;
+  white-space: nowrap;
+  max-width: 200px;
+  scrollbar-width: thin;
+}
+@media (min-width: 640px) {
+  .admin-soft .ad-scrollx {
+    max-width: 420px;
+  }
+}

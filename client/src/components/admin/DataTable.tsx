@@ -23,6 +23,11 @@ interface DataTableProps {
   onSort?: (key: string) => void
 }
 
+// Reusable admin table shell: headers + empty state + mobile data-labels.
+// Body rows are caller-rendered <tr> children. For long cell text that must
+// scroll horizontally instead of truncating (header stays fixed), wrap the
+// cell content in <div className="ad-scrollx"> (see admin-soft.css).
+
 // Recursively walks table rows (through Fragments, e.g. Products' grouped
 // variant rows) and stamps each <td> with data-label="<column label>". Pure
 // data attribute — zero extra DOM nodes, zero JS on the row-render call
