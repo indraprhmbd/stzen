@@ -63,6 +63,7 @@ export const adminOrderRoutes = new Hono<AdminOrderEnv>()
     snapshotText: `Order ${(order as any).publicId ?? c.req.param('id')} PENDING->PAID oleh ${user.email ?? user.sub} ${new Date().toLocaleString('id-ID')}`,
     actorId: user.sub,
     actorEmail: user.email ?? null,
+    actorType: 'admin',
     diff: order,
     idempotencyKey,
   }).catch((e) => console.error('[audit] admin order action failed', e))
@@ -86,6 +87,7 @@ export const adminOrderRoutes = new Hono<AdminOrderEnv>()
     snapshotText: `Order ${(order as any).publicId ?? c.req.param('id')} PENDING->REJECTED oleh ${user.email ?? user.sub} ${new Date().toLocaleString('id-ID')}`,
     actorId: user.sub,
     actorEmail: user.email ?? null,
+    actorType: 'admin',
     diff: order,
     idempotencyKey,
   }).catch((e) => console.error('[audit] admin order action failed', e))
@@ -113,6 +115,7 @@ export const adminOrderRoutes = new Hono<AdminOrderEnv>()
     snapshotText: `Order ${(order as any).publicId ?? c.req.param('id')} PAID->DELIVERED oleh ${user.email ?? user.sub} ${new Date().toLocaleString('id-ID')}`,
     actorId: user.sub,
     actorEmail: user.email ?? null,
+    actorType: 'admin',
     diff: order,
     idempotencyKey,
   }).catch((e) => console.error('[audit] admin order action failed', e))
@@ -158,6 +161,7 @@ export const adminOrderRoutes = new Hono<AdminOrderEnv>()
     snapshotText: `Order ${orderPublicId} dibuat manual untuk ${customerEmail} oleh ${user.email ?? user.sub} ${new Date().toLocaleString('id-ID')}`,
     actorId: user.sub,
     actorEmail: user.email ?? null,
+    actorType: 'admin',
     diff: order,
   }).catch((e) => console.error('[audit] admin order action failed', e))
   return c.json(order, 201)
@@ -180,6 +184,7 @@ export const adminOrderRoutes = new Hono<AdminOrderEnv>()
     snapshotText: `Order ${(order as any).publicId ?? c.req.param('id')} PAID->REFUNDED oleh ${user.email ?? user.sub} ${new Date().toLocaleString('id-ID')}`,
     actorId: user.sub,
     actorEmail: user.email ?? null,
+    actorType: 'admin',
     diff: order,
     idempotencyKey,
   }).catch((e) => console.error('[audit] admin order action failed', e))

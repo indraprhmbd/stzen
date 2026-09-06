@@ -57,6 +57,7 @@ export const adminSettingsRoutes = new Hono<SettingsEnv>()
     snapshotText: `Pengaturan diperbarui oleh ${user.email ?? user.sub} ${new Date().toLocaleString('id-ID')}`,
     actorId: user.sub,
     actorEmail: user.email ?? null,
+    actorType: 'admin',
     diff: Object.fromEntries(entries),
   }).catch(() => {})
   return c.json({ success: true, updated: entries.length })

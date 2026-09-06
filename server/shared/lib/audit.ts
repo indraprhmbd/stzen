@@ -9,6 +9,8 @@ export type AuditAction =
   | 'variant:create' | 'variant:update' | 'variant:delete'
   | 'settings:update'
 
+export type ActorType = 'admin' | 'user' | 'system'
+
 export async function appendAudit(params: {
   action: AuditAction
   resourceType: 'order' | 'stock' | 'product' | 'variant' | 'settings'
@@ -17,12 +19,13 @@ export async function appendAudit(params: {
   snapshotText: string
   actorId?: string | null
   actorEmail?: string | null
+  actorType: ActorType
   diff?: any
   idempotencyKey?: string | null
 }) {
   await db.execute(sql`
-    insert into audit_logs (actor_id, actor_email, action, resource_type, resource_public_id, resource_name, snapshot_text, diff, idempotency_key)
-    values (${params.actorId ?? null}::uuid, ${params.actorEmail ?? null}, ${params.action}, ${params.resourceType}, ${params.resourcePublicId ?? null}, ${params.resourceName ?? null}, ${params.snapshotText}, ${params.diff ? JSON.stringify(params.diff) : null}::jsonb, ${params.idempotencyKey ?? null})
+    insert into audit_logs (actor_id, actor_email, actor_type, action, resource_type, resource_public_id, resource_name, snapshot_text, diff, idempotency_key)
+    values (${params.actorId ?? null}::uuid, ${params.actorEmail ?? null}, ${params.actorType}, ${params.action}, ${params.resourceType}, ${params.resourcePublicId ?? null}, ${params.resourceName ?? null}, ${params.snapshotText}, ${params.diff ? JSON.stringify(params.diff) : null}::jsonb, ${params.idempotencyKey ?? null})
   `)
 }
 

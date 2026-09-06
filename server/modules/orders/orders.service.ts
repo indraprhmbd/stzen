@@ -1,6 +1,6 @@
 import { eq, desc, sql, ilike, or, and, inArray } from 'drizzle-orm'
 import { db } from '../../shared/db'
-import { orders, products, productVariants, vaultItems } from '../../shared/db/schema'
+import { orders, products, productVariants, profiles, vaultItems } from '../../shared/db/schema'
 import type { PayableOrder } from './orders.types'
 import { NotFoundError, ConflictError, BadRequestError } from '../../shared/errors/http'
 import { generatePublicId } from '../../shared/lib/publicId'
@@ -268,7 +268,8 @@ export const ordersService = {
           ilike(orders.variantNameSnapshot, like),
           ilike(orders.baseNameSnapshot, like),
           ilike(orders.paymentRef, like),
-          ilike(products.name, like)
+          ilike(products.name, like),
+          ilike(profiles.email, like)
         )
       )
     }
@@ -280,6 +281,7 @@ export const ordersService = {
         .select({
           id: orders.publicId,
           userId: orders.userId,
+          customerEmail: profiles.email,
           productId: orders.productId,
           variantId: orders.variantId,
           status: orders.status,
@@ -296,6 +298,7 @@ export const ordersService = {
         .from(orders)
         .leftJoin(products, eq(orders.productId, products.id))
         .leftJoin(productVariants, eq(orders.variantId, productVariants.id))
+        .leftJoin(profiles, eq(orders.userId, profiles.id))
         .where(whereClause)
         .orderBy(sort === 'amount' ? (sortDir === 'asc' ? sql`${orders.amount} asc` : desc(orders.amount))
           : sort === 'status' ? (sortDir === 'asc' ? sql`${orders.status} asc` : desc(orders.status))
@@ -306,6 +309,7 @@ export const ordersService = {
         .select({ count: sql<number>`cast(count(*) as int)` })
         .from(orders)
         .leftJoin(products, eq(orders.productId, products.id))
+        .leftJoin(profiles, eq(orders.userId, profiles.id))
         .where(whereClause),
       getStatusCounts(),
     ] as any[])

@@ -79,6 +79,7 @@ export const adminProductRoutes = new Hono<AdminProductEnv>()
       snapshotText: `Produk ${(created as any).name} dibuat oleh ${user.email ?? user.sub} ${new Date().toLocaleString('id-ID')}`,
       actorId: user.sub,
       actorEmail: user.email ?? null,
+      actorType: 'admin',
     }).catch(() => {})
     return c.json({ ...rest, id: pid }, 201)
   }
@@ -122,6 +123,7 @@ export const adminProductRoutes = new Hono<AdminProductEnv>()
       snapshotText: `Produk ${(updated as any).name} diperbarui oleh ${user.email ?? user.sub} ${new Date().toLocaleString('id-ID')}`,
       actorId: user.sub,
       actorEmail: user.email ?? null,
+      actorType: 'admin',
     }).catch(() => {})
     return c.json({ ...rest, id: pid })
   }
@@ -158,6 +160,7 @@ export const adminProductRoutes = new Hono<AdminProductEnv>()
     snapshotText: `Produk ${(deleted as any).name} dihapus oleh ${user.email ?? user.sub} ${new Date().toLocaleString('id-ID')}`,
     actorId: user.sub,
     actorEmail: user.email ?? null,
+    actorType: 'admin',
   }).catch(() => {})
   return c.json({ success: true })
 })
@@ -192,6 +195,7 @@ export const adminProductRoutes = new Hono<AdminProductEnv>()
         snapshotText: `Stok ${result.imported} ditambah ke ${variant.name} (${publicId}) oleh ${user.email ?? user.sub} ${new Date().toLocaleString('id-ID')}`,
         actorId: user.sub,
         actorEmail: user.email ?? null,
+        actorType: 'admin',
       }).catch(() => {})
       return c.json(result)
     }
@@ -207,6 +211,7 @@ export const adminProductRoutes = new Hono<AdminProductEnv>()
       snapshotText: `Stok ${result.imported} ditambah ke ${product.name} (${publicId}) oleh ${user.email ?? user.sub} ${new Date().toLocaleString('id-ID')}`,
       actorId: user.sub,
       actorEmail: user.email ?? null,
+      actorType: 'admin',
     }).catch(() => {})
     return c.json(result)
   }

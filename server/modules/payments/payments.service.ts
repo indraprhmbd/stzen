@@ -96,6 +96,8 @@ export const paymentsService = {
       resourcePublicId: order.publicId,
       resourceName: order.publicId,
       snapshotText: `Webhook ${providerName} outcome=${parsed.outcome} order=${order.publicId} at ${new Date().toLocaleString('id-ID')}`,
+      actorEmail: `webhook:${providerName}`,
+      actorType: 'system',
       diff: result,
       idempotencyKey: idempotencyKey ?? undefined,
     }).catch((e) => console.error('[audit] webhook failed', e))

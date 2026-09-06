@@ -158,6 +158,7 @@ export const vaultService = {
       snapshotText: `Kredensial vault diperbarui oleh ${actor.email ?? actor.sub}`,
       actorId: actor.sub,
       actorEmail: actor.email ?? null,
+      actorType: 'admin',
     }).catch(() => {})
     return { id }
   },
@@ -176,6 +177,7 @@ export const vaultService = {
       snapshotText: `Kredensial vault dihapus oleh ${actor.email ?? actor.sub}`,
       actorId: actor.sub,
       actorEmail: actor.email ?? null,
+      actorType: 'admin',
     }).catch(() => {})
     return { id }
   },
@@ -194,6 +196,7 @@ export const vaultService = {
       snapshotText: `Kredensial vault dicabut oleh ${actor.email ?? actor.sub}`,
       actorId: actor.sub,
       actorEmail: actor.email ?? null,
+      actorType: 'admin',
     }).catch(() => {})
     return { id }
   },
@@ -230,6 +233,7 @@ export const vaultService = {
       snapshotText: `Kredensial order diganti oleh ${actor.email ?? actor.sub}`,
       actorId: actor.sub,
       actorEmail: actor.email ?? null,
+      actorType: 'admin',
     }).catch(() => {})
     return result
   },

@@ -11,6 +11,7 @@ interface Log {
   id: string
   created_at: string
   actor_email: string | null
+  actor_type: 'admin' | 'user' | 'system'
   action: string
   resource_type: string
   resource_public_id: string | null
@@ -31,6 +32,7 @@ function formatIdDate(iso: string) {
 
 export default function History() {
   const [type, setType] = useState('all')
+  const [actor, setActor] = useState('all')
   const [q, setQ] = useState('')
   const [offset, setOffset] = useState(0)
   const limit = 20
@@ -40,6 +42,7 @@ export default function History() {
   const { data, loading, error, fetchedAt, refetch: fetchLogs } = useAdminQuery(async () => {
     const params: Record<string, string> = { limit: String(limit), offset: String(offset) }
     if (type !== 'all') params.type = type
+    if (actor !== 'all') params.actor = actor
     if (q) params.q = q
     if (sortKey) { params.sort = sortKey; params.sortDir = sortDir ?? 'desc' }
     const res = await authedApiRequest((c) =>
@@ -54,11 +57,11 @@ export default function History() {
       return { logs: json, total: json.length }
     }
     return { logs: [], total: 0 }
-  }, [type, q, offset, sortKey, sortDir])
+  }, [type, actor, q, offset, sortKey, sortDir])
   const logs = data?.logs ?? []
   const total = data?.total ?? 0
 
-  useEffect(() => { setOffset(0) }, [type, q, sortKey, sortDir])
+  useEffect(() => { setOffset(0) }, [type, actor, q, sortKey, sortDir])
 
   if (error) return <div className="ad-card-flat p-8 text-center"><div className="text-sm font-semibold text-red-600">Gagal memuat</div><div className="text-xs text-[#6e6e73] mt-1">{error}</div><button onClick={fetchLogs} className="ad-btn ad-btn-dark mt-4">Coba lagi</button></div>
 
@@ -75,7 +78,20 @@ export default function History() {
         </button>
       </div>
 
-      <div className="ad-card-flat p-3 flex flex-col sm:flex-row gap-3">
+      <div className="ad-card-flat p-3 flex flex-col gap-3">
+        <div role="tablist" aria-label="Filter aktor" className="ad-seg self-start max-w-full overflow-x-auto">
+          {(['all', 'admin', 'user', 'system'] as const).map((a) => (
+            <button
+              key={a}
+              role="tab"
+              aria-selected={actor === a}
+              onClick={() => setActor(a)}
+            >
+              {a === 'all' ? 'Semua' : a === 'admin' ? 'Admin' : a === 'user' ? 'User' : 'Sistem'}
+            </button>
+          ))}
+        </div>
+        <div className="flex flex-col sm:flex-row gap-3">
         <select value={type} onChange={(e) => setType(e.target.value)} className="ad-input w-full sm:w-40">
           <option value="all">Semua</option>
           <option value="order">Pesanan</option>
@@ -85,6 +101,7 @@ export default function History() {
           <Search width={15} height={15} strokeWidth={1.5} className="shrink-0 text-[#aeaeb2]" />
           <input placeholder="public id, teks, aktor..." value={q} onChange={(e) => setQ(e.target.value)} className="grow bg-transparent text-sm outline-none" />
         </label>
+        </div>
       </div>
 
       <div className="ad-card">

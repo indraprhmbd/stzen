@@ -35,6 +35,7 @@ export const checkoutRoutes = new Hono<CheckoutEnv>()
       snapshotText: `Order ${(order as any).orderId ?? (order as any).id} PENDING dibuat oleh ${user.email ?? user.sub} ${new Date().toLocaleString('id-ID')}`,
       actorId: user.sub,
       actorEmail: user.email ?? null,
+      actorType: 'user',
       diff: order,
       idempotencyKey,
     }).catch((e) => console.error('[audit] order:create failed', e))

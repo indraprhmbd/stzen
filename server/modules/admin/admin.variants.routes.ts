@@ -148,6 +148,7 @@ export const adminVariantRoutes = new Hono<VariantEnv>()
     snapshotText: `Varian ${sku} dibuat oleh ${user.email ?? user.sub} ${new Date().toLocaleString('id-ID')}`,
     actorId: user.sub,
     actorEmail: user.email ?? null,
+    actorType: 'admin',
   }).catch((e) => console.error('[audit] admin variant action failed', e))
   return c.json({ ...rest, id: pid, sku, name }, 201)
 })
@@ -200,6 +201,7 @@ export const adminVariantRoutes = new Hono<VariantEnv>()
     snapshotText: `Varian ${(updated as any).name} diperbarui oleh ${user.email ?? user.sub} ${new Date().toLocaleString('id-ID')}`,
     actorId: user.sub,
     actorEmail: user.email ?? null,
+    actorType: 'admin',
   }).catch((e) => console.error('[audit] admin variant action failed', e))
   return c.json({ ...rest, id: pid })
 })
@@ -218,6 +220,7 @@ export const adminVariantRoutes = new Hono<VariantEnv>()
     snapshotText: `Varian ${(deleted as any).name} dihapus oleh ${user.email ?? user.sub} ${new Date().toLocaleString('id-ID')}`,
     actorId: user.sub,
     actorEmail: user.email ?? null,
+    actorType: 'admin',
   }).catch((e) => console.error('[audit] admin variant action failed', e))
   return c.json({ success: true })
 })
@@ -241,6 +244,7 @@ export const adminVariantRoutes = new Hono<VariantEnv>()
     snapshotText: `Stok ${result.imported} ditambah ke ${variant.name} (${publicId}) oleh ${user.email ?? user.sub} ${new Date().toLocaleString('id-ID')}`,
     actorId: user.sub,
     actorEmail: user.email ?? null,
+    actorType: 'admin',
   }).catch((e) => console.error('[audit] admin variant action failed', e))
   return c.json(result)
 })

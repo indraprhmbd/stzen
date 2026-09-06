@@ -15,6 +15,7 @@ interface AdminOrder {
   id: string
   productName: string
   userId: string
+  customerEmail: string | null
   amount: string
   paymentRef: string | null
   paymentProvider: string | null
@@ -318,7 +319,7 @@ export default function Orders() {
                 <StatusChip tone={o.fulfillmentType === 'on_demand' ? 'amber' : 'zinc'}>{o.fulfillmentType === 'on_demand' ? 'ON-DEMAND' : 'VAULT'}</StatusChip>
                 {stockout && <StatusChip tone="red" className="ml-1">STOK HABIS</StatusChip>}
               </td>
-              <td className="ad-num text-xs text-[#6e6e73]">{o.userId.slice(0, 8)}</td>
+              <td className="ad-num text-xs text-[#6e6e73] max-w-[160px] truncate" title={o.customerEmail ?? o.userId}>{o.customerEmail ?? o.userId.slice(0, 8)}</td>
               <td className="text-[13px] ad-num font-semibold">Rp {Number(o.amount).toLocaleString('id-ID')}</td>
               <td><StatusChip status={o.status}>{o.status}</StatusChip></td>
               <td className="text-right">
