@@ -9,14 +9,15 @@ import { authedApiRequest } from '../../../lib/api'
 import type { Variant } from '../types'
 import { Lock, LockSlash, Refresh, Copy, EditPencil, Trash, Prohibition, Redo, Search, NavArrowLeft, NavArrowRight, Plus } from 'iconoir-react'
 
-interface Props { variants: Variant[]; fetchedAt: number | null; initialVariantId?: string | null; onVariantSelected?: () => void; /** Prefill order search (orders deep-link: jump straight to that order's credential). */ initialOrderId?: string | null; /** Open import dialog on preselect (create flow). Deep-links only preselect. */ autoImport?: boolean; /** Unlock vault on mount (orders deep-link). Manual visits keep the gate. */ autoUnlock?: boolean }
+interface Props { variants: Variant[]; fetchedAt: number | null; initialVariantId?: string | null; onVariantSelected?: () => void; /** Prefill order search (orders deep-link: jump straight to that order's credential). */ initialOrderId?: string | null; /** Open import dialog on preselect (create flow). Deep-links only preselect. */ autoImport?: boolean }
 
-export default function VaultList({ variants, fetchedAt, initialVariantId, onVariantSelected, initialOrderId, autoImport = true, autoUnlock = false }: Props) {
+export default function VaultList({ variants, fetchedAt, initialVariantId, onVariantSelected, initialOrderId, autoImport = true }: Props) {
   const v = useVaultManager(variants)
   const [editing, setEditing] = useState<{ id: string; text: string } | null>(null)
   const [pendingDelete, setPendingDelete] = useState<{ id: string } | null>(null)
   const [pendingRevoke, setPendingRevoke] = useState<{ id: string } | null>(null)
   const [pendingRotate, setPendingRotate] = useState<{ orderId: string } | null>(null)
+  const [unlocking, setUnlocking] = useState(true)
   const [showImport, setShowImport] = useState(false)
   const [importText, setImportText] = useState('')
   const [importLoading, setImportLoading] = useState(false)
@@ -33,15 +34,16 @@ export default function VaultList({ variants, fetchedAt, initialVariantId, onVar
     }
   }, [initialVariantId])
 
-  // Deep-link arrival unlocks once; manual tab visits keep the soft gate.
+  // Vault opens itself on mount — no manual gate. The 10-min token,
+  // hide-tab relock, and manual lock button still bound the session.
   const autoUnlocked = useRef(false)
   useEffect(() => {
-    if (autoUnlock && !autoUnlocked.current) {
+    if (!autoUnlocked.current) {
       autoUnlocked.current = true
-      v.unlock()
+      v.unlock().finally(() => setUnlocking(false))
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoUnlock])
+  }, [])
 
   const importParsed = useMemo(() => {
     const lines: string[] = []
@@ -95,15 +97,21 @@ export default function VaultList({ variants, fetchedAt, initialVariantId, onVar
 
   return (
     <div className="flex flex-col gap-4">
-      {/* ── Unlock banner ─────────────────────────────────────── */}
+      {/* ── Unlock banner (retry fallback; vault opens itself) ─────── */}
       {!v.isUnlocked ? (
         <div className="ad-card-flat p-6 text-center">
           <Lock width={32} height={32} strokeWidth={1.5} className="mx-auto mb-3 text-[#aeaeb2]" />
-          <div className="text-[13px] text-[#6e6e73] mb-3">Buka kunci untuk melihat kredensial dalam plaintext.</div>
-          <button onClick={v.unlock} className="ad-btn ad-btn-dark">
-            <LockSlash width={15} height={15} strokeWidth={1.5} />
-            Buka Kunci Vault
-          </button>
+          {unlocking ? (
+            <div className="text-[13px] text-[#6e6e73]">Membuka vault...</div>
+          ) : (
+            <>
+              <div className="text-[13px] text-[#6e6e73] mb-3">Gagal membuka vault otomatis.</div>
+              <button onClick={() => { setUnlocking(true); v.unlock().finally(() => setUnlocking(false)) }} className="ad-btn ad-btn-dark">
+                <LockSlash width={15} height={15} strokeWidth={1.5} />
+                Coba Lagi
+              </button>
+            </>
+          )}
         </div>
       ) : (
         <>

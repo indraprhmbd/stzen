@@ -175,7 +175,7 @@ export default function ProductsPage() {
 
       {tab === 'stok' && (
       <div role="tabpanel" id="panel-stok" aria-labelledby="tab-stok" className="flex flex-col gap-6">
-        <VaultList variants={variants} fetchedAt={fetchedAt} initialVariantId={importVariantId ?? urlVariant} initialOrderId={urlOrder} autoImport={importVariantId != null || urlImport} autoUnlock={urlVariant != null} onVariantSelected={clearUrlVariant} />
+        <VaultList variants={variants} fetchedAt={fetchedAt} initialVariantId={importVariantId ?? urlVariant} initialOrderId={urlOrder} autoImport={importVariantId != null || urlImport} onVariantSelected={clearUrlVariant} />
       </div>
       )}
 
