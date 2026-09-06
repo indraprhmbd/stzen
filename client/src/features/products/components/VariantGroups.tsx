@@ -3,7 +3,7 @@ import DataTable from '../../../components/admin/DataTable'
 import StatusChip, { type ChipTone } from '../../../components/admin/StatusChip'
 import { SkeletonRows } from '../../../components/admin/TableSkeleton'
 import { useTableSort, sortByKey } from '../../../hooks/useTableSort'
-import { NavArrowDown, Plus } from 'iconoir-react'
+import { NavArrowDown, Plus, Expand, Collapse } from 'iconoir-react'
 import type { Variant, VariantGroup } from '../types'
 
 function stockTone(v: { fulfillmentType: string; stockCount: number }): { tone: ChipTone; label: string } {
@@ -35,6 +35,18 @@ export default function VariantGroups({ groups, filteredCount, collapsedGroups, 
     const items = g.items.map((v) => ({ ...v, priceNum: Number(v.price) }))
     return { ...g, items: sortByKey(items, itemKey, sortDir) }
   }), [groups, itemKey, sortDir])
+
+  const allCollapsed = groups.length > 0 && groups.every((g) => collapsedGroups[g.key] ?? true)
+
+  function toggleAll() {
+    const next = !allCollapsed
+    setCollapsedGroups((s) => {
+      const copy = { ...s }
+      for (const g of groups) copy[g.key] = next
+      return copy
+    })
+  }
+
   function renderVariantRow(v: Variant) {
     return (
       <tr key={v.id}>
@@ -57,11 +69,13 @@ export default function VariantGroups({ groups, filteredCount, collapsedGroups, 
 
   return (
     <div className="ad-card">
-      <div className="ad-card-head">
-        <div>
-          <div className="ad-card-title">Varian per Induk</div>
-          <div className="text-[11px] text-[#6e6e73] mt-0.5">Klik baris induk untuk membuka atau menutup daftar variannya</div>
-        </div>
+      <div className="ad-card-head" style={{ justifyContent: 'flex-end' }}>
+        <button onClick={toggleAll} className="ad-btn" title={allCollapsed ? 'Buka semua' : 'Tutup semua'}>
+          {allCollapsed
+            ? <Expand width={15} height={15} strokeWidth={1.5} />
+            : <Collapse width={15} height={15} strokeWidth={1.5} />}
+          {allCollapsed ? 'Buka semua' : 'Tutup semua'}
+        </button>
         <button onClick={() => onCreateVariant()} className="ad-btn ad-btn-dark"><Plus width={15} height={15} strokeWidth={1.5} />Varian</button>
       </div>
       <DataTable
