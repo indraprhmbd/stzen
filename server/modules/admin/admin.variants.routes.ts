@@ -245,8 +245,20 @@ export const adminVariantRoutes = new Hono<VariantEnv>()
         }
       }
 
-      const updateData: any = { ...data, updated_at: new Date().toISOString() }
+      const updateData: any = { updated_at: new Date().toISOString() }
       delete updateData.id
+      if (data.productId !== undefined) updateData.product_id = data.productId
+      if (data.price !== undefined) updateData.price = data.price
+      if (data.compareAtPrice !== undefined) updateData.compare_at_price = data.compareAtPrice
+      if (data.badge !== undefined) updateData.badge = data.badge
+      if (data.overview !== undefined) updateData.overview = data.overview
+      if (data.description !== undefined) updateData.description = data.description
+      if (data.durationMonths !== undefined) updateData.duration_months = data.durationMonths
+      if (data.durationUnit !== undefined) updateData.duration_unit = data.durationUnit
+      if (data.accountType !== undefined) updateData.account_type = data.accountType
+      if (data.conditions !== undefined) updateData.conditions = data.conditions
+      if (data.fulfillmentType !== undefined) updateData.fulfillment_type = data.fulfillmentType
+      if (data.isActive !== undefined) updateData.is_active = data.isActive
       for (const [key, value] of Object.entries(updateData)) {
         if (value === undefined) delete updateData[key]
       }

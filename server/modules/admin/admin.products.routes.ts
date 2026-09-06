@@ -51,8 +51,17 @@ export const adminProductRoutes = new Hono<AdminProductEnv>()
   .post('/', zValidator('json', ProductCreateSchema), async (c) => {
     const data = c.req.valid('json') as any
     const publicId = generatePublicId()
-    const dbData: any = { ...data, public_id: publicId }
-    if (dbData.price !== undefined && dbData.price !== '') dbData.price = parseInt(dbData.price, 10)
+    const dbData: any = {
+      public_id: publicId,
+      name: data.name,
+      category: data.category,
+      badge: data.badge ?? null,
+      overview: data.overview ?? null,
+      description: data.description ?? null,
+      instructions: data.instructions ?? null,
+      is_active: data.isActive ?? true,
+    }
+    if (data.price !== undefined && data.price !== '') dbData.price = parseInt(data.price, 10)
     else dbData.price = 0
 
     const { data: created, error } = await supabaseAdmin
@@ -81,8 +90,17 @@ export const adminProductRoutes = new Hono<AdminProductEnv>()
   .put('/:id', zValidator('json', ProductUpdateSchema), async (c) => {
     const publicId = c.req.param('id')
     const data = c.req.valid('json') as any
-    const dbData: any = { ...data, updated_at: new Date().toISOString() }
-    if (dbData.price !== undefined) dbData.price = parseInt(dbData.price, 10)
+    const dbData: any = {
+      name: data.name,
+      category: data.category,
+      badge: data.badge ?? null,
+      overview: data.overview ?? null,
+      description: data.description ?? null,
+      instructions: data.instructions ?? null,
+      is_active: data.isActive,
+      updated_at: new Date().toISOString(),
+    }
+    if (data.price !== undefined && data.price !== '') dbData.price = parseInt(data.price, 10)
 
     const { data: updated, error } = await supabaseAdmin
       .from(PRODUCTS)
