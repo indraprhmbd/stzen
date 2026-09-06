@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import SearchableSelect from '../../../components/admin/SearchableSelect'
 import DataTable from '../../../components/admin/DataTable'
 import StatusChip from '../../../components/admin/StatusChip'
@@ -8,9 +8,9 @@ import { authedApiRequest } from '../../../lib/api'
 import type { Variant } from '../types'
 import { Lock, LockSlash, Refresh, Copy, EditPencil, Trash, Prohibition, Redo, Search, NavArrowLeft, NavArrowRight, Plus } from 'iconoir-react'
 
-interface Props { variants: Variant[]; fetchedAt: number | null; initialVariantId?: string | null; onVariantSelected?: () => void }
+interface Props { variants: Variant[]; fetchedAt: number | null; initialVariantId?: string | null; onVariantSelected?: () => void; /** Open import dialog on preselect (create flow). Deep-links only preselect. */ autoImport?: boolean; /** Unlock vault on mount (orders deep-link). Manual visits keep the gate. */ autoUnlock?: boolean }
 
-export default function VaultList({ variants, fetchedAt, initialVariantId, onVariantSelected }: Props) {
+export default function VaultList({ variants, fetchedAt, initialVariantId, onVariantSelected, autoImport = true, autoUnlock = false }: Props) {
   const v = useVaultManager(variants)
   const [editing, setEditing] = useState<{ id: string; text: string } | null>(null)
   const [pendingDelete, setPendingDelete] = useState<{ id: string } | null>(null)
@@ -20,14 +20,24 @@ export default function VaultList({ variants, fetchedAt, initialVariantId, onVar
   const [importText, setImportText] = useState('')
   const [importLoading, setImportLoading] = useState(false)
 
-  // Pre-select variant when navigating from create dialog
+  // Pre-select variant when navigating from create dialog or orders deep-link
   useEffect(() => {
     if (initialVariantId) {
       v.setVariantId(initialVariantId)
-      setShowImport(true)
+      if (autoImport) setShowImport(true)
       onVariantSelected?.()
     }
   }, [initialVariantId])
+
+  // Deep-link arrival unlocks once; manual tab visits keep the soft gate.
+  const autoUnlocked = useRef(false)
+  useEffect(() => {
+    if (autoUnlock && !autoUnlocked.current) {
+      autoUnlocked.current = true
+      v.unlock()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoUnlock])
 
   const importParsed = useMemo(() => {
     const lines: string[] = []

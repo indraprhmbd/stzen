@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams, useNavigate } from 'react-router-dom'
 import { authedApiRequest } from '../../lib/api'
 import { useAdminQuery } from '../../hooks/useAdminQuery'
 import DataTable from '../../components/admin/DataTable'
@@ -7,7 +7,7 @@ import StatusChip from '../../components/admin/StatusChip'
 import ConfirmDialog, { openConfirm } from '../../components/admin/ConfirmDialog'
 import DeliverDialog, { openConfirm as openDialog } from '../../components/admin/DeliverDialog'
 import { printReceipt as printOrderReceipt } from '../../lib/receipt'
-import { Refresh, Plus, Search, NavArrowLeft, NavArrowRight } from 'iconoir-react'
+import { Refresh, Plus, Search, NavArrowLeft, NavArrowRight, Key } from 'iconoir-react'
 import { SkeletonRows } from '../../components/admin/TableSkeleton'
 import { useTableSort } from '../../hooks/useTableSort'
 
@@ -16,6 +16,7 @@ interface AdminOrder {
   productName: string
   userId: string
   customerEmail: string | null
+  variantId: string | null
   amount: string
   paymentRef: string | null
   paymentProvider: string | null
@@ -49,6 +50,7 @@ function formatAge(iso: string): string {
 export default function Orders() {
   const [q, setQ] = useState('')
   const [searchParams, setSearchParams] = useSearchParams()
+  const navigate = useNavigate()
   const rawTab = searchParams.get('status')
   const tab: TabKey = TABS.some((t) => t.key === rawTab) ? (rawTab as TabKey) : 'butuh-tindakan'
   const activeTab = TABS.find((t) => t.key === tab)!
@@ -329,6 +331,9 @@ export default function Orders() {
               <td><StatusChip status={o.status}>{o.status}</StatusChip></td>
               <td className="text-right">
                 <div className="flex justify-end gap-1.5">
+                  {o.variantId && o.fulfillmentType !== 'on_demand' && (
+                    <button onClick={() => navigate(`/admin/products?tab=stok&variant=${o.variantId}`)} title="Lihat stok varian" aria-label="Lihat stok varian" className="ad-btn !px-2.5"><Key width={15} height={15} strokeWidth={1.5} /></button>
+                  )}
                   {o.status === 'PENDING' && (
                     <>
                       <button disabled={actionLoading === o.id} onClick={() => handleAction(o.id, 'approve')} className="ad-btn ad-btn-dark">Setujui</button>
