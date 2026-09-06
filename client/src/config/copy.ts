@@ -3,7 +3,7 @@ export interface Copy {
   auth: { signIn: string; signOut: string; signInWithGoogle: string; email: string; password: string; or: string; backToStore: string }
   hero: { title1: string; title2: string; tagline: string; cta: string; statusPill: string; searchPlaceholder: string; searchHint: string }
   marquee: string[]
-  products: { title: string; buy: string; soldOut: string; inStock: string; onlyXLeft: string; outOfStock: string; sortNewest: string; sortPrice: string; sortStock: string; sortOutOfStock: string; viewGrid: string; viewList: string; verifiedBuyer: string; loginForMore: string }
+  products: { title: string; buy: string; buyNow: string; soldOut: string; inStock: string; onlyXLeft: string; outOfStock: string; sortNewest: string; sortPrice: string; sortStock: string; sortOutOfStock: string; viewGrid: string; viewList: string; verifiedBuyer: string; loginForMore: string; confirmTitle: string; confirmNote: string; confirmCancel: string; confirmGo: string; processing: string }
   howItWorks: { title: string; steps: { num: string; title: string; desc: string }[] }
   whyUs: { title: string; items: { title: string; desc: string }[] }
   testimonials: { title: string; items: { quote: string; name: string; product: string }[] }
@@ -47,6 +47,7 @@ const id: Copy = {
   products: {
     title: 'SEMUA PRODUK',
     buy: 'Beli',
+    buyNow: 'BELI SEKARANG',
     soldOut: 'Habis',
     inStock: 'Stok Tersedia',
     onlyXLeft: 'Sisa',
@@ -59,6 +60,11 @@ const id: Copy = {
     viewList: 'List',
     verifiedBuyer: 'PEMBELI TERVERIFIKASI',
     loginForMore: 'Login untuk melihat semua produk',
+    confirmTitle: 'KONFIRMASI PESANAN',
+    confirmNote: 'Tanpa keranjang, pesanan langsung dibuat dan lanjut ke pembayaran. Pastikan produk dan harga sudah benar.',
+    confirmCancel: 'BATAL',
+    confirmGo: 'LANJUT BAYAR',
+    processing: 'Memproses...',
   },
   howItWorks: {
     title: 'CARA KERJA',
@@ -160,6 +166,7 @@ const en: Copy = {
   products: {
     title: 'ALL PRODUCTS',
     buy: 'Buy',
+    buyNow: 'BUY NOW',
     soldOut: 'Sold Out',
     inStock: 'In Stock',
     onlyXLeft: 'Only',
@@ -172,6 +179,11 @@ const en: Copy = {
     viewList: 'List',
     verifiedBuyer: 'VERIFIED BUYER',
     loginForMore: 'Log in to see all products',
+    confirmTitle: 'CONFIRM ORDER',
+    confirmNote: 'No cart, the order is created immediately and continues to payment. Make sure the product and price are correct.',
+    confirmCancel: 'CANCEL',
+    confirmGo: 'CONTINUE TO PAY',
+    processing: 'Processing...',
   },
   howItWorks: {
     title: 'HOW IT WORKS',

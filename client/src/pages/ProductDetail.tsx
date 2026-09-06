@@ -85,6 +85,16 @@ export default function ProductDetail() {
     return () => observer.disconnect()
   }, [product])
 
+  function openBuyConfirm() {
+    if (!product || purchasing || !inStock) return
+    ;(document.getElementById('buy-confirm') as HTMLDialogElement | null)?.showModal()
+  }
+
+  function confirmBuy() {
+    ;(document.getElementById('buy-confirm') as HTMLDialogElement | null)?.close()
+    void handleBuy()
+  }
+
   async function handleBuy() {
     if (!product || purchasing) return
     setPurchasing(true)
@@ -211,11 +221,11 @@ export default function ProductDetail() {
           {/* CTA */}
           <button
             ref={ctaRef}
-            onClick={handleBuy}
+            onClick={openBuyConfirm}
             disabled={purchasing || !inStock}
             className="btn btn-primary border-comic shadow-comic btn-comic-interactive font-black uppercase w-full min-h-12 text-sm"
           >
-            {purchasing ? 'Memproses...' : (inStock ? 'BELI SEKARANG' : t.products.soldOut)}
+            {purchasing ? t.products.processing : (inStock ? t.products.buyNow : t.products.soldOut)}
           </button>
 
           {/* Success message */}
@@ -327,15 +337,73 @@ export default function ProductDetail() {
             </p>
           </div>
           <button
-            onClick={handleBuy}
+            onClick={openBuyConfirm}
             disabled={purchasing}
             className="bg-primary border-2 border-black font-black text-xs uppercase px-4 py-2.5 btn-comic-interactive shrink-0"
             style={{ fontFamily: "'Space Grotesk', sans-serif" }}
           >
-            {purchasing ? '...' : 'BELI'}
+            {purchasing ? '...' : t.products.buy}
           </button>
         </div>
       )}
+      {/* ═══ BUY CONFIRM MODAL (receipt style) ═══ */}
+      <dialog id="buy-confirm" className="modal">
+        <div className="modal-box bg-white border-comic shadow-comic rounded-sm p-0 max-w-md">
+          <div className="bg-neutral border-b-[3px] border-black px-5 py-3 text-center">
+            <h3 className="font-black text-sm uppercase text-primary tracking-widest" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+              {t.products.confirmTitle}
+            </h3>
+          </div>
+          <div className="p-5 flex flex-col gap-3">
+            <div className="border-2 border-dashed border-black/60 px-4 py-3 font-mono text-xs text-neutral">
+              <div className="flex justify-between gap-3 py-1">
+                <span className="opacity-60">PRODUK</span>
+                <span className="font-bold text-right break-words">{product.name}</span>
+              </div>
+              <div className="flex justify-between gap-3 py-1">
+                <span className="opacity-60">HARGA</span>
+                <span className="font-bold whitespace-nowrap">{brand.storefront.currencySymbol} {Number(product.price).toLocaleString('id-ID')}</span>
+              </div>
+              {pct !== null && (
+                <div className="flex justify-between gap-3 py-1">
+                  <span className="opacity-60">DISKON</span>
+                  <span className="font-bold whitespace-nowrap">-{pct}%</span>
+                </div>
+              )}
+              {!isOnDemand && (
+                <div className="flex justify-between gap-3 py-1">
+                  <span className="opacity-60">STOK</span>
+                  <span className="font-bold whitespace-nowrap">{product.stockCount > 3 ? product.stockCount : `${t.products.onlyXLeft} ${product.stockCount}`}</span>
+                </div>
+              )}
+              <div className="border-t-2 border-dashed border-black/60 mt-2 pt-2 flex justify-between gap-3">
+                <span className="font-black">TOTAL</span>
+                <span className="font-black whitespace-nowrap">{brand.storefront.currencySymbol} {Number(product.price).toLocaleString('id-ID')}</span>
+              </div>
+            </div>
+            <div className="bg-primary/20 border-2 border-black p-2.5 text-xs font-bold text-neutral leading-relaxed">
+              {t.products.confirmNote}
+            </div>
+            <div className="flex gap-2">
+              <form method="dialog" className="flex-1">
+                <button className="w-full bg-white text-black font-black text-xs uppercase border-2 border-black py-2.5 hover:bg-black hover:text-white transition-colors">
+                  {t.products.confirmCancel}
+                </button>
+              </form>
+              <button
+                onClick={confirmBuy}
+                disabled={purchasing}
+                className="flex-1 btn btn-primary border-2 border-black font-black text-xs uppercase py-2.5 btn-comic-interactive disabled:opacity-50"
+              >
+                {purchasing ? t.products.processing : t.products.confirmGo}
+              </button>
+            </div>
+          </div>
+        </div>
+        <form method="dialog" className="modal-backdrop">
+          <button>close</button>
+        </form>
+      </dialog>
       <ToastStack toasts={toasts} onDone={dismissToast} />
     </Layout>
   )
