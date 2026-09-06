@@ -86,7 +86,7 @@ export const vaultService = {
 
     const { data: variants, error } = await supabaseAdmin
       .from(PRODUCT_VARIANTS)
-      .select('id')
+      .select('id, fulfillment_type')
       .eq('public_id', variantPublicId)
       .limit(1)
 
@@ -94,6 +94,7 @@ export const vaultService = {
     if (!variants || variants.length === 0) throw new NotFoundError('Variant not found')
 
     const variantId = variants[0].id
+    const fulfillmentType = variants[0].fulfillment_type || 'vault'
 
     let query = supabaseAdmin
       .from(VAULT_ITEMS)
@@ -137,6 +138,7 @@ export const vaultService = {
           credential: await decrypt(key, JSON.parse(r.credential_payload) as EncryptedPayload),
           orderPublicId: order?.public_id,
           orderStatus: order?.status,
+          fulfillmentType,
         }
       })
     )
@@ -283,6 +285,59 @@ export const vaultService = {
       .update({ status: 'REVOKED' })
       .eq('id', oldId)
 
+    // Detect fulfillment type
+    const { data: variantRow } = await supabaseAdmin
+      .from(PRODUCT_VARIANTS)
+      .select('fulfillment_type')
+      .eq('id', order.variant_id)
+      .limit(1)
+
+    const fulfillmentType = variantRow?.[0]?.fulfillment_type || 'vault'
+
+    // On-demand: never use pooled stock; require manual credential
+    if (fulfillmentType === 'on_demand') {
+      const credential = (opts?.credential || '').trim()
+      if (!credential) {
+        throw new ConflictError('ON_DEMAND_REQUIRES_CREDENTIAL')
+      }
+
+      const aesSecret = process.env.AES_SECRET_KEY
+      if (!aesSecret) throw new Error('AES_SECRET_KEY not configured')
+      const key = await importKeyFromBase64(aesSecret)
+      const payload = await encrypt(key, credential)
+
+      const { data: inserted, error: insertError } = await supabaseAdmin
+        .from(VAULT_ITEMS)
+        .insert({
+          variant_id: order.variant_id,
+          product_id: order.product_id ?? null,
+          credential_payload: JSON.stringify(payload),
+          status: 'SOLD',
+        })
+        .select('id')
+        .single()
+
+      if (insertError) throw new Error(insertError.message)
+
+      await supabaseAdmin
+        .from(ORDERS)
+        .update({ vault_item_id: inserted.id })
+        .eq('id', order.id)
+
+      await appendAudit({
+        action: 'order:replace',
+        resourceType: 'order',
+        resourcePublicId: orderPublicId,
+        snapshotText: `Kredensial order diganti oleh ${actor.email ?? actor.sub}`,
+        actorId: actor.sub,
+        actorEmail: actor.email ?? null,
+        actorType: 'admin',
+      }).catch(() => {})
+
+      return { oldId, newId: inserted.id }
+    }
+
+    // Vault flow: try RPC, then fallbacks
     let newId: string | null = null
 
     // 1) Try auto-replace on the same variant
@@ -315,7 +370,7 @@ export const vaultService = {
       }
     }
 
-    // 3) Manual credential fallback: encrypt and insert as new AVAILABLE vault item
+    // 3) Manual credential fallback: encrypt and insert as new SOLD vault item
     if (!newId && opts?.credential && opts.credential.trim()) {
       const aesSecret = process.env.AES_SECRET_KEY
       if (!aesSecret) throw new Error('AES_SECRET_KEY not configured')
@@ -330,7 +385,7 @@ export const vaultService = {
           variant_id: targetVariantId,
           product_id: order.product_id ?? null,
           credential_payload: JSON.stringify(payload),
-          status: 'AVAILABLE',
+          status: 'SOLD',
         })
         .select('id')
         .single()

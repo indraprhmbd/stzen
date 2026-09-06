@@ -24,6 +24,7 @@ interface VaultItem {
   credential: string
   orderPublicId: string | null
   orderStatus: string | null
+  fulfillmentType: string
 }
 
 interface VaultListResponse {

@@ -190,13 +190,21 @@ export default function VaultList({ variants, fetchedAt, initialVariantId, onVar
                         {item.status === 'SOLD' && item.orderPublicId && (
                           <>
                             <button onClick={() => { setPendingRevoke({ id: item.id }); openConfirm('vault-revoke') }} title="Cabut saja" className="ad-btn !px-2"><Prohibition width={14} height={14} strokeWidth={1.5} /></button>
-                            <button onClick={() => { setPendingRotate({ orderId: item.orderPublicId! }); openConfirm('vault-rotate') }} title="Cabut + ganti" className="ad-btn ad-btn-dark !px-2"><Redo width={14} height={14} strokeWidth={1.5} /></button>
+                            {item.fulfillmentType === 'on_demand' ? (
+                              <button onClick={() => { setPendingRotate({ orderId: item.orderPublicId! }); setRotateFallback({ orderId: item.orderPublicId!, message: 'ON_DEMAND_REQUIRES_CREDENTIAL' }); setPendingRotate(null) }} title="Ganti kredensial" className="ad-btn ad-btn-dark !px-2"><Redo width={14} height={14} strokeWidth={1.5} /></button>
+                            ) : (
+                              <button onClick={() => { setPendingRotate({ orderId: item.orderPublicId! }); openConfirm('vault-rotate') }} title="Cabut + ganti" className="ad-btn ad-btn-dark !px-2"><Redo width={14} height={14} strokeWidth={1.5} /></button>
+                            )}
                           </>
                         )}
                         {item.status === 'AVAILABLE' && item.orderPublicId && (
                           <>
                             <button onClick={() => { setPendingRevoke({ id: item.id }); openConfirm('vault-revoke') }} title="Cabut saja" className="ad-btn !px-2"><Prohibition width={14} height={14} strokeWidth={1.5} /></button>
-                            <button onClick={() => { setPendingRotate({ orderId: item.orderPublicId! }); openConfirm('vault-rotate') }} title="Cabut + ganti" className="ad-btn ad-btn-dark !px-2"><Redo width={14} height={14} strokeWidth={1.5} /></button>
+                            {item.fulfillmentType === 'on_demand' ? (
+                              <button onClick={() => { setPendingRotate({ orderId: item.orderPublicId! }); setRotateFallback({ orderId: item.orderPublicId!, message: 'ON_DEMAND_REQUIRES_CREDENTIAL' }); setPendingRotate(null) }} title="Ganti kredensial" className="ad-btn ad-btn-dark !px-2"><Redo width={14} height={14} strokeWidth={1.5} /></button>
+                            ) : (
+                              <button onClick={() => { setPendingRotate({ orderId: item.orderPublicId! }); openConfirm('vault-rotate') }} title="Cabut + ganti" className="ad-btn ad-btn-dark !px-2"><Redo width={14} height={14} strokeWidth={1.5} /></button>
+                            )}
                           </>
                         )}
                       </div>
@@ -247,26 +255,36 @@ export default function VaultList({ variants, fetchedAt, initialVariantId, onVar
           {rotateFallback && (
             <dialog open className="modal" style={{ zIndex: 60 }}>
               <div className="modal-box ad-dialog max-w-lg p-6">
-                <h3 className="font-semibold text-[17px] tracking-tight">Stok habis — pilih cara penggantian</h3>
-                <p className="text-xs text-[#6e6e73] mt-1">Varian saat ini tidak punya stok tersedia. Kamu bisa memasukkan kredensial manual atau pilih varian lain.</p>
+                <h3 className="font-semibold text-[17px] tracking-tight">
+                  {rotateFallback.message === 'ON_DEMAND_REQUIRES_CREDENTIAL' ? 'Ganti kredensial on-demand' : 'Stok habis — pilih cara penggantian'}
+                </h3>
+                <p className="text-xs text-[#6e6e73] mt-1">
+                  {rotateFallback.message === 'ON_DEMAND_REQUIRES_CREDENTIAL'
+                    ? 'Varian ini menggunakan mode on-demand. Masukkan kredensial baru untuk order ini.'
+                    : 'Varian saat ini tidak punya stok tersedia. Kamu bisa memasukkan kredensial manual atau pilih varian lain.'}
+                </p>
                 <div className="mt-4 flex flex-col gap-3">
                   <label className="ad-input">
-                    <span className="text-xs font-semibold mb-1 block">Kredensial manual (opsional)</span>
+                    <span className="text-xs font-semibold mb-1 block">
+                      Kredensial manual {rotateFallback.message === 'ON_DEMAND_REQUIRES_CREDENTIAL' ? '(wajib)' : '(opsional)'}
+                    </span>
                     <textarea value={rotateCredential} onChange={(e) => setRotateCredential(e.target.value)} rows={4} placeholder="user@email.com:password123" className="font-mono text-xs" />
                   </label>
-                  <label className="ad-input">
-                    <span className="text-xs font-semibold mb-1 block">Varian cadangan (opsional)</span>
-                    <select value={rotateFallbackVariantId} onChange={(e) => setRotateFallbackVariantId(e.target.value)} className="ad-input">
-                      <option value="">Gunakan varian order asli</option>
-                      {v.vaultOptions.map((opt) => (
-                        <option key={opt.value} value={opt.value}>{opt.label} {opt.sublabel ? `(${opt.sublabel})` : ''}</option>
-                      ))}
-                    </select>
-                  </label>
+                  {rotateFallback.message !== 'ON_DEMAND_REQUIRES_CREDENTIAL' && (
+                    <label className="ad-input">
+                      <span className="text-xs font-semibold mb-1 block">Varian cadangan (opsional)</span>
+                      <select value={rotateFallbackVariantId} onChange={(e) => setRotateFallbackVariantId(e.target.value)} className="ad-input">
+                        <option value="">Gunakan varian order asli</option>
+                        {v.vaultOptions.map((opt) => (
+                          <option key={opt.value} value={opt.value}>{opt.label} {opt.sublabel ? `(${opt.sublabel})` : ''}</option>
+                        ))}
+                      </select>
+                    </label>
+                  )}
                 </div>
                 <div className="flex justify-end gap-2 mt-4">
                   <button onClick={() => { setRotateFallback(null); setRotateCredential(''); setRotateFallbackVariantId('') }} className="ad-btn">Batal</button>
-                  <button disabled={!rotateCredential.trim() && !rotateFallbackVariantId} onClick={async () => {
+                  <button disabled={rotateFallback.message === 'ON_DEMAND_REQUIRES_CREDENTIAL' ? !rotateCredential.trim() : (!rotateCredential.trim() && !rotateFallbackVariantId)} onClick={async () => {
                     const orderId = rotateFallback.orderId
                     setRotateFallback(null)
                     await v.rotateCred(orderId, { credential: rotateCredential.trim() || undefined, fallbackVariantId: rotateFallbackVariantId || undefined })
