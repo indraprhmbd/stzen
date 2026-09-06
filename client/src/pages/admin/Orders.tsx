@@ -345,7 +345,7 @@ export default function Orders() {
               <td><StatusChip status={o.status}>{o.status}</StatusChip></td>
               <td className="text-right">
                 <div className="flex justify-end gap-1.5">
-                  {o.variantPublicId && o.fulfillmentType !== 'on_demand' && (
+                  {o.variantPublicId && (
                     <button onClick={() => navigate(`/admin/products?tab=stok&variant=${o.variantPublicId}&order=${o.id}`)} title="Lihat stok varian" aria-label="Lihat stok varian" className="ad-btn !px-2.5"><Key width={15} height={15} strokeWidth={1.5} /></button>
                   )}
                   {o.status === 'PENDING' && (

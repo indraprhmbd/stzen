@@ -191,8 +191,7 @@ export function useVaultManager(variants: Variant[]) {
 
   const isUnlocked = !!token && Date.now() < expiresAt
   const vaultOptions = variants
-    .filter((v) => v.fulfillmentType !== 'on_demand')
-    .map((v) => ({ value: v.id, groupLabel: v.baseName, label: v.name, sublabel: `${v.sku} · ${v.stockCount} stok` }))
+    .map((v) => ({ value: v.id, groupLabel: v.baseName, label: v.name, sublabel: `${v.sku} · ${v.fulfillmentType === 'on_demand' ? 'on demand' : `${v.stockCount} stok`}` }))
 
   return {
     // unlock
