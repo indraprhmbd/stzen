@@ -34,6 +34,8 @@ export default function Settings() {
   const [pw2, setPw2] = useState('')
   const [pwMsg, setPwMsg] = useState<string | null>(null)
   const [pwSaving, setPwSaving] = useState(false)
+  const [savingGroup, setSavingGroup] = useState<string | null>(null)
+  const [msg, setMsg] = useState<{ group: string; text: string } | null>(null)
 
   if (loading) return <div className="flex justify-center py-16"><span className="loading loading-spinner loading-lg"></span></div>
   if (error) return <div className="ad-card-flat p-8 text-center"><div className="text-sm font-semibold text-red-600">Gagal memuat</div><div className="text-xs text-[#6e6e73] mt-1">{error}</div><button onClick={() => refetch()} className="ad-btn ad-btn-dark mt-4">Coba lagi</button></div>
@@ -41,8 +43,6 @@ export default function Settings() {
   const keys = data?.keys ?? []
   const values = draft ?? data?.values ?? {}
   const base = data?.values ?? {}
-  const [savingGroup, setSavingGroup] = useState<string | null>(null)
-  const [msg, setMsg] = useState<{ group: string; text: string } | null>(null)
 
   function groupDirty(items: string[]): boolean {
     if (!draft) return false
