@@ -6,20 +6,35 @@ import { db } from '../../shared/db'
 import { type AuthEnv } from '../../shared/middleware/auth'
 import { requireRole } from '../../shared/middleware/require-role'
 import { appendAudit } from '../../shared/lib/audit'
+import { invalidateSettings } from '../../shared/lib/settings'
 
 // ─── Admin Settings Routes ────────────────────────────────────────────────────
-// Key/value store for bank accounts and support contacts (no RLS row, superuser only).
+// Key/value store for store identity, support contacts, bank accounts, and
+// operational thresholds (no RLS row, superuser only).
 
 type SettingsEnv = AuthEnv
 
 const KNOWN_KEYS = [
+  'store.name',
+  'store.announcement',
   'support.whatsapp',
   'support.telegram',
   'support.email',
   'payment.bank_name',
   'payment.account_number',
   'payment.account_name',
+  'ops.low_threshold',
+  'ops.vault_lock_minutes',
+  'ops.csv_limit',
 ] as const
+
+// Per-key validation: ints are range-checked so typos fail loudly instead
+// of silently storing unusable values.
+const INT_KEYS: Record<string, { min: number; max: number }> = {
+  'ops.low_threshold': { min: 1, max: 100 },
+  'ops.vault_lock_minutes': { min: 1, max: 60 },
+  'ops.csv_limit': { min: 100, max: 5000 },
+}
 
 const SettingsUpdateSchema = z.object({
   values: z.record(z.string(), z.string().max(500)),
@@ -45,11 +60,19 @@ export const adminSettingsRoutes = new Hono<SettingsEnv>()
   const allowed = new Set<string>(KNOWN_KEYS as unknown as string[])
   const entries = Object.entries(values).filter(([k]) => allowed.has(k))
   for (const [k, v] of entries) {
+    const rule = INT_KEYS[k]
+    if (rule) {
+      const n = parseInt(v, 10)
+      if (!Number.isFinite(n) || n < rule.min || n > rule.max) {
+        return c.json({ error: `${k} must be an integer ${rule.min}-${rule.max}` }, 400)
+      }
+    }
     await db.execute(sql`
       insert into settings (key, value, updated_at) values (${k}, ${v}, now())
       on conflict (key) do update set value = excluded.value, updated_at = now()
     `)
   }
+  invalidateSettings()
   await appendAudit({
     action: 'settings:update',
     resourceType: 'settings',
@@ -58,7 +81,8 @@ export const adminSettingsRoutes = new Hono<SettingsEnv>()
     actorId: user.sub,
     actorEmail: user.email ?? null,
     actorType: 'admin',
-    diff: Object.fromEntries(entries),
+    // Changed keys only, values excluded: payment.* in logs creates a second secret store.
+    diff: { keys: entries.map(([k]) => k) },
   }).catch(() => {})
   return c.json({ success: true, updated: entries.length })
 })

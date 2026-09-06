@@ -3,6 +3,7 @@ import { sql } from 'drizzle-orm'
 import { db } from '../../shared/db'
 import { type AuthEnv } from '../../shared/middleware/auth'
 import { requireRole } from '../../shared/middleware/require-role'
+import { getIntSetting } from '../../shared/lib/settings'
 
 type AdminStatsEnv = AuthEnv
 
@@ -36,8 +37,13 @@ export const adminStatsRoutes = new Hono<AdminStatsEnv>()
   // GET /low-stock — bottom N variants by AVAILABLE stock, plus out/low
   // summary counts across the whole threshold set (top-N alone hides the
   // 1-4s behind a wall of zeros). Two parallel sub-ms queries.
+  // Threshold defaults to the ops.low_threshold setting when the caller
+  // omits it, so the configured value applies everywhere automatically.
   .get('/low-stock', async (c) => {
-  const threshold = parseInt(c.req.query('threshold') || '5', 10)
+  const thresholdParam = c.req.query('threshold')
+  const threshold = thresholdParam
+    ? parseInt(thresholdParam, 10)
+    : await getIntSetting('ops.low_threshold', 5, 1, 100).catch(() => 5)
   const limit = Math.min(parseInt(c.req.query('limit') || '10', 10), 50)
 
   try {

@@ -6,10 +6,11 @@
 // a valid admin session. Uses Web Crypto only, per repo convention.
 
 import { timingSafeEqual } from './hmac'
+import { getIntSetting } from './settings'
 
 const encoder = new TextEncoder()
 
-export const VAULT_UNLOCK_TTL_MS = 10 * 60 * 1000
+const DEFAULT_TTL_MS = 10 * 60 * 1000
 
 function unlockSecret(): string {
   const s = process.env.AES_SECRET_KEY
@@ -30,7 +31,8 @@ async function sign(userId: string, expiry: number): Promise<string> {
 }
 
 export async function mintUnlockToken(userId: string): Promise<{ token: string; expiresAt: number }> {
-  const expiresAt = Date.now() + VAULT_UNLOCK_TTL_MS
+  const ttlMs = await getIntSetting('ops.vault_lock_minutes', 10, 1, 60).then((m) => m * 60 * 1000).catch(() => DEFAULT_TTL_MS)
+  const expiresAt = Date.now() + ttlMs
   const sig = await sign(userId, expiresAt)
   return { token: `${expiryToStr(expiresAt)}.${sig}`, expiresAt }
 }

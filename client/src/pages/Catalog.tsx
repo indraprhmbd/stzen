@@ -1,6 +1,7 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useCopy } from '../hooks/useCopy'
+import { api } from '../lib/api'
 import Layout from '../components/Layout'
 import Marquee from '../components/Marquee'
 import ShopCtaCardSlim from '../components/ShopCtaCardSlim'
@@ -8,6 +9,15 @@ import ShopCtaCardSlim from '../components/ShopCtaCardSlim'
 function Catalog() {
   const { t } = useCopy()
   const stripRef = useRef<HTMLDivElement>(null)
+  const [announcement, setAnnouncement] = useState('')
+
+  // Public store announcement (admin settings, store.announcement).
+  useEffect(() => {
+    api.api.settings.public.$get()
+      .then((r) => r.json() as Promise<{ announcement?: string }>)
+      .then((j) => { if (j.announcement) setAnnouncement(j.announcement) })
+      .catch(() => {})
+  }, [])
 
   // Desktop has no carousel buttons: vertical wheel over the strip scrolls
   // it horizontally instead of moving the page.
@@ -37,6 +47,11 @@ function Catalog() {
 
   return (
     <Layout>
+      {announcement && (
+        <div className="mb-3 border-2 border-black bg-primary px-3 py-2 text-center text-xs font-black uppercase tracking-wide text-black shadow-comic-sm">
+          {announcement}
+        </div>
+      )}
       {/* ═══ HERO 2/3 + FEATURED CARD 1/3 ═══ */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
         {/* Hero — 2/3 */}

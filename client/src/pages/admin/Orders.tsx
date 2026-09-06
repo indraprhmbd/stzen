@@ -72,6 +72,18 @@ export default function Orders() {
   const [mSaving, setMSaving] = useState(false)
   const [exportBusy, setExportBusy] = useState(false)
   const [exportErr, setExportErr] = useState<string | null>(null)
+  const [csvLimit, setCsvLimit] = useState(1000)
+
+  // CSV cap follows ops.csv_limit (one-time fetch, silent fallback).
+  useEffect(() => {
+    authedApiRequest((c) => c.api.v1.admin.settings.$get())
+      .then((r) => r.json() as Promise<{ values?: Record<string, string> }>)
+      .then((j) => {
+        const n = parseInt(j.values?.['ops.csv_limit'] ?? '', 10)
+        if (Number.isFinite(n)) setCsvLimit(Math.min(5000, Math.max(100, n)))
+      })
+      .catch(() => {})
+  }, [])
 
   // Server-side sort: URL params drive API query
   const { sortKey, sortDir, toggleSort } = useTableSort([], { urlKey: 'sort', defaultKey: 'createdAt', defaultDir: 'desc' })
@@ -200,12 +212,12 @@ export default function Orders() {
 
   async function exportCsv() {
     setExportErr(null)
-    if (total > 1000) {
-      setExportErr(`Peringatan: hanya 1000 dari ${total} pesanan diekspor. Gunakan filter untuk menyaring data.`)
+    if (total > csvLimit) {
+      setExportErr(`Peringatan: hanya ${csvLimit} dari ${total} pesanan diekspor. Gunakan filter untuk menyaring data.`)
     }
     setExportBusy(true)
     try {
-      const query: Record<string, string> = { limit: '1000', offset: '0' }
+      const query: Record<string, string> = { limit: String(csvLimit), offset: '0' }
       if (activeTab.statuses) query.status = activeTab.statuses
       if (q) query.q = q
       const res = await authedApiRequest((c) => c.api.v1.admin.orders.$get({ query }))

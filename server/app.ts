@@ -10,6 +10,7 @@ import { routes as orderRoutes } from './modules/orders'
 import { routes as checkoutRoutes } from './modules/checkout'
 import { routes as adminRoutes } from './modules/admin'
 import { paymentsRoutes, webhooksRoutes } from './modules/payments'
+import { getSetting } from './shared/lib/settings'
 
 // ─── App Factory ────────────────────────────────────────────────────────────
 // Creates the Hono app with all modules composed.
@@ -73,6 +74,16 @@ export function createApp() {
     .get('/api/health', (c) =>
       c.json({ status: 'ok', timestamp: new Date().toISOString() })
     )
+    // Public storefront settings (unversioned, infrastructure endpoint).
+    // Hardcoded allowlist: store.* only. Payment and support internals
+    // never leave the admin route.
+    .get('/api/settings/public', async (c) => {
+      const [name, announcement] = await Promise.all([
+        getSetting('store.name', ''),
+        getSetting('store.announcement', ''),
+      ])
+      return c.json({ name, announcement })
+    })
     .route('/api/v1/products', productRoutes)
     .route('/api/v1/checkout', checkoutRoutes)
     .route('/api/v1/orders', orderRoutes)
