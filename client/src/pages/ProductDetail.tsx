@@ -362,11 +362,7 @@ export default function ProductDetail() {
               </div>
               <div className="flex justify-between gap-3 py-1">
                 <span className="opacity-60">HARGA</span>
-                {pct !== null ? (
-                  <s className="font-bold whitespace-nowrap">{brand.storefront.currencySymbol} {Number(product.compareAtPrice).toLocaleString('id-ID')}</s>
-                ) : (
-                  <span className="font-bold whitespace-nowrap">{brand.storefront.currencySymbol} {Number(product.price).toLocaleString('id-ID')}</span>
-                )}
+                <span className="font-bold whitespace-nowrap">{brand.storefront.currencySymbol} {Number(pct !== null ? product.compareAtPrice : product.price).toLocaleString('id-ID')}</span>
               </div>
               {pct !== null && (
                 <div className="flex justify-between gap-3 py-1">
