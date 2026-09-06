@@ -191,88 +191,93 @@ export const adminVariantRoutes = new Hono<VariantEnv>()
     const publicId = c.req.param('id')
     const data = c.req.valid('json') as any
 
-    if (data.price !== undefined) data.price = parseInt(data.price, 10)
-    if (data.compareAtPrice !== undefined) {
-      data.compareAtPrice = !data.compareAtPrice ? null : parseInt(data.compareAtPrice, 10)
-      if (data.compareAtPrice !== null) {
-        let effPrice = data.price
-        if (effPrice === undefined) {
-          const { data: cur } = await supabaseAdmin
-            .from(PRODUCT_VARIANTS)
-            .select('price')
-            .eq('public_id', publicId)
-            .limit(1)
-          effPrice = cur?.[0]?.price
+    try {
+      if (data.price !== undefined) data.price = parseInt(data.price, 10)
+      if (data.compareAtPrice !== undefined) {
+        data.compareAtPrice = !data.compareAtPrice ? null : parseInt(data.compareAtPrice, 10)
+        if (data.compareAtPrice !== null) {
+          let effPrice = data.price
+          if (effPrice === undefined) {
+            const { data: cur } = await supabaseAdmin
+              .from(PRODUCT_VARIANTS)
+              .select('price')
+              .eq('public_id', publicId)
+              .limit(1)
+            effPrice = cur?.[0]?.price
+          }
+          if (effPrice === undefined || data.compareAtPrice <= effPrice) data.compareAtPrice = null
         }
-        if (effPrice === undefined || data.compareAtPrice <= effPrice) data.compareAtPrice = null
       }
-    }
 
-    if (data.productId !== undefined && data.productId !== '') {
-      const { data: p } = await supabaseAdmin
-        .from(PRODUCTS)
-        .select('id')
-        .eq('public_id', data.productId)
-        .limit(1)
-      data.productId = p?.[0]?.id ?? null
-    } else if (data.productId === '') {
-      data.productId = null
-    }
-
-    if (data.durationMonths !== undefined || data.durationUnit !== undefined || data.accountType !== undefined || data.conditions !== undefined || data.productId) {
-      const { data: cur } = await supabaseAdmin
-        .from(PRODUCT_VARIANTS)
-        .select('*')
-        .eq('public_id', publicId)
-        .limit(1)
-
-      if (cur && cur.length > 0) {
-        const current = cur[0]
-        const targetBaseId = data.productId ?? current.product_id
-        const { data: base } = targetBaseId ? await supabaseAdmin
+      if (data.productId !== undefined && data.productId !== '') {
+        const { data: p } = await supabaseAdmin
           .from(PRODUCTS)
-          .select('name')
-          .eq('id', targetBaseId)
-          .limit(1) : { data: [{ name: current.name }] }
+          .select('id')
+          .eq('public_id', data.productId)
+          .limit(1)
+        data.productId = p?.[0]?.id ?? null
+      } else if (data.productId === '') {
+        data.productId = null
+      }
 
-        const baseName = base?.[0]?.name ?? current.name
-        const unit = data.durationUnit ?? current.duration_unit ?? 'month'
-        data.name = composeVariantName(baseName, data.durationMonths ?? current.duration_months, unit, data.accountType ?? current.account_type, data.conditions ?? current.conditions)
-        if (data.durationMonths !== undefined || data.durationUnit !== undefined || data.accountType !== undefined || data.productId) {
-          data.sku = generateSku(baseName, data.durationMonths ?? current.duration_months, unit, data.accountType ?? current.account_type)
+      if (data.durationMonths !== undefined || data.durationUnit !== undefined || data.accountType !== undefined || data.conditions !== undefined || data.productId) {
+        const { data: cur } = await supabaseAdmin
+          .from(PRODUCT_VARIANTS)
+          .select('*')
+          .eq('public_id', publicId)
+          .limit(1)
+
+        if (cur && cur.length > 0) {
+          const current = cur[0]
+          const targetBaseId = data.productId ?? current.product_id
+          const { data: base } = targetBaseId ? await supabaseAdmin
+            .from(PRODUCTS)
+            .select('name')
+            .eq('id', targetBaseId)
+            .limit(1) : { data: [{ name: current.name }] }
+
+          const baseName = base?.[0]?.name ?? current.name
+          const unit = data.durationUnit ?? current.duration_unit ?? 'month'
+          data.name = composeVariantName(baseName, data.durationMonths ?? current.duration_months, unit, data.accountType ?? current.account_type, data.conditions ?? current.conditions)
+          if (data.durationMonths !== undefined || data.durationUnit !== undefined || data.accountType !== undefined || data.productId) {
+            data.sku = generateSku(baseName, data.durationMonths ?? current.duration_months, unit, data.accountType ?? current.account_type)
+          }
         }
       }
+
+      const updateData: any = { ...data, updated_at: new Date().toISOString() }
+      delete updateData.id
+      for (const [key, value] of Object.entries(updateData)) {
+        if (value === undefined) delete updateData[key]
+      }
+
+      const { data: updated, error } = await supabaseAdmin
+        .from(PRODUCT_VARIANTS)
+        .update(updateData)
+        .eq('public_id', publicId)
+        .select()
+        .single()
+
+      if (error) throw new Error(error.message)
+      if (!updated) return c.json({ error: 'Variant not found' }, 404)
+
+      const user = c.get('user')
+      await appendAudit({
+        action: 'variant:update',
+        resourceType: 'variant',
+        resourcePublicId: publicId,
+        resourceName: updated.name ?? '',
+        snapshotText: `Varian ${updated.name} diperbarui oleh ${user.email ?? user.sub} ${new Date().toLocaleString('id-ID')}`,
+        actorId: user.sub,
+        actorEmail: user.email ?? null,
+        actorType: 'admin',
+      }).catch((e) => console.error('[audit] admin variant action failed', e))
+
+      return c.json({ ...updated, id: publicId })
+    } catch (err) {
+      console.error('[variant:update] failed', { publicId, data, err })
+      throw err
     }
-
-    const updateData: any = { ...data, updated_at: new Date().toISOString() }
-    delete updateData.id
-    for (const [key, value] of Object.entries(updateData)) {
-      if (value === undefined) delete updateData[key]
-    }
-
-    const { data: updated, error } = await supabaseAdmin
-      .from(PRODUCT_VARIANTS)
-      .update(updateData)
-      .eq('public_id', publicId)
-      .select()
-      .single()
-
-    if (error) throw new Error(error.message)
-    if (!updated) return c.json({ error: 'Variant not found' }, 404)
-
-    const user = c.get('user')
-    await appendAudit({
-      action: 'variant:update',
-      resourceType: 'variant',
-      resourcePublicId: publicId,
-      resourceName: updated.name ?? '',
-      snapshotText: `Varian ${updated.name} diperbarui oleh ${user.email ?? user.sub} ${new Date().toLocaleString('id-ID')}`,
-      actorId: user.sub,
-      actorEmail: user.email ?? null,
-      actorType: 'admin',
-    }).catch((e) => console.error('[audit] admin variant action failed', e))
-
-    return c.json({ ...updated, id: publicId })
   })
 
   .delete('/:id', async (c) => {
