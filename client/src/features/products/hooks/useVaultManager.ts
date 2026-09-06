@@ -47,6 +47,7 @@ export function useVaultManager(variants: Variant[]) {
   const [error, setError] = useState<string | null>(null)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null)
+  const [rotateError, setRotateError] = useState<{ orderId: string; message: string } | null>(null)
   const fetchRef = useRef(0)
   const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
@@ -157,16 +158,20 @@ export function useVaultManager(variants: Variant[]) {
     finally { setActionLoading(null) }
   }
 
-  async function rotateCred(orderId: string) {
+  async function rotateCred(orderId: string, opts?: { credential?: string; fallbackVariantId?: string }) {
     setActionLoading(orderId)
+    setRotateError(null)
     try {
       await authedApiRequest(
-        (c) => c.api.v1.admin.vault.replace[':orderId'].$post({ param: { orderId } })
+        (c) => c.api.v1.admin.vault.replace[':orderId'].$post({ param: { orderId }, json: { credential: opts?.credential, fallbackVariantId: opts?.fallbackVariantId } })
       )
       showToast('Kredensial diganti', 'success')
       await fetchList()
-    } catch (e: unknown) { showToast(e instanceof Error ? e.message : 'Gagal ganti', 'error') }
-    finally { setActionLoading(null) }
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Gagal ganti'
+      showToast(msg, 'error')
+      setRotateError({ orderId, message: msg })
+    } finally { setActionLoading(null) }
   }
 
   function setVariantAndReset(id: string) {
@@ -200,5 +205,6 @@ export function useVaultManager(variants: Variant[]) {
     actionLoading, editCred, deleteCred, revokeCred, rotateCred,
     fetchList, toast, showToast,
     sortKey: sort.key, sortDir: sort.dir, toggleSort,
+    rotateError, setRotateError,
   }
 }

@@ -23,6 +23,11 @@ const CredentialSchema = z.object({
   credential: z.string().min(1).max(5000),
 })
 
+const ReplaceSchema = z.object({
+  credential: z.string().max(5000).optional(),
+  fallbackVariantId: z.string().optional(),
+})
+
 async function unlockGuard(c: { req: { header: (n: string) => string | undefined }; get: (k: 'user') => { sub: string } }) {
   const user = c.get('user')
   const token = c.req.header('X-Vault-Token') ?? ''
@@ -75,7 +80,8 @@ export const adminVaultRoutes = new Hono<AuthEnv>()
   // AVAILABLE, repoint order. Buyer sees new cred on the same card.
   // No unlock guard needed: endpoint only touches SOLD→REVOKED and
   // AVAILABLE→SOLD, never exposes plaintext.
-  .post('/replace/:orderId', async (c) => {
+  .post('/replace/:orderId', zValidator('json', ReplaceSchema), async (c) => {
     const user = c.get('user')
-    return c.json(await vaultService.replace(c.req.param('orderId'), { sub: user.sub, email: user.email }))
+    const { credential, fallbackVariantId } = c.req.valid('json')
+    return c.json(await vaultService.replace(c.req.param('orderId'), { sub: user.sub, email: user.email }, { credential: credential ?? null, fallbackVariantId: fallbackVariantId ?? null }))
   })

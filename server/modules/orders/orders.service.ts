@@ -331,8 +331,10 @@ export const ordersService = {
     }
 
     if (q) {
-      const like = `%${q}%`
-      query = query.or(`public_id.ilike.${like},user_id.ilike.${like},products.name.ilike.${like},profiles.email.ilike.${like},variant_name_snapshot.ilike.${like},base_name_snapshot.ilike.${like},payment_ref.ilike.${like}`)
+      const raw = q.replace(/[%_]/g, (c) => `\\${c}`)
+      const like = `%${raw}%`
+      const orFilter = `public_id.ilike.${like},user_id.ilike.${like},variant_name_snapshot.ilike.${like},base_name_snapshot.ilike.${like},payment_ref.ilike.${like}`
+      query = query.or(orFilter)
     }
 
     const [{ data: rows, error }, { count: total }] = await Promise.all([
@@ -348,8 +350,10 @@ export const ordersService = {
           }
         }
         if (q) {
-          const like = `%${q}%`
-          countQuery = countQuery.or(`public_id.ilike.${like},user_id.ilike.${like},products.name.ilike.${like},profiles.email.ilike.${like},variant_name_snapshot.ilike.${like},base_name_snapshot.ilike.${like},payment_ref.ilike.${like}`)
+          const raw = q.replace(/[%_]/g, (c) => `\\${c}`)
+          const like = `%${raw}%`
+          const orFilter = `public_id.ilike.${like},user_id.ilike.${like},variant_name_snapshot.ilike.${like},base_name_snapshot.ilike.${like},payment_ref.ilike.${like}`
+          countQuery = countQuery.or(orFilter)
         }
         return countQuery
       })(),
