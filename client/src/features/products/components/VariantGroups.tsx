@@ -4,7 +4,7 @@ import CopyCell from '../../../components/admin/CopyCell'
 import StatusChip, { type ChipTone } from '../../../components/admin/StatusChip'
 import { SkeletonRows } from '../../../components/admin/TableSkeleton'
 import { useTableSort, sortByKey } from '../../../hooks/useTableSort'
-import { NavArrowDown, Plus, Expand, Collapse, EditPencil, Trash } from 'iconoir-react'
+import { NavArrowDown, Plus, Expand, Collapse, EditPencil, Trash, Key } from 'iconoir-react'
 import type { Variant, VariantGroup } from '../types'
 
 function stockTone(v: { fulfillmentType: string; stockCount: number }): { tone: ChipTone; label: string } {
@@ -22,10 +22,11 @@ interface Props {
   onCreateVariant: (productId?: string) => void
   onEditVariant: (v: Variant) => void
   onDeleteVariant: (v: Variant) => void
+  onOpenVault?: (v: Variant) => void
   loading?: boolean
 }
 
-export default function VariantGroups({ groups, filteredCount, collapsedGroups, setCollapsedGroups, onCreateVariant, onEditVariant, onDeleteVariant, loading }: Props) {
+export default function VariantGroups({ groups, filteredCount, collapsedGroups, setCollapsedGroups, onCreateVariant, onEditVariant, onDeleteVariant, onOpenVault, loading }: Props) {
   // Sort state shared across groups. Variant keys (name/sku/price/stockCount/
   // isActive) sort items within each group; groups keep category order.
   const { sortKey, sortDir, toggleSort } = useTableSort<VariantGroup>(groups, {})
@@ -62,6 +63,7 @@ export default function VariantGroups({ groups, filteredCount, collapsedGroups, 
           <div className="flex justify-end gap-1.5">
             <button onClick={() => onEditVariant(v)} className="ad-btn"><EditPencil width={14} height={14} strokeWidth={1.5} />Edit</button>
             <button onClick={() => onDeleteVariant(v)} className="ad-btn ad-btn-danger"><Trash width={14} height={14} strokeWidth={1.5} />Hapus</button>
+            {onOpenVault && <button onClick={() => onOpenVault(v)} title="Lihat stok vault" aria-label="Lihat stok vault" className="ad-btn !px-2.5"><Key width={15} height={15} strokeWidth={1.5} /></button>}
           </div>
         </td>
       </tr>

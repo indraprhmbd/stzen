@@ -88,6 +88,15 @@ export default function ProductsPage() {
     setPendingDelete({ kind: 'product', id: p.id, name: p.name })
     openConfirm('delete-confirm')
   }
+  function openVault(v: Variant) {
+    setTab('stok')
+    setSearchParams((prev) => {
+      const p = new URLSearchParams(prev)
+      p.set('tab', 'stok')
+      p.set('variant', v.id)
+      return p
+    })
+  }
 
   async function confirmDelete() {
     if (!pendingDelete) return
@@ -155,6 +164,7 @@ export default function ProductsPage() {
           onCreateVariant={variantForm.openCreateVariant}
           onEditVariant={variantForm.openEditVariant}
           onDeleteVariant={askDeleteVariant}
+          onOpenVault={openVault}
           loading={loading}
         />
       </div>
