@@ -33,32 +33,49 @@ export const adminStatsRoutes = new Hono<AdminStatsEnv>()
   }
 })
 
-  // GET /low-stock — bottom N variants by AVAILABLE stock. Single query.
-  // Variant-level (not product-level): matches the vault model where stock
-  // is imported per variant. Vault-type active variants only; on_demand
-  // never runs out. Cheap: indexed joins, in-memory aggregate (~0.5ms).
+  // GET /low-stock — bottom N variants by AVAILABLE stock, plus out/low
+  // summary counts across the whole threshold set (top-N alone hides the
+  // 1-4s behind a wall of zeros). Two parallel sub-ms queries.
   .get('/low-stock', async (c) => {
   const threshold = parseInt(c.req.query('threshold') || '5', 10)
   const limit = Math.min(parseInt(c.req.query('limit') || '10', 10), 50)
 
   try {
-    const rows = await db.execute(sql`
-      select v.public_id as id, v.name, v.sku, p.name as product_name,
-             coalesce(sum(case when vi.status = 'AVAILABLE' then 1 else 0 end), 0)::int as stock_count
-      from product_variants v
-      join products p on p.id = v.product_id
-      left join vault_items vi on vi.variant_id = v.id
-      where v.is_active and v.fulfillment_type != 'on_demand'
-      group by v.public_id, v.name, v.sku, p.name
-      having coalesce(sum(case when vi.status = 'AVAILABLE' then 1 else 0 end), 0) < ${threshold}
-      order by stock_count asc
-      limit ${limit}
-    `) as unknown as any[]
+    const [rows, counts] = await Promise.all([
+      db.execute(sql`
+        select v.public_id as id, v.name, v.sku, p.name as product_name,
+               coalesce(sum(case when vi.status = 'AVAILABLE' then 1 else 0 end), 0)::int as stock_count
+        from product_variants v
+        join products p on p.id = v.product_id
+        left join vault_items vi on vi.variant_id = v.id
+        where v.is_active and v.fulfillment_type != 'on_demand'
+        group by v.public_id, v.name, v.sku, p.name
+        having coalesce(sum(case when vi.status = 'AVAILABLE' then 1 else 0 end), 0) < ${threshold}
+        -- Nonzero urgents first so a wall of zeros never hides the 1-4s;
+        -- the out-of-stock alarm lives in the summary counts instead.
+        order by (coalesce(sum(case when vi.status = 'AVAILABLE' then 1 else 0 end), 0) = 0), stock_count asc
+        limit ${limit}
+      `) as unknown as any[],
+      db.execute(sql`
+        select
+          (count(*) filter (where stock_count = 0))::int as out_of_stock,
+          (count(*) filter (where stock_count > 0))::int as running_low
+        from (
+          select coalesce(sum(case when vi.status = 'AVAILABLE' then 1 else 0 end), 0)::int as stock_count
+          from product_variants v
+          left join vault_items vi on vi.variant_id = v.id
+          where v.is_active and v.fulfillment_type != 'on_demand'
+          group by v.id
+          having coalesce(sum(case when vi.status = 'AVAILABLE' then 1 else 0 end), 0) < ${threshold}
+        ) t
+      `) as unknown as any[],
+    ])
 
     const data = Array.isArray(rows) ? rows : (rows as any).rows ?? []
-    return c.json(data)
+    const agg = Array.isArray(counts) ? counts[0] : (counts as any).rows?.[0]
+    return c.json({ rows: data, outOfStock: agg?.out_of_stock ?? 0, runningLow: agg?.running_low ?? 0 })
   } catch (e) {
     console.error('low-stock query failed', e)
-    return c.json([])
+    return c.json({ rows: [], outOfStock: 0, runningLow: 0 })
   }
 })

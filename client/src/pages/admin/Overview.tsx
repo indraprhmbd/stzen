@@ -71,13 +71,17 @@ export default function Overview() {
     const s = (await statsRes.json()) as Stats
     const a = (await analyticsRes.json()) as unknown as { dailySales: unknown[]; byStatus: unknown[]; byCategory: unknown[]; topProducts: unknown[] }
     const o = (await ordersRes.json()) as { orders: Order[] }
-    const ls = (await lowStockRes.json()) as LowStockVariant[]
+    const ls = (await lowStockRes.json()) as LowStockVariant[] | { rows: LowStockVariant[]; outOfStock: number; runningLow: number }
+    const lsRows = Array.isArray(ls) ? ls : (ls.rows ?? [])
 
     return {
       stats: s,
       analytics: a,
       orders: (Array.isArray(o.orders) ? o.orders : []).slice(0, 5),
-      lowStock: Array.isArray(ls) ? ls.slice(0, 5) : [],
+      lowStock: lsRows.slice(0, 5),
+      stockSummary: Array.isArray(ls)
+        ? { out: lsRows.filter((r) => r.stock_count === 0).length, low: lsRows.filter((r) => r.stock_count > 0).length }
+        : { out: ls.outOfStock ?? 0, low: ls.runningLow ?? 0 },
     }
   }, [range])
   const stats = data?.stats ?? null
@@ -86,6 +90,7 @@ export default function Overview() {
   // Derived lists memoized so recharts trees skip re-render on unrelated state
   const orders = useMemo(() => data?.orders ?? [], [data])
   const lowStock = useMemo(() => data?.lowStock ?? [], [data])
+  const stockSummary = useMemo(() => data?.stockSummary ?? { out: 0, low: 0 }, [data])
   const dailySales = useMemo(() => analytics?.dailySales ?? [], [analytics])
   const byCategory = useMemo(() => analytics?.byCategory ?? [], [analytics])
   const topProducts = useMemo(() => analytics?.topProducts ?? [], [analytics])
@@ -284,7 +289,7 @@ export default function Overview() {
         <div className="ad-card">
           <div className="ad-card-head">
             <div className="ad-card-title">Stok Menipis</div>
-            <span className="ad-card-hint ad-num">ambang &lt; 5</span>
+            <span className="ad-card-hint ad-num">{stockSummary.out} habis · {stockSummary.low} menipis</span>
           </div>
           {loading ? (
             <DataTable columns={[{ label: 'VARIAN' }, { label: 'SISA' }, { label: 'AKSI', className: 'text-right' }]} empty={false}>
