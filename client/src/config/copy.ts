@@ -1,6 +1,13 @@
 export interface Copy {
   nav: { home: string; shop: string; myOrders: string; admin: string; profile: string }
-  auth: { signIn: string; signOut: string; signInWithGoogle: string; email: string; password: string; or: string; backToStore: string }
+  auth: { 
+    signIn: string; signOut: string; signInWithGoogle: string; email: string; password: string; or: string; backToStore: string; 
+    signUp: string; signUpTitle: string; signUpSubtitle: string; confirmPassword: string; noAccount: string; hasAccount: string;
+    forgotPassword: string; forgotPasswordTitle: string; forgotPasswordSubtitle: string; backToLogin: string;
+    updatePassword: string; updatePasswordTitle: string; updatePasswordSubtitle: string; newPassword: string; confirmNewPassword: string;
+    verifyEmail: string; verifyEmailTitle: string; verifyEmailSubtitle: string; resendEmail: string; emailSent: string;
+    checkInbox: string; spamHint: string; successRedirect: string;
+  }
   hero: { title1: string; title2: string; tagline: string; cta: string; statusPill: string; searchPlaceholder: string; searchHint: string }
   marquee: string[]
   products: { title: string; buy: string; buyNow: string; soldOut: string; inStock: string; onlyXLeft: string; outOfStock: string; sortNewest: string; sortPrice: string; sortStock: string; sortOutOfStock: string; viewGrid: string; viewList: string; verifiedBuyer: string; loginForMore: string; confirmTitle: string; confirmNote: string; confirmCancel: string; confirmGo: string; processing: string }
@@ -28,7 +35,7 @@ export interface Copy {
 
 const id: Copy = {
   nav: { home: 'Beranda', shop: 'Belanja', myOrders: 'Pesanan Saya', admin: 'Admin', profile: 'Akun' },
-  auth: { signIn: 'Masuk', signOut: 'Keluar', signInWithGoogle: 'Masuk dengan Google', email: 'EMAIL', password: 'PASSWORD', or: 'ATAU', backToStore: 'Kembali ke toko' },
+  auth: { signIn: 'Masuk', signOut: 'Keluar', signInWithGoogle: 'Masuk dengan Google', email: 'EMAIL', password: 'PASSWORD', or: 'ATAU', backToStore: 'Kembali ke toko', signUp: 'Daftar', signUpTitle: 'BUAT AKUN', signUpSubtitle: 'Daftar untuk mulai berbelanja', confirmPassword: 'KONFIRMASI PASSWORD', noAccount: 'Belum punya akun?', hasAccount: 'Sudah punya akun?', forgotPassword: 'Lupa Password', forgotPasswordTitle: 'RESET PASSWORD', forgotPasswordSubtitle: 'Masukkan email untuk menerima link reset', backToLogin: 'Kembali ke login', updatePassword: 'Update Password', updatePasswordTitle: 'PASSWORD BARU', updatePasswordSubtitle: 'Masukkan password baru untuk akunmu', newPassword: 'PASSWORD BARU', confirmNewPassword: 'KONFIRMASI PASSWORD BARU', verifyEmail: 'Verifikasi Email', verifyEmailTitle: 'CEK EMAIL KAMU', verifyEmailSubtitle: 'Kami sudah mengirim link verifikasi', resendEmail: 'Kirim ulang email', emailSent: 'Email terkirim', checkInbox: 'Cek inbox kamu', spamHint: 'Jangan lupa cek folder spam jika tidak menemukan email', successRedirect: 'Verifikasi berhasil, mengalihkan...' },
   hero: {
     title1: 'AKSES INSTAN',
     title2: 'AKUN DIGITAL PREMIUM',
@@ -147,7 +154,7 @@ const id: Copy = {
 
 const en: Copy = {
   nav: { home: 'Home', shop: 'Shop', myOrders: 'My Orders', admin: 'Admin', profile: 'Account' },
-  auth: { signIn: 'Sign In', signOut: 'Sign Out', signInWithGoogle: 'Sign in with Google', email: 'EMAIL', password: 'PASSWORD', or: 'OR', backToStore: 'Back to store' },
+  auth: { signIn: 'Sign In', signOut: 'Sign Out', signInWithGoogle: 'Sign in with Google', email: 'EMAIL', password: 'PASSWORD', or: 'OR', backToStore: 'Back to store', signUp: 'Sign Up', signUpTitle: 'CREATE ACCOUNT', signUpSubtitle: 'Sign up to start shopping', confirmPassword: 'CONFIRM PASSWORD', noAccount: "Don't have an account?", hasAccount: 'Already have an account?', forgotPassword: 'Forgot Password', forgotPasswordTitle: 'RESET PASSWORD', forgotPasswordSubtitle: 'Enter your email to receive a reset link', backToLogin: 'Back to login', updatePassword: 'Update Password', updatePasswordTitle: 'NEW PASSWORD', updatePasswordSubtitle: 'Enter your new password', newPassword: 'NEW PASSWORD', confirmNewPassword: 'CONFIRM NEW PASSWORD', verifyEmail: 'Verify Email', verifyEmailTitle: 'CHECK YOUR INBOX', verifyEmailSubtitle: 'We sent you a verification link', resendEmail: 'Resend email', emailSent: 'Email sent', checkInbox: 'Check your inbox', spamHint: "Don't forget to check spam if you can't find it", successRedirect: 'Verification successful, redirecting...' },
   hero: {
     title1: 'INSTANT ACCESS',
     title2: 'PREMIUM DIGITAL ACCOUNTS',

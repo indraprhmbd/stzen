@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import SearchableSelect from '../../../components/admin/SearchableSelect'
 import DataTable from '../../../components/admin/DataTable'
 import CopyCell from '../../../components/admin/CopyCell'
@@ -7,12 +8,13 @@ import ConfirmDialog, { openConfirm } from '../../../components/admin/ConfirmDia
 import { useVaultManager } from '../hooks/useVaultManager'
 import { authedApiRequest } from '../../../lib/api'
 import type { Variant } from '../types'
-import { Lock, LockSlash, Refresh, Copy, EditPencil, Trash, Prohibition, Redo, Search, NavArrowLeft, NavArrowRight, Plus } from 'iconoir-react'
+import { Lock, LockSlash, Refresh, Copy, EditPencil, Trash, Prohibition, Redo, Search, NavArrowLeft, NavArrowRight, Plus, ArrowUpRightSquare } from 'iconoir-react'
 
 interface Props { variants: Variant[]; fetchedAt: number | null; initialVariantId?: string | null; onVariantSelected?: () => void; /** Prefill order search (orders deep-link: jump straight to that order's credential). */ initialOrderId?: string | null; /** Open import dialog on preselect (create flow). Deep-links only preselect. */ autoImport?: boolean }
 
 export default function VaultList({ variants, fetchedAt, initialVariantId, onVariantSelected, initialOrderId, autoImport = true }: Props) {
   const v = useVaultManager(variants)
+  const navigate = useNavigate()
   const [editing, setEditing] = useState<{ id: string; text: string } | null>(null)
   const [pendingDelete, setPendingDelete] = useState<{ id: string } | null>(null)
   const [pendingRevoke, setPendingRevoke] = useState<{ id: string } | null>(null)
@@ -176,7 +178,14 @@ export default function VaultList({ variants, fetchedAt, initialVariantId, onVar
                     <td className="whitespace-nowrap">
                       <StatusChip status={item.status}>{item.status}</StatusChip>
                     </td>
-                    <td>{item.orderPublicId ? <CopyCell value={item.orderPublicId} display={item.orderPublicId.slice(0, 8)} className="text-xs ad-num text-[#6e6e73]" /> : <span className="text-xs ad-num text-[#6e6e73]">-</span>}</td>
+                    <td className="whitespace-nowrap">
+                      {item.orderPublicId ? (
+                        <div className="inline-flex items-center gap-1.5">
+                          <CopyCell value={item.orderPublicId} display={item.orderPublicId.slice(0, 8)} className="text-xs ad-num text-[#6e6e73]" />
+                          <button onClick={() => navigate(`/admin/orders?status=semua&q=${item.orderPublicId}`)} title="Lihat order" className="ad-btn !px-1.5 text-[#6e6e73]"><ArrowUpRightSquare width={13} height={13} strokeWidth={1.5} /></button>
+                        </div>
+                      ) : <span className="text-xs ad-num text-[#6e6e73]">-</span>}
+                    </td>
                     <td className="text-xs ad-num text-[#6e6e73] whitespace-nowrap">{new Date(item.createdAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' })}</td>
                     <td className="text-right">
                       <div className="flex justify-end gap-1">

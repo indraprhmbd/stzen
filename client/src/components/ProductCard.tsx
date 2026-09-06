@@ -6,7 +6,7 @@ import { prefetchDetailChunk, prefetchDetailData } from '../lib/prefetch'
 interface Product {
   id: string
   name: string
-  description: string | null
+  overview: string | null
   category: string
   price: string
   compareAtPrice?: number | null
@@ -171,9 +171,9 @@ export default function ProductCard({ product, index = 0, onBuy, view = 'grid' }
                 ))}
               </div>
             )}
-            {product.description && (
+            {product.overview && (
               <p className="text-[9px] font-semibold text-on-surface-variant line-clamp-1 mt-0.5" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-                {product.description}
+                {product.overview}
               </p>
             )}
           </div>
@@ -239,9 +239,9 @@ export default function ProductCard({ product, index = 0, onBuy, view = 'grid' }
             </span>
           ))}
         </div>
-        {product.description && (
+        {product.overview && (
           <p className="text-xs font-bold text-neutral/80 mb-4 line-clamp-2" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-            {product.description}
+            {product.overview}
           </p>
         )}
         <div className="mt-auto pt-3 flex justify-between items-center">

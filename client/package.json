@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@phosphor-icons/react": "^2.1.7",
+    "@supabase/ssr": "^0.12.6",
     "@supabase/supabase-js": "^2.112.4",
     "hono": "^4.13.5",
     "iconoir-react": "^7.12.1",

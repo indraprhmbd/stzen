@@ -11,7 +11,11 @@ const HowToOrder = lazy(() => import('./pages/HowToOrder'))
 const PaymentMethods = lazy(() => import('./pages/PaymentMethods'))
 const FAQ = lazy(() => import('./pages/FAQ'))
 const Login = lazy(() => import('./pages/Login'))
-const Dashboard = lazy(() => import('./pages/Dashboard'))
+const SignUp = lazy(() => import('./pages/SignUp'))
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword'))
+  const UpdatePassword = lazy(() => import('./pages/UpdatePassword'))
+  const Dashboard = lazy(() => import('./pages/Dashboard'))
+  const AuthCallback = lazy(() => import('./pages/AuthCallback'))
 const Profile = lazy(() => import('./pages/Profile'))
 // Admin shell stays out of the main bundle — loads only on /admin visits.
 const AdminLayout = lazy(() => import('./layouts/AdminLayout'))
@@ -42,7 +46,11 @@ function App() {
           <Route path="/how-to-order" element={<HowToOrder />} />
           <Route path="/payment-methods" element={<PaymentMethods />} />
           <Route path="/faq" element={<FAQ />} />
+          <Route path="/auth/callback" element={<AuthCallback />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<SignUp />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/update-password" element={<UpdatePassword />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/payment/return" element={<PaymentReturn />} />

@@ -3,6 +3,8 @@
   themes: zenith-arcade --default, dark;
 }
 
+@import "./styles/auth.css";
+
 @plugin "daisyui/theme" {
   name: "zenith-arcade";
   default: true;

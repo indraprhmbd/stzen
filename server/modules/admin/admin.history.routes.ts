@@ -1,18 +1,17 @@
 import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
-import { sql } from 'drizzle-orm'
-import { db } from '../../shared/db'
+import { supabaseAdmin } from '../../shared/db'
 import { type AuthEnv } from '../../shared/middleware/auth'
 import { requireRole } from '../../shared/middleware/require-role'
+
+const AUDIT_LOGS = 'audit_logs'
 
 type HistoryEnv = AuthEnv
 
 export const adminHistoryRoutes = new Hono<HistoryEnv>()
-  // Auth is enforced globally in app.ts; this only adds the role check.
   .use('*', requireRole('admin'))
 
-  // GET / — list audit logs with filters + sort
   .get('/', zValidator('query', z.object({
     type: z.string().optional(),
     actor: z.enum(['admin', 'user', 'system']).optional(),
@@ -22,40 +21,53 @@ export const adminHistoryRoutes = new Hono<HistoryEnv>()
     sort: z.string().optional(),
     sortDir: z.string().optional(),
   })), async (c) => {
-  const type = c.req.query('type')
-  const actor = c.req.query('actor')
-  const q = c.req.query('q')
-  const limit = Math.min(parseInt(c.req.query('limit') || '20', 10), 100)
-  const offset = parseInt(c.req.query('offset') || '0', 10)
-  const sort = c.req.query('sort') || 'createdAt'
-  const sortDir = c.req.query('sortDir') || 'desc'
+    const type = c.req.query('type')
+    const actor = c.req.query('actor')
+    const q = c.req.query('q')
+    const limit = Math.min(parseInt(c.req.query('limit') || '20', 10), 100)
+    const offset = parseInt(c.req.query('offset') || '0', 10)
+    const sort = c.req.query('sort') || 'created_at'
+    const sortDir = c.req.query('sortDir') || 'desc'
 
-  const conditions: any[] = []
-  if (type && type !== 'all') conditions.push(sql`resource_type = ${type}`)
-  if (actor) conditions.push(sql`actor_type = ${actor}`)
-  if (q) conditions.push(sql`(resource_public_id ilike ${'%' + q + '%'} or snapshot_text ilike ${'%' + q + '%'} or actor_email ilike ${'%' + q + '%'})`)
+    let query = supabaseAdmin.from(AUDIT_LOGS).select('*')
 
-  const where = conditions.length ? sql`where ${sql.join(conditions, sql` and `)}` : sql``
-  // id tiebreak: same-ms rows (bulk import, webhook bursts) keep stable order.
-  const orderBy = sort === 'action'
-    ? (sortDir === 'asc' ? sql`order by action asc, id asc` : sql`order by action desc, id desc`)
-    : (sortDir === 'asc' ? sql`order by created_at asc, id asc` : sql`order by created_at desc, id desc`)
+    if (type && type !== 'all') {
+      query = query.eq('resource_type', type)
+    }
+    if (actor) {
+      query = query.eq('actor_type', actor)
+    }
+    if (q) {
+      const like = `%${q}%`
+      query = query.or(`resource_public_id.ilike.${like},snapshot_text.ilike.${like},actor_email.ilike.${like}`)
+    }
 
-  // Parallelize data + count (2 independent queries)
-  const [rows, countRes] = await Promise.all([
-    db.execute(sql`
-      select id, created_at, actor_email, actor_type, action, resource_type, resource_public_id, resource_name, snapshot_text
-      from audit_logs
-      ${where}
-      ${orderBy}
-      limit ${limit} offset ${offset}
-    `),
-    db.execute(sql`
-      select count(*)::int as total from audit_logs ${where}
-    `),
-  ] as unknown as any[][])
+    if (sort === 'action') {
+      query = query.order('action', { ascending: sortDir === 'asc' })
+    } else {
+      query = query.order('created_at', { ascending: sortDir === 'asc' })
+    }
 
-  const data = Array.isArray(rows) ? rows : (rows as any).rows ?? rows
-  const total = (Array.isArray(countRes) ? countRes[0] : (countRes as any).rows?.[0])?.total ?? 0
-  return c.json({ data, total })
-})
+    const { data: rows, error } = await query.range(offset, offset + limit - 1)
+
+    if (error) throw new Error(error.message)
+
+    let countQuery = supabaseAdmin.from(AUDIT_LOGS).select('*', { count: 'exact', head: true })
+    if (type && type !== 'all') {
+      countQuery = countQuery.eq('resource_type', type)
+    }
+    if (actor) {
+      countQuery = countQuery.eq('actor_type', actor)
+    }
+    if (q) {
+      const like = `%${q}%`
+      countQuery = countQuery.or(`resource_public_id.ilike.${like},snapshot_text.ilike.${like},actor_email.ilike.${like}`)
+    }
+
+    const { count } = await countQuery
+
+    return c.json({
+      data: rows || [],
+      total: count || 0,
+    })
+  })

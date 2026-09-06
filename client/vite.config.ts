@@ -2,6 +2,8 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
+const apiBase = process.env.VITE_API_BASE_URL || 'http://127.0.0.1:8787'
+
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {
@@ -10,7 +12,7 @@ export default defineConfig({
     allowedHosts: true,
     proxy: {
       '/api': {
-        target: 'http://localhost:3000',
+        target: apiBase,
         changeOrigin: true,
       },
     },
@@ -20,7 +22,7 @@ export default defineConfig({
     host: true,
     proxy: {
       '/api': {
-        target: 'http://localhost:3000',
+        target: apiBase,
         changeOrigin: true,
       },
     },

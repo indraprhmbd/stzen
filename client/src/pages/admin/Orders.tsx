@@ -56,6 +56,11 @@ export default function Orders() {
   const rawTab = searchParams.get('status')
   const tab: TabKey = TABS.some((t) => t.key === rawTab) ? (rawTab as TabKey) : 'butuh-tindakan'
   const activeTab = TABS.find((t) => t.key === tab)!
+
+  useEffect(() => {
+    const urlQ = searchParams.get('q')
+    if (urlQ) setQ(urlQ)
+  }, [searchParams])
   const [offset, setOffset] = useState(0)
   const limit = 20
   const [actionLoading, setActionLoading] = useState<string | null>(null)

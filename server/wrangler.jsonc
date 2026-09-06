@@ -1,0 +1,17 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "store-subs-api",
+  "main": "./workers-entry.ts",
+  "compatibility_date": "2026-09-06",
+  "compatibility_flags": ["nodejs_compat"],
+  "vars": {
+    "SUPABASE_URL": "https://kqgfbmehepanzkhypzdw.supabase.co",
+    "SUPABASE_ANON_KEY": "***REMOVED***",
+    "SUPABASE_SERVICE_ROLE_KEY": "***REMOVED***",
+    "AES_SECRET_KEY": "***REMOVED***",
+    "CORS_ALLOWED_ORIGINS": "http://localhost:5173,http://localhost:4173,https://collected-ankle-dynamic.ngrok-free.dev"
+  },
+  "observability": {
+    "enabled": true
+  }
+}

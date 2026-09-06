@@ -4,18 +4,24 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch index.ts",
+    "dev:workers": "wrangler dev",
+    "build": "tsc",
+    "build:workers": "wrangler deploy --dry-run",
+    "deploy": "wrangler deploy",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
+    "@cloudflare/vite-plugin": "^1.54.4",
     "@hono/zod-validator": "^0.9.0",
     "dotenv": "^17.4.2",
     "drizzle-orm": "^0.45.2",
     "hono": "^4.13.5",
     "jose": "^6.0.11",
     "postgres": "^3.4.5",
+    "wrangler": "^4.129.0",
     "zod": "^3.24.0"
   },
   "devDependencies": {

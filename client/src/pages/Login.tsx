@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { useBrand } from '../hooks/useBrand'
 import { useCopy } from '../hooks/useCopy'
@@ -38,31 +38,17 @@ export default function Login() {
   }
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-base-100 px-4">
-      <div className="w-full max-w-md">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <h1
-            className="text-4xl font-black uppercase tracking-tight text-neutral"
-            style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-          >
-            {brand.name}
-          </h1>
-          <p
-            className="text-sm font-bold text-neutral/70 mt-1"
-            style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
-          >
-            {brand.tagline}
-          </p>
-        </div>
+    <div className="auth-bg">
+      <div className="w-full max-w-md mx-auto">
+        <img src="/logo.svg" alt={brand.name} className="auth-logo" />
 
-        {/* Card */}
-        <div className="card bg-base-200 border-brutal-thick shadow-pop-lime rounded-md">
-          <div className="card-body p-6">
-            {/* Google Sign-In */}
+        <div className="auth-card">
+          <div className="p-6">
+            <h2 className="auth-title">{t.auth.signIn}</h2>
+            <p className="auth-subtitle">{brand.tagline}</p>
+
             <button
-              className="btn bg-primary-container text-black w-full border-brutal shadow-brutal btn-brutal-interactive font-black uppercase"
-              style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+              className="auth-btn auth-btn-secondary"
               onClick={handleGoogleLogin}
             >
               <svg
@@ -78,16 +64,14 @@ export default function Login() {
               {t.auth.signInWithGoogle}
             </button>
 
-            {/* Divider */}
-            <div className="divider text-neutral/50 font-bold text-xs">{t.auth.or}</div>
+            <div className="auth-divider">{t.auth.or}</div>
 
-            {/* Email/Password Form */}
             <form onSubmit={handleEmailLogin} className="flex flex-col gap-3">
               <input
                 type="email"
                 placeholder={t.auth.email}
                 required
-                className="input input-bordered w-full bg-base-100 border-brutal font-mono text-xs text-neutral placeholder:text-neutral/50 focus:outline-none focus:border-primary focus:ring-2 focus:ring-neutral shadow-brutal-sm rounded-sm"
+                className="auth-input"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
@@ -95,21 +79,20 @@ export default function Login() {
                 type="password"
                 placeholder={t.auth.password}
                 required
-                className="input input-bordered w-full bg-base-100 border-brutal font-mono text-xs text-neutral placeholder:text-neutral/50 focus:outline-none focus:border-primary focus:ring-2 focus:ring-neutral shadow-brutal-sm rounded-sm"
+                className="auth-input"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
 
               {error && (
-                <div className="alert alert-error border-brutal shadow-brutal-sm font-bold text-xs">
+                <div className="auth-alert">
                   <span>{error}</span>
                 </div>
               )}
 
               <button
                 type="submit"
-                className="btn btn-secondary w-full border-brutal shadow-brutal btn-brutal-interactive font-black uppercase"
-                style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+                className="auth-btn"
                 disabled={loading}
               >
                 {loading ? (
@@ -119,17 +102,22 @@ export default function Login() {
                 )}
               </button>
             </form>
+
+            <div className="flex items-center justify-between mt-4 text-xs font-bold" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+              <Link to="/forgot-password" className="auth-link">
+                {t.auth.forgotPassword}
+              </Link>
+              <Link to="/signup" className="auth-link">
+                {t.auth.noAccount}
+              </Link>
+            </div>
           </div>
         </div>
 
-        {/* Back to store */}
         <div className="text-center mt-4">
-          <a
-            href="/"
-            className="text-xs font-bold text-neutral/60 hover:text-neutral underline"
-          >
+          <Link to="/" className="auth-link">
             {t.auth.backToStore}
-          </a>
+          </Link>
         </div>
       </div>
     </div>

@@ -15,7 +15,7 @@ import CopyToast from '../components/CopyToast'
 type Product = {
   id: string
   name: string
-  description: string | null
+  overview: string | null
   category: string
   price: string
   badge: string | null
