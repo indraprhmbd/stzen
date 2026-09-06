@@ -275,8 +275,8 @@ export const vaultService = {
     if (!order.variant_id) throw new ConflictError('Order has no variant linked')
 
     const { data: result, error: rpcError } = await supabaseAdmin.rpc('replace_order_credential', {
-      variant_id: order.variant_id,
-      order_id: order.id,
+      p_variant_id: order.variant_id,
+      p_order_id: order.id,
     })
 
     if (rpcError) throw new Error(rpcError.message)
