@@ -67,7 +67,7 @@ export default function History() {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-[22px] font-semibold tracking-tight">Riwayat</h1>
-          <p className="text-[13px] text-[#6e6e73] mt-0.5">Catatan immutable pesanan dan impor stok. Teks tidak terhubung dinamis.{fetchedAt && <span className="text-[#aeaeb2]"> Disinkron {new Date(fetchedAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>}</p>
+          {fetchedAt && <p className="text-[13px] text-[#aeaeb2] mt-0.5">Disinkron {new Date(fetchedAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</p>}
         </div>
         <button onClick={fetchLogs} title="Muat ulang" className="ad-btn">
           <Refresh width={15} height={15} strokeWidth={1.5} />

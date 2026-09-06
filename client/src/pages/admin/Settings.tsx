@@ -49,7 +49,7 @@ export default function Settings() {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-[22px] font-semibold tracking-tight">Pengaturan</h1>
-          <p className="text-[13px] text-[#6e6e73] mt-0.5">Rekening bank dan kontak bantuan toko{fetchedAt && <span className="text-[#aeaeb2]"> · Disinkron {new Date(fetchedAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>}</p>
+          {fetchedAt && <p className="text-[13px] text-[#aeaeb2] mt-0.5">Disinkron {new Date(fetchedAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</p>}
         </div>
         <button onClick={handleSave} disabled={!dirty || saving} className="ad-btn ad-btn-dark">
           {saving ? 'Menyimpan...' : 'Simpan'}
