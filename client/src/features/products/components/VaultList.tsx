@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import SearchableSelect from '../../../components/admin/SearchableSelect'
 import DataTable from '../../../components/admin/DataTable'
+import CopyCell from '../../../components/admin/CopyCell'
 import StatusChip from '../../../components/admin/StatusChip'
 import ConfirmDialog, { openConfirm } from '../../../components/admin/ConfirmDialog'
 import { useVaultManager } from '../hooks/useVaultManager'
@@ -164,7 +165,7 @@ export default function VaultList({ variants, fetchedAt, initialVariantId, onVar
                     <td className="whitespace-nowrap">
                       <StatusChip status={item.status}>{item.status}</StatusChip>
                     </td>
-                    <td className="text-xs ad-num text-[#6e6e73]">{item.orderPublicId ? `${item.orderPublicId.slice(0, 8)}` : '-'}</td>
+                    <td>{item.orderPublicId ? <CopyCell value={item.orderPublicId} display={item.orderPublicId.slice(0, 8)} className="text-xs ad-num text-[#6e6e73]" /> : <span className="text-xs ad-num text-[#6e6e73]">-</span>}</td>
                     <td className="text-xs ad-num text-[#6e6e73] whitespace-nowrap">{new Date(item.createdAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' })}</td>
                     <td className="text-right">
                       <div className="flex justify-end gap-1">

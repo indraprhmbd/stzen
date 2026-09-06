@@ -1,5 +1,6 @@
 import { Fragment, useMemo } from 'react'
 import DataTable from '../../../components/admin/DataTable'
+import CopyCell from '../../../components/admin/CopyCell'
 import StatusChip, { type ChipTone } from '../../../components/admin/StatusChip'
 import { SkeletonRows } from '../../../components/admin/TableSkeleton'
 import { useTableSort, sortByKey } from '../../../hooks/useTableSort'
@@ -53,7 +54,7 @@ export default function VariantGroups({ groups, filteredCount, collapsedGroups, 
         <td>
           <div className="text-[13px] font-medium">{v.name}</div>
         </td>
-        <td className="text-xs ad-num text-[#6e6e73]">{v.sku}</td>
+        <td><CopyCell value={v.sku} className="text-xs ad-num text-[#6e6e73]" /></td>
         <td className="text-[13px] ad-num font-semibold">Rp {Number(v.price).toLocaleString('id-ID')}{v.compareAtPrice != null && Number(v.compareAtPrice) > Number(v.price) && (<><br /><s className="text-[11px] font-normal text-[#aeaeb2]">Rp {Number(v.compareAtPrice).toLocaleString('id-ID')}</s></>)}</td>
         <td><StatusChip tone={stockTone(v).tone}>{stockTone(v).label}</StatusChip></td>
         <td><StatusChip tone="zinc" className={v.isActive ? '' : 'opacity-60'}>{v.isActive ? 'AKTIF' : 'NONAKTIF'}</StatusChip></td>
