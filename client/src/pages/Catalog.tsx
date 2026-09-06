@@ -4,7 +4,6 @@ import { useCopy } from '../hooks/useCopy'
 import { api } from '../lib/api'
 import Layout from '../components/Layout'
 import Marquee from '../components/Marquee'
-import SquiggleBox from '../components/SquiggleBox'
 import ShopCtaCardSlim from '../components/ShopCtaCardSlim'
 
 function Catalog() {
@@ -50,10 +49,8 @@ function Catalog() {
   return (
     <Layout>
       {announcement && (
-        <div className="mb-3 bg-white shadow-comic">
-          <SquiggleBox stroke="#0D110F" strokeWidth={2.5}>
-            <p className="text-center text-base font-black tracking-wide text-neutral">{announcement}</p>
-          </SquiggleBox>
+        <div className="mb-3 bg-white px-4 py-3 text-center shadow-comic">
+          <p className="text-base font-black tracking-wide text-neutral">{announcement}</p>
         </div>
       )}
       {/* ═══ HERO 2/3 + FEATURED CARD 1/3 ═══ */}
