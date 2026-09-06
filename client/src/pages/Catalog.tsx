@@ -49,11 +49,6 @@ function Catalog() {
 
   return (
     <Layout>
-      {announcement && (
-        <SquiggleBox className="mb-3" stroke="#FFFFFF" strokeWidth={3} shadow="#0D110F">
-          <p className="text-center text-base font-black tracking-wide text-white [text-shadow:2px_2px_0_#0D110F]">{announcement}</p>
-        </SquiggleBox>
-      )}
       {/* ═══ HERO 2/3 + FEATURED CARD 1/3 ═══ */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
         {/* Hero — 2/3 */}
@@ -74,6 +69,13 @@ function Catalog() {
               </p>
             </div>
           </div>
+          {announcement && (
+            <div className="relative z-10 mt-4">
+              <SquiggleBox stroke="#FFFFFF" strokeWidth={2.5}>
+                <p className="text-center text-sm font-bold tracking-wide text-white">{announcement}</p>
+              </SquiggleBox>
+            </div>
+          )}
         </section>
 
         {/* Shop CTA card — 1/3 */}
