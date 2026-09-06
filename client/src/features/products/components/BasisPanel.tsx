@@ -16,7 +16,6 @@ interface Props {
 }
 
 export default function BasisPanel({ products, variants, onCreate, onEdit, onDelete, loading }: Props) {
-  const { sorted, sortKey, sortDir, toggleSort } = useTableSort(products, { defaultKey: 'name', defaultDir: 'asc' })
   const priceMap = useMemo(() => {
     const map = new Map<string, { min: number; max: number; avg: number; median: number; mode: number; count: number }>()
     for (const v of variants) {
@@ -72,6 +71,25 @@ export default function BasisPanel({ products, variants, onCreate, onEdit, onDel
     return map
   }, [variants])
 
+  // Enriched rows: AVG/MEDIAN/MODUS/STOK/DURASI are computed, so sort
+  // must run on enriched rows — raw Product has no avg/median/mode keys.
+  const rows = useMemo(() => products.map((p) => {
+    const stats = priceMap.get(p.id)
+    const vs = variantStats.get(p.id)
+    const durArr = vs?.durations ?? new Set<string>()
+    return {
+      ...p,
+      avg: stats?.avg ?? null,
+      median: stats?.median ?? null,
+      mode: stats?.mode ?? null,
+      stockLabel: vs && vs.vaultCount > 0 ? `${vs.stock}/${vs.vaultCount} var` : vs ? '0 var' : '-',
+      durLabel: durArr.size === 0 ? '-' : durArr.size === 1 ? [...durArr][0] : `${durArr.size} tipe`,
+      rentangLabel: stats && stats.min !== stats.max ? `Rp ${stats.min.toLocaleString('id-ID')} - ${stats.max.toLocaleString('id-ID')}` : stats ? `Rp ${stats.min.toLocaleString('id-ID')}` : '-',
+    }
+  }), [products, priceMap, variantStats])
+
+  const { sorted, sortKey, sortDir, toggleSort } = useTableSort(rows, { defaultKey: 'name', defaultDir: 'asc' })
+
   return (
     <>
     <div className="ad-card-flat p-4 flex flex-wrap items-center gap-6">
@@ -106,20 +124,16 @@ export default function BasisPanel({ products, variants, onCreate, onEdit, onDel
         onSort={toggleSort}
       >
         {loading ? <SkeletonRows rows={5} cols={10} /> : sorted.map((p) => {
-          const stats = priceMap.get(p.id)
-          const vs = variantStats.get(p.id)
-          const durArr = vs?.durations ?? new Set()
-          const durLabel = durArr.size === 0 ? '-' : durArr.size === 1 ? [...durArr][0] : `${durArr.size} tipe`
           return (
           <tr key={p.id}>
             <td className="text-[13px] font-medium">{p.name}</td>
             <td className="text-xs text-[#6e6e73]">{p.category}</td>
-            <td className="text-[13px] ad-num font-semibold">{vs && vs.vaultCount > 0 ? `${vs.stock}/${vs.vaultCount} var` : vs ? '0 var' : '-'}</td>
-            <td className="text-xs text-[#6e6e73]">{durLabel}</td>
-            <td className="text-[13px] ad-num font-semibold">{stats ? `Rp ${stats.avg.toLocaleString('id-ID')}` : '-'}</td>
-            <td className="text-[13px] ad-num text-[#6e6e73]">{stats ? `Rp ${stats.median.toLocaleString('id-ID')}` : '-'}</td>
-            <td className="text-[13px] ad-num text-[#6e6e73]">{stats ? `Rp ${stats.mode.toLocaleString('id-ID')}` : '-'}</td>
-            <td className="text-xs ad-num text-[#6e6e73]">{stats && stats.min !== stats.max ? `Rp ${stats.min.toLocaleString('id-ID')} - ${stats.max.toLocaleString('id-ID')}` : stats ? `Rp ${stats.min.toLocaleString('id-ID')}` : '-'}</td>
+            <td className="text-[13px] ad-num font-semibold">{p.stockLabel}</td>
+            <td className="text-xs text-[#6e6e73]">{p.durLabel}</td>
+            <td className="text-[13px] ad-num font-semibold">{p.avg != null ? `Rp ${p.avg.toLocaleString('id-ID')}` : '-'}</td>
+            <td className="text-[13px] ad-num text-[#6e6e73]">{p.median != null ? `Rp ${p.median.toLocaleString('id-ID')}` : '-'}</td>
+            <td className="text-[13px] ad-num text-[#6e6e73]">{p.mode != null ? `Rp ${p.mode.toLocaleString('id-ID')}` : '-'}</td>
+            <td className="text-xs ad-num text-[#6e6e73]">{p.rentangLabel}</td>
             <td><StatusChip tone={p.isActive ? 'green' : 'zinc'}>{p.isActive ? 'AKTIF' : 'NONAKTIF'}</StatusChip></td>
             <td className="text-right"><div className="flex justify-end gap-1.5"><button onClick={() => onEdit(p)} className="ad-btn">Edit</button><button onClick={() => onDelete(p)} className="ad-btn ad-btn-danger">Hapus</button></div></td>
           </tr>

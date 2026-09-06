@@ -17,7 +17,7 @@ interface SortResult<T> {
   toggleSort: (key: string) => void
 }
 
-function autoCompare(a: unknown, b: unknown): number {
+export function autoCompare(a: unknown, b: unknown): number {
   if (a == null && b == null) return 0
   if (a == null) return 1
   if (b == null) return -1
@@ -27,9 +27,9 @@ function autoCompare(a: unknown, b: unknown): number {
   return String(a).localeCompare(String(b))
 }
 
-function sortData<T>(data: T[], key: string | null, dir: SortDir): T[] {
+export function sortByKey<T>(data: T[], key: string | null, dir: SortDir): T[] {
   if (!key || !dir) return data
-  const sorted = [...data].sort((a, b) => autoCompare((a as any)[key], (b as any)[key]))
+  const sorted = [...data].sort((a, b) => autoCompare((a as Record<string, unknown>)[key], (b as Record<string, unknown>)[key]))
   return dir === 'desc' ? sorted.reverse() : sorted
 }
 
@@ -89,7 +89,7 @@ export function useTableSort<T>(data: T[], opts: SortOpts = {}): SortResult<T> {
   const toggleSort = isServer ? toggleSortServer : toggleSortLocal
 
   const sorted = useMemo(
-    () => isServer ? data : sortData(data, activeKey, activeDir),
+    () => isServer ? data : sortByKey(data, activeKey, activeDir),
     [data, activeKey, activeDir, isServer]
   )
 

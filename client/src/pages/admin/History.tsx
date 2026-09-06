@@ -54,7 +54,7 @@ export default function History() {
       return { logs: json, total: json.length }
     }
     return { logs: [], total: 0 }
-  }, [type, q, offset])
+  }, [type, q, offset, sortKey, sortDir])
   const logs = data?.logs ?? []
   const total = data?.total ?? 0
 

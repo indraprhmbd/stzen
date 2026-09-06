@@ -1,7 +1,8 @@
-import { Fragment } from 'react'
+import { Fragment, useMemo } from 'react'
 import DataTable from '../../../components/admin/DataTable'
 import StatusChip, { type ChipTone } from '../../../components/admin/StatusChip'
 import { SkeletonRows } from '../../../components/admin/TableSkeleton'
+import { useTableSort, sortByKey } from '../../../hooks/useTableSort'
 import { NavArrowDown, Plus } from 'iconoir-react'
 import type { Variant, VariantGroup } from '../types'
 
@@ -24,6 +25,16 @@ interface Props {
 }
 
 export default function VariantGroups({ groups, filteredCount, collapsedGroups, setCollapsedGroups, onCreateVariant, onEditVariant, onDeleteVariant, loading }: Props) {
+  // Sort state shared across groups. Variant keys (name/sku/price/stockCount/
+  // isActive) sort items within each group; groups keep category order.
+  const { sortKey, sortDir, toggleSort } = useTableSort<VariantGroup>(groups, {})
+  const itemKey = sortKey === 'priceNum' || sortKey === 'name' || sortKey === 'sku' || sortKey === 'stockCount' || sortKey === 'isActive' ? sortKey : null
+
+  const sortedGroups = useMemo(() => groups.map((g) => {
+    if (!itemKey || !sortDir) return g
+    const items = g.items.map((v) => ({ ...v, priceNum: Number(v.price) }))
+    return { ...g, items: sortByKey(items, itemKey, sortDir) }
+  }), [groups, itemKey, sortDir])
   function renderVariantRow(v: Variant) {
     return (
       <tr key={v.id}>
@@ -55,17 +66,20 @@ export default function VariantGroups({ groups, filteredCount, collapsedGroups, 
       </div>
       <DataTable
         columns={[
-          { label: 'VARIAN' },
-          { label: 'SKU' },
-          { label: 'HARGA' },
-          { label: 'STOK' },
-          { label: 'STATUS' },
+          { label: 'VARIAN', sortKey: 'name' },
+          { label: 'SKU', sortKey: 'sku' },
+          { label: 'HARGA', sortKey: 'priceNum' },
+          { label: 'STOK', sortKey: 'stockCount' },
+          { label: 'STATUS', sortKey: 'isActive' },
           { label: 'AKSI', className: 'text-right' },
         ]}
         empty={!loading && filteredCount === 0}
         emptyText="Belum ada varian."
+        sortKey={sortKey}
+        sortDir={sortDir}
+        onSort={toggleSort}
       >
-        {loading ? <SkeletonRows rows={5} cols={6} /> : groups.map((g) => {
+        {loading ? <SkeletonRows rows={5} cols={6} /> : sortedGroups.map((g) => {
           const collapsed = collapsedGroups[g.key] ?? true
           return (
           <Fragment key={g.key}>
