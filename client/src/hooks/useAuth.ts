@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { supabase } from '../lib/supabase'
+import { supabase } from '../lib/supabase-browser'
 import type { Session, User } from '@supabase/supabase-js'
 
 export function useAuth() {
@@ -13,7 +13,6 @@ export function useAuth() {
       if (!cancelled) setLoading(false)
     }, 6000)
 
-    // Get initial session from localStorage
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (cancelled) return
       setSession(session)
@@ -24,7 +23,6 @@ export function useAuth() {
       if (!cancelled) setLoading(false)
     })
 
-    // Listen for auth changes
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -45,7 +43,7 @@ export function useAuth() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/dashboard`,
+        redirectTo: `${window.location.origin}/auth/callback`,
       },
     })
     if (error) throw error
@@ -55,6 +53,36 @@ export function useAuth() {
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
+    })
+    if (error) throw error
+  }
+
+  const signUp = async (email: string, password: string) => {
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+    })
+    if (error) throw error
+  }
+
+  const resetPassword = async (email: string) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/update-password`,
+    })
+    if (error) throw error
+  }
+
+  const updatePassword = async (password: string) => {
+    const { error } = await supabase.auth.updateUser({
+      password,
+    })
+    if (error) throw error
+  }
+
+  const resendConfirmation = async (email: string) => {
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email,
     })
     if (error) throw error
   }
@@ -70,6 +98,10 @@ export function useAuth() {
     loading,
     signInWithGoogle,
     signInWithEmail,
+    signUp,
+    resetPassword,
+    updatePassword,
+    resendConfirmation,
     signOut,
   }
 }

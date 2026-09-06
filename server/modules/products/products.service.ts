@@ -1,162 +1,219 @@
-import { eq, and, asc, desc, ilike, sql, or, ne, not, exists } from 'drizzle-orm'
-import { db } from '../../shared/db'
-import { products, productVariants, vaultItems } from '../../shared/db/schema'
+import { supabaseAdmin } from '../../shared/db'
 import { NotFoundError } from '../../shared/errors/http'
 import { getStockCount, getStockCounts } from '../../shared/lib/db-helpers'
 import type { ProductWithStock, PaginatedProducts, ProductQueryParams } from './products.types'
 
-// ─── Products Service ───────────────────────────────────────────────────────
-// Business logic for product queries. Testable without HTTP.
+function pickProductFields(variant: any): { category: string; description: string | null; overview: string | null; instructions: string | null; name: string } {
+  const product = Array.isArray(variant.products) ? variant.products[0] : (variant.products || variant.product || {})
+  return {
+    category: product?.category ?? '',
+    description: product?.description ?? null,
+    overview: product?.overview ?? null,
+    instructions: product?.instructions ?? null,
+    name: product?.name ?? '',
+  }
+}
+
+function mapVariantToProduct(variant: any, stockCount: number): ProductWithStock {
+  const product = pickProductFields(variant)
+  return {
+    id: variant.public_id,
+    name: variant.name,
+    description: variant.description ?? product.description ?? null,
+    category: product.category,
+    price: String(variant.price),
+    badge: variant.badge ?? null,
+    isActive: variant.is_active,
+    stockCount,
+    fulfillmentType: variant.fulfillment_type,
+    compareAtPrice: variant.compare_at_price ?? null,
+    overview: variant.overview ?? product.overview ?? null,
+    instructions: product.instructions ?? null,
+    createdAt: variant.created_at,
+    updatedAt: variant.updated_at,
+  }
+}
+
+function mapProductRow(row: any, stockCount: number): ProductWithStock {
+  return {
+    id: row.public_id,
+    name: row.name,
+    description: row.description ?? null,
+    category: row.category ?? '',
+    price: String(row.price),
+    badge: row.badge ?? null,
+    isActive: row.is_active,
+    stockCount,
+    fulfillmentType: 'vault',
+    compareAtPrice: row.compare_at_price ?? null,
+    overview: row.overview ?? null,
+    instructions: row.instructions ?? null,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  }
+}
 
 export const productsService = {
-  // Storefront: variants behave like products, 30+ SKUs
   async listActive(category?: string): Promise<ProductWithStock[]> {
-    const whereClause = category
-      ? and(eq(productVariants.isActive, true), eq(products.category, category))
-      : eq(productVariants.isActive, true)
+    const { data: variants, error } = await supabaseAdmin
+      .from('product_variants')
+      .select(`
+        id,
+        public_id,
+        sku,
+        name,
+        price,
+        compare_at_price,
+        badge,
+        overview,
+        description,
+        duration_months,
+        account_type,
+        conditions,
+        fulfillment_type,
+        is_active,
+        created_at,
+        updated_at,
+        products (
+          id,
+          name,
+          description,
+          category,
+          instructions,
+          overview
+        )
+      `)
+      .eq('is_active', true)
 
-    const rows = await db
-      .select({
-        internalId: productVariants.id,
-        id: productVariants.publicId,
-        sku: productVariants.sku,
-        name: productVariants.name,
-        description: products.description,
-        category: products.category,
-        price: productVariants.price,
-        compareAtPrice: productVariants.compareAtPrice,
-        badge: productVariants.badge,
-        instructions: products.instructions,
-        isActive: productVariants.isActive,
-        createdAt: productVariants.createdAt,
-        updatedAt: productVariants.updatedAt,
-        durationMonths: productVariants.durationMonths,
-        accountType: productVariants.accountType,
-        conditions: productVariants.conditions,
-        fulfillmentType: productVariants.fulfillmentType,
-        baseName: products.name,
-      })
-      .from(productVariants)
-      .innerJoin(products, eq(productVariants.productId, products.id))
-      .where(whereClause)
-      .orderBy(products.category, productVariants.name)
+    if (error) throw new Error(error.message)
 
-    const stock = await getStockCounts(rows.map((r) => r.internalId))
-    const withStock: ProductWithStock[] = rows.map((row) => {
-      const { internalId, ...rest } = row as any
-      return { ...rest, stockCount: stock.get(internalId) ?? 0 }
+    let filtered = (variants || []).filter((variant: any) => {
+      if (!category) return true
+      const cat = pickProductFields(variant).category
+      return cat === category
     })
 
-    // Filter out out-of-stock variants by default
+    const stockPromises = filtered.map(async (variant: any) => {
+      const stockCount = await getStockCount(variant.id)
+      return mapVariantToProduct(variant, stockCount)
+    })
+
+    const withStock = await Promise.all(stockPromises)
+    withStock.sort((a, b) => {
+      const catA = a.category
+      const catB = b.category
+      if (catA !== catB) return catA.localeCompare(catB)
+      return a.name.localeCompare(b.name)
+    })
     return withStock.filter(item => item.stockCount > 0)
   },
 
-  // Category counts without fetching rows — the /categories endpoint only
-  // needs names + counts. Same sellable filter as listPaginated (active +
-  // on_demand-or-in-stock) so badges match list results. Never select
-  // instruction payloads here.
   async getCategoryCounts(): Promise<{ categories: string[]; counts: Record<string, number> }> {
-    const hasStock = exists(
-      db.select({ one: sql`1` }).from(vaultItems).where(
-        and(eq(vaultItems.variantId, productVariants.id), eq(vaultItems.status, 'AVAILABLE'))
-      )
-    )
-    const rows = await db
-      .select({
-        category: products.category,
-        count: sql<number>`cast(count(*) as int)`,
-      })
-      .from(productVariants)
-      .innerJoin(products, eq(productVariants.productId, products.id))
-      .where(
-        and(
-          eq(productVariants.isActive, true),
-          or(eq(productVariants.fulfillmentType, 'on_demand'), hasStock)!
+    const { data: variants, error } = await supabaseAdmin
+      .from('product_variants')
+      .select(`
+        id,
+        fulfillment_type,
+        products (
+          category
         )
-      )
-      .groupBy(products.category)
-    const counts: Record<string, number> = {}
-    for (const r of rows) counts[r.category] = r.count
-    return { categories: Object.keys(counts), counts }
+      `)
+      .eq('is_active', true)
+
+    if (error) throw new Error(error.message)
+
+    const variantIds = (variants || []).map((v: any) => v.id)
+    const stockByVariant = await getStockCounts(variantIds)
+
+    const categoryMap = new Map<string, number>()
+    for (const variant of variants || []) {
+      const isSellable = variant.fulfillment_type === 'on_demand' || (stockByVariant.get(variant.id) ?? 0) > 0
+      if (!isSellable) continue
+      const cat = pickProductFields(variant).category
+      if (!cat) continue
+      categoryMap.set(cat, (categoryMap.get(cat) || 0) + 1)
+    }
+
+    return {
+      categories: Array.from(categoryMap.keys()),
+      counts: Object.fromEntries(categoryMap),
+    }
   },
 
-  // Paginated storefront: server-side sort/filter/search
   async listPaginated(params: ProductQueryParams): Promise<PaginatedProducts> {
     const { category, sort = 'newest', page = 1, limit = 24, search } = params
     const offset = (page - 1) * limit
 
-    // Where: active variants only (skip for out_of_stock view)
-    const conditions = sort === 'out_of_stock' ? [] : [eq(productVariants.isActive, true)]
-    if (category) conditions.push(eq(products.category, category))
-    if (search) conditions.push(ilike(productVariants.name, `%${search}%`))
+    const { data: variants, error } = await supabaseAdmin
+      .from('product_variants')
+      .select(`
+        id,
+        public_id,
+        sku,
+        name,
+        price,
+        compare_at_price,
+        badge,
+        overview,
+        description,
+        duration_months,
+        account_type,
+        conditions,
+        fulfillment_type,
+        is_active,
+        created_at,
+        updated_at,
+        products (
+          id,
+          name,
+          description,
+          category,
+          overview
+        )
+      `)
+      .eq('is_active', true)
 
-    // Stock filter in SQL so LIMIT applies to sellable rows, not pre-filter rows.
-    // on_demand variants are always sellable; vault variants need an AVAILABLE item.
-    const hasStock = exists(
-      db.select({ one: sql`1` }).from(vaultItems).where(
-        and(eq(vaultItems.variantId, productVariants.id), eq(vaultItems.status, 'AVAILABLE'))
-      )
-    )
-    if (sort === 'out_of_stock') {
-      conditions.push(ne(productVariants.fulfillmentType, 'on_demand'))
-      conditions.push(not(hasStock))
-    } else {
-      conditions.push(or(eq(productVariants.fulfillmentType, 'on_demand'), hasStock)!)
-    }
-    const whereClause = and(...conditions)
+    if (error) throw new Error(error.message)
 
-    // Sort
-    const sortMap: Record<string, ReturnType<typeof asc>> = {
-      newest: desc(productVariants.createdAt),
-      price: asc(productVariants.price),
-      'price-asc': asc(productVariants.price),
-      'price-desc': desc(productVariants.price),
-      name: asc(productVariants.name),
-      stock: desc(productVariants.createdAt), // stock computed, sort by newest as fallback
-    }
-    const orderBy = sortMap[sort] || sortMap.newest
-
-    // Exact total for pagination (cheap count, same filter)
-    const [{ count: total }] = await db
-      .select({ count: sql<number>`cast(count(*) as int)` })
-      .from(productVariants)
-      .innerJoin(products, eq(productVariants.productId, products.id))
-      .where(whereClause)
-
-    // Page rows only — LIMIT now applies to sellable rows, not pre-filter rows.
-    // Minimal card projection: cards render name/description/category/price/
-    // badge/stock only. Everything else (sku, timestamps, duration, account
-    // type, conditions, baseName, instructions) is detail-endpoint data —
-    // never ship it to list callers, guest or not.
-    const rows = await db
-      .select({
-        internalId: productVariants.id,
-        id: productVariants.publicId,
-        name: productVariants.name,
-        description: products.description,
-        category: products.category,
-        price: productVariants.price,
-        compareAtPrice: productVariants.compareAtPrice,
-        badge: productVariants.badge,
-        isActive: productVariants.isActive,
-        fulfillmentType: productVariants.fulfillmentType,
-      })
-      .from(productVariants)
-      .innerJoin(products, eq(productVariants.productId, products.id))
-      .where(whereClause)
-      .orderBy(orderBy)
-      .limit(limit)
-      .offset(offset)
-
-    // Stock counts for the page only (single batched query over ≤limit ids).
-    const stock = await getStockCounts(rows.map((r) => (r as any).internalId))
-    const paginatedProducts: ProductWithStock[] = rows.map((row) => {
-      const { internalId, ...rest } = row as any
-      return { ...rest, stockCount: stock.get(internalId) ?? 0 }
+    let filtered = (variants || []).filter((variant: any) => {
+      if (category && pickProductFields(variant).category !== category) return false
+      if (search && !variant.name?.toLowerCase().includes(search.toLowerCase())) return false
+      return true
     })
 
+    const stockPromises = filtered.map(async (variant: any) => {
+      const stockCount = await getStockCount(variant.id)
+      return mapVariantToProduct(variant, stockCount)
+    })
+
+    let withStock = await Promise.all(stockPromises)
+
+    if (sort === 'out_of_stock') {
+      withStock = withStock.filter(v => v.fulfillmentType !== 'on_demand' && v.stockCount === 0)
+    } else {
+      withStock = withStock.filter(v => v.fulfillmentType === 'on_demand' || v.stockCount > 0)
+    }
+
+    withStock.sort((a, b) => {
+      switch (sort) {
+        case 'price-asc':
+          return Number(a.price) - Number(b.price)
+        case 'price-desc':
+          return Number(b.price) - Number(a.price)
+        case 'name':
+          return a.name.localeCompare(b.name)
+        case 'stock':
+        case 'newest':
+        default:
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      }
+    })
+
+    const total = filtered.length
+    const paginated = withStock.slice(offset, offset + limit)
+
     return {
-      products: paginatedProducts,
+      products: paginated,
       total,
       page,
       limit,
@@ -165,82 +222,130 @@ export const productsService = {
   },
 
   async getById(publicId: string): Promise<ProductWithStock> {
-    // try variant first (new flow)
-    const [variant] = await db
-      .select({
-        id: productVariants.id,
-        publicId: productVariants.publicId,
-        sku: productVariants.sku,
-        name: productVariants.name,
-        overview: productVariants.overview,
-        description: productVariants.description,
-        price: productVariants.price,
-        compareAtPrice: productVariants.compareAtPrice,
-        badge: productVariants.badge,
-        durationMonths: productVariants.durationMonths,
-        accountType: productVariants.accountType,
-        conditions: productVariants.conditions,
-        fulfillmentType: productVariants.fulfillmentType,
-        isActive: productVariants.isActive,
-        productId: productVariants.productId,
-        createdAt: productVariants.createdAt,
-        updatedAt: productVariants.updatedAt,
-      })
-      .from(productVariants)
-      .where(eq(productVariants.publicId, publicId))
+    const { data: variants, error } = await supabaseAdmin
+      .from('product_variants')
+      .select(`
+        id,
+        public_id,
+        sku,
+        name,
+        price,
+        compare_at_price,
+        badge,
+        overview,
+        description,
+        duration_months,
+        account_type,
+        conditions,
+        fulfillment_type,
+        is_active,
+        product_id,
+        created_at,
+        updated_at,
+        products (
+          id,
+          name,
+          description,
+          category,
+          overview
+        )
+      `)
+      .eq('public_id', publicId)
+      .limit(1)
 
-    if (variant) {
+    if (error) throw new Error(error.message)
+
+    if (variants && variants.length > 0) {
+      const variant = variants[0]
       const stockCount = await getStockCount(variant.id)
-      const [base] = variant.productId ? await db.select({ category: products.category, description: products.description, overview: products.overview }).from(products).where(eq(products.id, variant.productId)) : [{} as any]
-      // Strip internal productId; instructions are post-delivery only (credentials endpoint).
-      // Content fallback: variant wins, induk fills gaps.
-      const { publicId: pid, productId: _internalBase, ...rest } = variant as any
-      return { ...rest, id: pid, category: (base as any)?.category ?? '', overview: (variant as any).overview ?? (base as any)?.overview ?? null, description: (variant as any).description ?? (base as any)?.description ?? null, stockCount }
+      return mapVariantToProduct(variant, stockCount)
     }
 
-    // fallback legacy product id
-    const [product] = await db.select().from(products).where(eq(products.publicId, publicId))
-    if (!product) throw new NotFoundError('Product not found')
-    const stockCount = await getStockCount(product.id)
-    const { publicId: pid, instructions: _gated, ...rest } = product as any
-    return { ...rest, id: pid, stockCount }
+    const { data: product, error: productError } = await supabaseAdmin
+      .from('products')
+      .select(`
+        id,
+        public_id,
+        name,
+        description,
+        category,
+        instructions,
+        overview,
+        created_at,
+        updated_at
+      `)
+      .eq('public_id', publicId)
+      .limit(1)
+
+    if (productError) throw new Error(productError.message)
+
+    if (!product || product.length === 0) {
+      throw new NotFoundError('Product not found')
+    }
+
+    const stockCount = await getStockCount(product[0].id)
+    return mapProductRow(product[0], stockCount)
   },
 
   async listAll() {
-    const rows = await db.select().from(products).orderBy(products.createdAt)
-    return rows.map((r: any) => {
-      const { publicId, id: internalId, ...rest } = r
-      return { ...rest, id: publicId, internalId }
-    })
+    const { data: rows, error } = await supabaseAdmin
+      .from('products')
+      .select('public_id, id, name, description, category, price, badge, instructions, overview, is_active, created_at, updated_at')
+      .order('created_at', { ascending: true })
+
+    if (error) throw new Error(error.message)
+
+    return rows.map((r: any) => ({
+      id: r.public_id,
+      internalId: r.id,
+      name: r.name,
+      description: r.description ?? null,
+      category: r.category ?? '',
+      price: String(r.price),
+      badge: r.badge ?? null,
+      instructions: r.instructions ?? null,
+      isActive: r.is_active,
+      overview: r.overview ?? null,
+      createdAt: r.created_at,
+      updatedAt: r.updated_at,
+    }))
   },
 
   async listAllVariants() {
-    const rows = await db
-      .select({
-        id: productVariants.publicId,
-        internalId: productVariants.id,
-        sku: productVariants.sku,
-        name: productVariants.name,
-        price: productVariants.price,
-        compareAtPrice: productVariants.compareAtPrice,
-        badge: productVariants.badge,
-        durationMonths: productVariants.durationMonths,
-        accountType: productVariants.accountType,
-        conditions: productVariants.conditions,
-        fulfillmentType: productVariants.fulfillmentType,
-        isActive: productVariants.isActive,
-        productId: productVariants.productId,
-        baseName: products.name,
-        category: products.category,
-        createdAt: productVariants.createdAt,
-      })
-      .from(productVariants)
-      .leftJoin(products, eq(productVariants.productId, products.id))
-      .orderBy(productVariants.createdAt)
+    const { data: rows, error } = await supabaseAdmin
+      .from('product_variants')
+      .select(`
+        public_id,
+        id,
+        sku,
+        name,
+        price,
+        compare_at_price,
+        badge,
+        duration_months,
+        account_type,
+        conditions,
+        fulfillment_type,
+        is_active,
+        product_id,
+        created_at,
+        products (
+          id,
+          name,
+          category
+        )
+      `)
+      .order('created_at', { ascending: true })
+
+    if (error) throw new Error(error.message)
 
     const withStock = await Promise.all(
-      rows.map(async (r: any) => ({ ...r, stockCount: await getStockCount(r.internalId) }))
+      (rows || []).map(async (r: any) => ({
+        ...r,
+        stockCount: await getStockCount(r.id),
+      }))
     )
+
     return withStock
   },
 }

@@ -13,8 +13,8 @@ export interface Order {
   paymentRef: string | null
   paymentProvider: string | null
   amount: string
-  createdAt: Date
-  paidAt: Date | null
+  createdAt: string
+  paidAt: string | null
 }
 
 export interface OrderWithProduct extends Order {

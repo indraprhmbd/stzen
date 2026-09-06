@@ -1,5 +1,4 @@
-import { db } from '../db'
-import { sql } from 'drizzle-orm'
+import { supabase, supabaseAdmin } from '../db'
 
 export type AuditAction =
   | 'order:create' | 'order:approve' | 'order:reject' | 'order:deliver' | 'order:refund' | 'order:replace'
@@ -23,18 +22,35 @@ export async function appendAudit(params: {
   diff?: any
   idempotencyKey?: string | null
 }) {
-  await db.execute(sql`
-    insert into audit_logs (actor_id, actor_email, actor_type, action, resource_type, resource_public_id, resource_name, snapshot_text, diff, idempotency_key)
-    values (${params.actorId ?? null}::uuid, ${params.actorEmail ?? null}, ${params.actorType}, ${params.action}, ${params.resourceType}, ${params.resourcePublicId ?? null}, ${params.resourceName ?? null}, ${params.snapshotText}, ${params.diff ? JSON.stringify(params.diff) : null}::jsonb, ${params.idempotencyKey ?? null})
-  `)
+  const { error } = await supabaseAdmin
+    .from('audit_logs')
+    .insert({
+      actor_id: params.actorId ?? null,
+      actor_email: params.actorEmail ?? null,
+      actor_type: params.actorType,
+      action: params.action,
+      resource_type: params.resourceType,
+      resource_public_id: params.resourcePublicId ?? null,
+      resource_name: params.resourceName ?? null,
+      snapshot_text: params.snapshotText,
+      diff: params.diff ? JSON.stringify(params.diff) : null,
+      idempotency_key: params.idempotencyKey ?? null,
+    })
+
+  if (error) throw new Error(error.message)
 }
 
-// Returns the stored result of a previous request with the same key, or null.
 export async function findAuditByIdempotencyKey(key: string): Promise<any | null> {
-  const rows = (await db.execute(sql`
-    select diff from audit_logs where idempotency_key = ${key} limit 1
-  `)) as unknown as any
-  const row = Array.isArray(rows) ? rows[0] : rows?.rows?.[0]
-  if (!row?.diff) return null
+  const { data: rows, error } = await supabaseAdmin
+    .from('audit_logs')
+    .select('diff')
+    .eq('idempotency_key', key)
+    .limit(1)
+
+  if (error) throw new Error(error.message)
+  if (!rows || rows.length === 0) return null
+
+  const row = rows[0]
+  if (!row.diff) return null
   return typeof row.diff === 'string' ? JSON.parse(row.diff) : row.diff
 }

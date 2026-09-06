@@ -1,6 +1,4 @@
-import { eq, and, sql, desc } from 'drizzle-orm'
-import { db } from '../../shared/db'
-import { vaultItems, products, productVariants, orders } from '../../shared/db/schema'
+import { supabaseAdmin } from '../../shared/db'
 import { NotFoundError, ConflictError } from '../../shared/errors/http'
 import { appendAudit } from '../../shared/lib/audit'
 import {
@@ -10,12 +8,11 @@ import {
   type EncryptedPayload,
 } from '../../shared/lib/crypto'
 
-// ─── Vault Service ──────────────────────────────────────────────────────────
-// Credential import, listing, edit, delete, revoke, replace. Used by admin
-// routes. Cached CryptoKey: import once per process, decrypt stays microseconds.
+const VAULT_ITEMS = 'vault_items'
+const PRODUCTS = 'products'
+const PRODUCT_VARIANTS = 'product_variants'
+const ORDERS = 'orders'
 
-// Cached key — importKeyFromBase64 on every call wastes a subtle.importKey
-// per credential. Module scope is per process, key never leaves memory.
 let cachedKey: CryptoKey | null = null
 async function getKey(): Promise<CryptoKey> {
   if (!cachedKey) {
@@ -28,47 +25,53 @@ async function getKey(): Promise<CryptoKey> {
 
 export const vaultService = {
   async importCredentials(variantOrProductId: string, credentialLines: string[]) {
-    // Try variant first
-    const [variant] = await db.select().from(productVariants).where(eq(productVariants.id, variantOrProductId))
-    let product: any = variant
-    let isVariant = !!variant
-    if (!variant) {
-      const [p] = await db.select().from(products).where(eq(products.id, variantOrProductId))
-      if (!p) throw new NotFoundError('Product not found')
-      product = p
+    const { data: variant } = await supabaseAdmin
+      .from(PRODUCT_VARIANTS)
+      .select('*')
+      .eq('id', variantOrProductId)
+      .limit(1)
+
+    let product: any = variant?.[0]
+    let isVariant = !!variant && variant.length > 0
+    if (!isVariant) {
+      const { data: p } = await supabaseAdmin
+        .from(PRODUCTS)
+        .select('*')
+        .eq('id', variantOrProductId)
+        .limit(1)
+
+      if (!p || p.length === 0) throw new NotFoundError('Product not found')
+      product = p[0]
     }
 
-    // Load encryption key (cached)
     const key = await getKey()
-
-    // Encrypt each credential
     const encryptedItems: Array<any> = []
 
     for (const line of credentialLines) {
       const payload: EncryptedPayload = await encrypt(key, line)
       if (isVariant) {
         encryptedItems.push({
-          variantId: variantOrProductId,
-          productId: (product as any).productId ?? null,
-          credentialPayload: JSON.stringify(payload),
+          variant_id: variantOrProductId,
+          product_id: (product as any)?.product_id ?? null,
+          credential_payload: JSON.stringify(payload),
           status: 'AVAILABLE',
         })
       } else {
         encryptedItems.push({
-          productId: variantOrProductId,
-          credentialPayload: JSON.stringify(payload),
+          product_id: variantOrProductId,
+          credential_payload: JSON.stringify(payload),
           status: 'AVAILABLE',
         })
       }
     }
 
-    // Bulk insert
-    const inserted = await db
-      .insert(vaultItems)
-      .values(encryptedItems)
-      .returning()
+    const { data: inserted, error } = await supabaseAdmin
+      .from(VAULT_ITEMS)
+      .insert(encryptedItems)
+      .select()
 
-    return { imported: inserted.length, productId: variantOrProductId }
+    if (error) throw new Error(error.message)
+    return { imported: inserted?.length || 0, productId: variantOrProductId }
   },
 
   async decryptCredential(encryptedPayload: string): Promise<string> {
@@ -77,80 +80,110 @@ export const vaultService = {
     return decrypt(key, payload)
   },
 
-  // Paginated vault rows for one variant, plaintext included. Caller must
-  // enforce the unlock gate. SOLD rows carry their order pointer for rotate.
   async listByVariant(variantPublicId: string, page: number, orderQuery?: string, sort?: string, sortDir?: string) {
     const limit = 50
     const offset = Math.max(0, page) * limit
-    const [variant] = await db
-      .select({ id: productVariants.id })
-      .from(productVariants)
-      .where(eq(productVariants.publicId, variantPublicId))
-    if (!variant) throw new NotFoundError('Variant not found')
 
-    const conditions = [eq(vaultItems.variantId, variant.id)]
+    const { data: variants, error } = await supabaseAdmin
+      .from(PRODUCT_VARIANTS)
+      .select('id')
+      .eq('public_id', variantPublicId)
+      .limit(1)
+
+    if (error) throw new Error(error.message)
+    if (!variants || variants.length === 0) throw new NotFoundError('Variant not found')
+
+    const variantId = variants[0].id
+
+    let query = supabaseAdmin
+      .from(VAULT_ITEMS)
+      .select(`
+        id,
+        status,
+        created_at,
+        allocated_at,
+        credential_payload,
+        orders (
+          public_id,
+          status
+        )
+      `)
+      .eq('variant_id', variantId)
+      .order('created_at', { ascending: sortDir === 'asc' })
+
+    let rows: any[] = []
+    const { data: rangeData, error: rangeError } = await query.range(offset, offset + limit)
+    if (rangeError) throw new Error(rangeError.message)
+    rows = rangeData || []
+
     if (orderQuery) {
-      conditions.push(sql`${orders.publicId} ilike ${orderQuery + '%'}`)
-    }
-    const rows = await db
-      .select({
-        id: vaultItems.id,
-        status: vaultItems.status,
-        createdAt: vaultItems.createdAt,
-        allocatedAt: vaultItems.allocatedAt,
-        payload: vaultItems.credentialPayload,
-        orderPublicId: orders.publicId,
-        orderStatus: orders.status,
+      const q = orderQuery.toLowerCase()
+      rows = rows.filter((r: any) => {
+        const order = Array.isArray(r.orders) ? r.orders[0] : (r.orders || {})
+        return order?.public_id?.toLowerCase().includes(q)
       })
-      .from(vaultItems)
-      .leftJoin(orders, eq(orders.vaultItemId, vaultItems.id))
-      .where(and(...conditions))
-      .orderBy(sort === 'status' ? (sortDir === 'asc' ? sql`${vaultItems.status} asc` : desc(vaultItems.status))
-        : sortDir === 'asc' ? sql`${vaultItems.createdAt} asc` : desc(vaultItems.createdAt))
-      .limit(limit + 1)
-      .offset(offset)
+    }
 
     const key = await getKey()
-    const hasMore = rows.length > limit
+    const hasMore = (rows?.length || 0) > limit
     const items = await Promise.all(
-      rows.slice(0, limit).map(async (r) => ({
-        id: r.id,
-        status: r.status,
-        createdAt: r.createdAt,
-        allocatedAt: r.allocatedAt,
-        credential: await decrypt(key, JSON.parse(r.payload) as EncryptedPayload),
-        orderPublicId: r.orderPublicId,
-        orderStatus: r.orderStatus,
-      }))
+      (rows || []).slice(0, limit).map(async (r: any) => {
+        const order = Array.isArray(r.orders) ? r.orders[0] : (r.orders || {})
+        return {
+          id: r.id,
+          status: r.status,
+          createdAt: r.created_at,
+          allocatedAt: r.allocated_at,
+          credential: await decrypt(key, JSON.parse(r.credential_payload) as EncryptedPayload),
+          orderPublicId: order?.public_id,
+          orderStatus: order?.status,
+        }
+      })
     )
 
-    // Single query replaces the redundant count + byStatus pair
-    const byStatus = await db
-      .select({ status: vaultItems.status, count: sql<number>`cast(count(*) as int)` })
-      .from(vaultItems)
-      .where(eq(vaultItems.variantId, variant.id))
-      .groupBy(vaultItems.status)
+    // Count by status
+    const { data: allItems } = await supabaseAdmin
+      .from(VAULT_ITEMS)
+      .select('status')
+      .eq('variant_id', variantId)
 
-    const total = byStatus.reduce((sum, r) => sum + r.count, 0)
+    const byStatus: Record<string, number> = {}
+    for (const item of allItems || []) {
+      byStatus[item.status] = (byStatus[item.status] || 0) + 1
+    }
+
+    const total = Object.values(byStatus).reduce((sum, count) => sum + count, 0)
 
     return {
       items,
       page,
       hasMore,
       total,
-      counts: Object.fromEntries(byStatus.map((s) => [s.status, s.count])),
+      counts: byStatus,
     }
   },
 
-  // In place edit: re-encrypt overwrite. AVAILABLE only, history rows are
-  // immutable (fix delivered creds via replace, not edit).
   async updateCredential(id: string, text: string, actor: { sub: string; email?: string | null }) {
-    const [item] = await db.select().from(vaultItems).where(eq(vaultItems.id, id))
-    if (!item) throw new NotFoundError('Credential not found')
-    if (item.status !== 'AVAILABLE') throw new ConflictError('Only AVAILABLE credentials can be edited')
+    const { data: item, error } = await supabaseAdmin
+      .from(VAULT_ITEMS)
+      .select('*')
+      .eq('id', id)
+      .limit(1)
+
+    if (error) throw new Error(error.message)
+    if (!item || item.length === 0) throw new NotFoundError('Credential not found')
+    if (item[0].status !== 'AVAILABLE') throw new ConflictError('Only AVAILABLE credentials can be edited')
+
     const key = await getKey()
     const payload = await encrypt(key, text)
-    await db.update(vaultItems).set({ credentialPayload: JSON.stringify(payload) }).where(eq(vaultItems.id, id))
+
+    const { error: updateError } = await supabaseAdmin
+      .from(VAULT_ITEMS)
+      .update({ credential_payload: JSON.stringify(payload) })
+      .eq('id', id)
+
+    if (updateError) throw new Error(updateError.message)
+
     await appendAudit({
       action: 'vault:update',
       resourceType: 'stock',
@@ -160,16 +193,28 @@ export const vaultService = {
       actorEmail: actor.email ?? null,
       actorType: 'admin',
     }).catch(() => {})
+
     return { id }
   },
 
-  // Hard delete AVAILABLE rows only. SOLD belongs to buyer history, REVOKED
-  // belongs to the incident trail.
   async deleteAvailable(id: string, actor: { sub: string; email?: string | null }) {
-    const [item] = await db.select().from(vaultItems).where(eq(vaultItems.id, id))
-    if (!item) throw new NotFoundError('Credential not found')
-    if (item.status !== 'AVAILABLE') throw new ConflictError('Only AVAILABLE credentials can be deleted')
-    await db.delete(vaultItems).where(eq(vaultItems.id, id))
+    const { data: item, error } = await supabaseAdmin
+      .from(VAULT_ITEMS)
+      .select('*')
+      .eq('id', id)
+      .limit(1)
+
+    if (error) throw new Error(error.message)
+    if (!item || item.length === 0) throw new NotFoundError('Credential not found')
+    if (item[0].status !== 'AVAILABLE') throw new ConflictError('Only AVAILABLE credentials can be deleted')
+
+    const { error: deleteError } = await supabaseAdmin
+      .from(VAULT_ITEMS)
+      .delete()
+      .eq('id', id)
+
+    if (deleteError) throw new Error(deleteError.message)
+
     await appendAudit({
       action: 'vault:delete',
       resourceType: 'stock',
@@ -179,16 +224,28 @@ export const vaultService = {
       actorEmail: actor.email ?? null,
       actorType: 'admin',
     }).catch(() => {})
+
     return { id }
   },
 
-  // Revoke without replacement (empty stock path). Buyer route 409s on
-  // REVOKED with a contact admin message.
   async revoke(id: string, actor: { sub: string; email?: string | null }) {
-    const [item] = await db.select().from(vaultItems).where(eq(vaultItems.id, id))
-    if (!item) throw new NotFoundError('Credential not found')
-    if (item.status !== 'SOLD') throw new ConflictError('Only delivered (SOLD) credentials can be revoked')
-    await db.update(vaultItems).set({ status: 'REVOKED' }).where(eq(vaultItems.id, id))
+    const { data: item, error } = await supabaseAdmin
+      .from(VAULT_ITEMS)
+      .select('*')
+      .eq('id', id)
+      .limit(1)
+
+    if (error) throw new Error(error.message)
+    if (!item || item.length === 0) throw new NotFoundError('Credential not found')
+    if (item[0].status !== 'SOLD') throw new ConflictError('Only delivered (SOLD) credentials can be revoked')
+
+    const { error: updateError } = await supabaseAdmin
+      .from(VAULT_ITEMS)
+      .update({ status: 'REVOKED' })
+      .eq('id', id)
+
+    if (updateError) throw new Error(updateError.message)
+
     await appendAudit({
       action: 'vault:revoke',
       resourceType: 'stock',
@@ -198,33 +255,34 @@ export const vaultService = {
       actorEmail: actor.email ?? null,
       actorType: 'admin',
     }).catch(() => {})
+
     return { id }
   },
 
-  // Rotate: revoke the delivered cred and point the order at the next
-  // AVAILABLE item. One transaction: empty stock rolls back the revoke, so
-  // the buyer never lands on a dead pointer. Order stays DELIVERED, buyer
-  // sees the new cred on the same card.
   async replace(orderPublicId: string, actor: { sub: string; email?: string | null }) {
-    const [order] = await db.select().from(orders).where(eq(orders.publicId, orderPublicId))
-    if (!order) throw new NotFoundError('Order not found')
-    if (order.status !== 'DELIVERED') throw new ConflictError('Only DELIVERED orders can rotate credentials')
-    if (!order.vaultItemId) throw new ConflictError('Order has no credential allocated')
-    if (!order.variantId) throw new ConflictError('Order has no variant linked')
+    const { data: orderRows, error } = await supabaseAdmin
+      .from(ORDERS)
+      .select('*')
+      .eq('public_id', orderPublicId)
+      .limit(1)
 
-    const result = await db.transaction(async (tx) => {
-      await tx.update(vaultItems).set({ status: 'REVOKED' }).where(eq(vaultItems.id, order.vaultItemId!))
-      const picked = (await tx.execute(sql`
-        select id from vault_items
-        where variant_id = ${order.variantId}::uuid and status = 'AVAILABLE'
-        order by created_at asc limit 1 for update skip locked
-      `)) as unknown as any
-      const row = Array.isArray(picked) ? picked[0] : picked?.rows?.[0]
-      if (!row) throw new ConflictError('STOK_HABIS: no replacement stock for this variant')
-      await tx.update(vaultItems).set({ status: 'SOLD', allocatedAt: new Date() }).where(eq(vaultItems.id, row.id))
-      await tx.update(orders).set({ vaultItemId: row.id }).where(eq(orders.id, order.id))
-      return { oldId: order.vaultItemId, newId: row.id as string }
+    if (error) throw new Error(error.message)
+    if (!orderRows || orderRows.length === 0) throw new NotFoundError('Order not found')
+
+    const order = orderRows[0] as any
+    if (order.status !== 'DELIVERED') throw new ConflictError('Only DELIVERED orders can rotate credentials')
+    if (!order.vault_item_id) throw new ConflictError('Order has no credential allocated')
+    if (!order.variant_id) throw new ConflictError('Order has no variant linked')
+
+    const { data: result, error: rpcError } = await supabaseAdmin.rpc('replace_order_credential', {
+      variant_id: order.variant_id,
+      order_id: order.id,
     })
+
+    if (rpcError) throw new Error(rpcError.message)
+    if (!result || result.length === 0) throw new ConflictError('STOK_HABIS: no replacement stock for this variant')
+
+    const { oldId, newId } = result[0]
 
     await appendAudit({
       action: 'order:replace',
@@ -235,6 +293,7 @@ export const vaultService = {
       actorEmail: actor.email ?? null,
       actorType: 'admin',
     }).catch(() => {})
-    return result
+
+    return { oldId, newId }
   },
 }

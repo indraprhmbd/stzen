@@ -1,118 +1,120 @@
-import { eq, desc, sql, ilike, or, and, inArray } from 'drizzle-orm'
-import { db } from '../../shared/db'
-import { orders, products, productVariants, profiles, vaultItems } from '../../shared/db/schema'
-import type { PayableOrder } from './orders.types'
+import { supabaseAdmin } from '../../shared/db'
+import type { PayableOrder, OrderWithProduct, OrderAction } from './orders.types'
 import { NotFoundError, ConflictError, BadRequestError } from '../../shared/errors/http'
 import { generatePublicId } from '../../shared/lib/publicId'
 import { allocateCredential, getStockCounts } from '../../shared/lib/db-helpers'
 import { importKeyFromBase64, encrypt } from '../../shared/lib/crypto'
 import {
-  type OrderWithProduct,
-  type OrderAction,
   VALID_TRANSITIONS,
   ACTION_TO_STATUS,
 } from './orders.types'
 
-// ─── Orders Service ─────────────────────────────────────────────────────────
-// Business logic for order management. Centralized state machine.
+const PRODUCTS = 'products'
+const PRODUCT_VARIANTS = 'product_variants'
+const VAULT_ITEMS = 'vault_items'
+const ORDERS = 'orders'
+const PROFILES = 'profiles'
+
+function mapOrderRow(r: any): OrderWithProduct {
+  const createdAt = r.created_at ? new Date(r.created_at) : new Date()
+  const paidAt = r.paid_at ? new Date(r.paid_at) : null
+  const product = Array.isArray(r.products) ? r.products[0] : (r.products || {})
+  return {
+    id: r.public_id,
+    userId: r.user_id,
+    productId: r.product_id,
+    vaultItemId: r.vault_item_id,
+    status: r.status,
+    paymentRef: r.payment_ref,
+    paymentProvider: r.payment_provider,
+    amount: String(r.amount),
+    createdAt: createdAt.toISOString(),
+    paidAt: paidAt ? paidAt.toISOString() : null,
+    productName: r.variant_name_snapshot ?? r.base_name_snapshot ?? product?.name ?? 'Produk',
+    productCategory: product?.category ?? '',
+  }
+}
 
 // 30s cache for statusCounts — runs full GROUP BY on orders table.
-// Stale window acceptable for badge counts; saves 1 full scan per
-// paginated request when multiple tabs load simultaneously.
 let statusCountsCache: { data: any[]; ts: number } | null = null
 async function getStatusCounts(): Promise<any[]> {
   if (statusCountsCache && Date.now() - statusCountsCache.ts < 30_000) return statusCountsCache.data
-  const rows = await db
-    .select({ status: orders.status, count: sql<number>`cast(count(*) as int)` })
-    .from(orders)
-    .groupBy(orders.status)
-  statusCountsCache = { data: rows, ts: Date.now() }
-  return rows
+
+  const { data: rows, error } = await supabaseAdmin
+    .from(ORDERS)
+    .select('status', { count: 'exact', head: false })
+
+  if (error) throw new Error(error.message)
+
+  const counts: Record<string, number> = {}
+  for (const row of rows || []) {
+    counts[row.status] = (counts[row.status] || 0) + 1
+  }
+
+  const result = Object.entries(counts).map(([status, count]) => ({ status, count }))
+  statusCountsCache = { data: result, ts: Date.now() }
+  return result
 }
 
 export const ordersService = {
   async listByUser(userId: string): Promise<OrderWithProduct[]> {
-    const rows = await db
-      .select({
-        id: orders.publicId,
-        userId: orders.userId,
-        productId: orders.productId,
-        variantId: orders.variantId,
-        vaultItemId: orders.vaultItemId,
-        status: orders.status,
-        paymentRef: orders.paymentRef,
-        paymentProvider: orders.paymentProvider,
-        amount: orders.amount,
-        createdAt: orders.createdAt,
-        paidAt: orders.paidAt,
-        productName: products.name,
-        productCategory: products.category,
-        variantNameSnapshot: orders.variantNameSnapshot,
-        baseNameSnapshot: orders.baseNameSnapshot,
-      })
-      .from(orders)
-      .leftJoin(products, eq(orders.productId, products.id))
-      .where(eq(orders.userId, userId))
-      .orderBy(desc(orders.createdAt))
-    return rows.map((r: any) => ({
-      ...r,
-      productName: r.variantNameSnapshot ?? r.baseNameSnapshot ?? r.productName ?? 'Produk',
-      productCategory: r.productCategory ?? '',
-    }))
+    const { data: rows, error } = await supabaseAdmin
+      .from(ORDERS)
+      .select(`
+        *,
+        ${PRODUCTS} (
+          name,
+          category
+        )
+      `)
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+
+    if (error) throw new Error(error.message)
+
+    return (rows || []).map(mapOrderRow)
   },
 
   async getById(publicId: string, userId?: string): Promise<OrderWithProduct> {
-    const [order] = await db
-      .select({
-        id: orders.publicId,
-        userId: orders.userId,
-        productId: orders.productId,
-        variantId: orders.variantId,
-        vaultItemId: orders.vaultItemId,
-        status: orders.status,
-        paymentRef: orders.paymentRef,
-        paymentProvider: orders.paymentProvider,
-        amount: orders.amount,
-        createdAt: orders.createdAt,
-        paidAt: orders.paidAt,
-        productName: products.name,
-        productCategory: products.category,
-        variantNameSnapshot: orders.variantNameSnapshot,
-        baseNameSnapshot: orders.baseNameSnapshot,
-      })
-      .from(orders)
-      .leftJoin(products, eq(orders.productId, products.id))
-      .where(eq(orders.publicId, publicId))
+    const { data: rows, error } = await supabaseAdmin
+      .from(ORDERS)
+      .select(`
+        *,
+        ${PRODUCTS} (
+          name,
+          category
+        )
+      `)
+      .eq('public_id', publicId)
+      .limit(1)
 
-    if (!order) {
+    if (error) throw new Error(error.message)
+    if (!rows || rows.length === 0) throw new NotFoundError('Order not found')
+
+    const order = rows[0] as any
+
+    if (userId && order.user_id !== userId) {
       throw new NotFoundError('Order not found')
     }
 
-    if (userId && order.userId !== userId) {
-      throw new NotFoundError('Order not found')
-    }
-
-    return {
-      ...order,
-      productName: (order as any).variantNameSnapshot ?? (order as any).baseNameSnapshot ?? (order as any).productName ?? 'Produk',
-      productCategory: (order as any).productCategory ?? '',
-    } as any
+    return mapOrderRow(order)
   },
 
-  // ─── Buyer self-cancel ────────────────────────────────────────────────────
-  // Owner-only hard delete of a dead PENDING row (e.g. gateway initiate
-  // failed, invoice never minted). Blocked once payment_ref exists — a live
-  // gateway invoice is outstanding, admin must void it. Audit trail stays in
-  // audit_logs (order:create + initiate attempts); nothing payable is lost.
   async deleteOwnOrder(publicId: string, userId: string) {
     const order = await this.getById(publicId, userId)
     if (order.status !== 'PENDING') {
       throw new ConflictError('Only PENDING orders can be cancelled')
     }
-    if (order.paymentRef) {
+    if ((order as any).payment_ref) {
       throw new ConflictError('Order already invoiced, contact admin to cancel')
     }
-    await db.delete(orders).where(eq(orders.publicId, publicId))
+
+    const { error } = await supabaseAdmin
+      .from(ORDERS)
+      .delete()
+      .eq('public_id', publicId)
+
+    if (error) throw new Error(error.message)
     return { ok: true }
   },
 
@@ -120,27 +122,30 @@ export const ordersService = {
     const publicId = generatePublicId()
     const amountInt = typeof data.amount === 'string' ? parseInt(data.amount, 10) : data.amount
     const vs: any = data.variantSnapshot
-    const [order] = await db
-      .insert(orders)
-      .values({
-        publicId,
-        userId: data.userId,
-        productId: data.productId ?? null,
-        variantId: (data as any).variantId ?? null,
+
+    const { data: order, error } = await supabaseAdmin
+      .from(ORDERS)
+      .insert({
+        public_id: publicId,
+        user_id: data.userId,
+        product_id: data.productId ?? null,
+        variant_id: (data as any).variantId ?? null,
         status: 'PENDING',
         amount: amountInt,
-        variantNameSnapshot: vs?.name ?? null,
-        variantSkuSnapshot: vs?.sku ?? null,
-        priceAtPurchase: amountInt,
-        durationSnapshot: vs?.durationMonths ?? null,
-        durationSnapshotUnit: vs?.durationUnit ?? null,
-        accountTypeSnapshot: vs?.accountType ?? null,
-        conditionsSnapshot: vs?.conditions ?? null,
-        baseNameSnapshot: vs?.baseName ?? (vs?.name ?? null),
-      } as any)
-      .returning()
+        variant_name_snapshot: vs?.name ?? null,
+        variant_sku_snapshot: vs?.sku ?? null,
+        price_at_purchase: amountInt,
+        duration_snapshot: vs?.duration_months ?? null,
+        duration_snapshot_unit: vs?.duration_unit ?? null,
+        account_type_snapshot: vs?.account_type ?? null,
+        conditions_snapshot: vs?.conditions ?? null,
+        base_name_snapshot: vs?.base_name ?? (vs?.name ?? null),
+      })
+      .select()
+      .single()
 
-    return { ...order, id: publicId }
+    if (error) throw new Error(error.message)
+    return mapOrderRow(order)
   },
 
   async transitionStatus(publicId: string, action: OrderAction) {
@@ -148,205 +153,260 @@ export const ordersService = {
     const targetStatus = ACTION_TO_STATUS[action]
 
     if (!VALID_TRANSITIONS[order.status].includes(targetStatus)) {
-      throw new ConflictError(
-        `Cannot ${action} order in ${order.status} status`
-      )
+      throw new ConflictError(`Cannot ${action} order in ${order.status} status`)
     }
 
     const updateData: Record<string, any> = { status: targetStatus }
     if (targetStatus === 'PAID') {
-      updateData.paidAt = new Date()
+      updateData.paid_at = new Date().toISOString()
     }
-    if (targetStatus === 'REFUNDED' && (order as any).vaultItemId) {
-      await db
-        .update(vaultItems)
-        .set({ status: 'AVAILABLE', allocatedAt: null })
-        .where(eq(vaultItems.id, (order as any).vaultItemId))
-      updateData.vaultItemId = null
+    if (targetStatus === 'REFUNDED' && (order as any).vault_item_id) {
+      await supabaseAdmin
+        .from(VAULT_ITEMS)
+        .update({ status: 'AVAILABLE', allocated_at: null })
+        .eq('id', (order as any).vault_item_id)
+      updateData.vault_item_id = null
     }
 
-    const [updated] = await db
-      .update(orders)
-      .set(updateData)
-      .where(eq(orders.publicId, publicId))
-      .returning()
+    const { data: updated, error } = await supabaseAdmin
+      .from(ORDERS)
+      .update(updateData)
+      .eq('public_id', publicId)
+      .select()
+      .single()
 
-    return { ...updated, id: (updated as any).publicId }
+    if (error) throw new Error(error.message)
+    return mapOrderRow(updated)
   },
 
-  // ─── Payment gateway helpers ────────────────────────────────────────────
-  // Internal-id-bearing lookups used by the payments module. Kept separate
-  // from getById/listByUser (which expose the public API shape) because
-  // payments.service needs the internal uuid + fulfillment type for the
-  // allocate_credential RPC and webhook lookups.
-
-  // ─── Atomic PENDING -> PAID claim (webhook race guard) ────────────────────
-  // Single-statement conditional update: concurrent deliveries race here, and
-  // exactly one wins. Losers get null and must treat the order as
-  // already-claimed (re-read for the response, never allocate). This is what
-  // turns gateway at-least-once retries into behaviorally-exactly-once
-  // fulfillment without threading a transaction through every caller.
   async claimPaid(publicId: string) {
-    const rows = (await db.execute(sql`
-      update orders set status = 'PAID', paid_at = now()
-      where public_id = ${publicId} and status = 'PENDING'
-      returning public_id
-    `)) as unknown as any
-    const claimed = Array.isArray(rows) ? rows[0] : rows?.rows?.[0]
-    return claimed ? { ...claimed, id: claimed.public_id ?? publicId } : null
+    const { data: updated, error } = await supabaseAdmin
+      .from(ORDERS)
+      .update({ status: 'PAID', paid_at: new Date().toISOString() })
+      .eq('public_id', publicId)
+      .eq('status', 'PENDING')
+      .select('public_id')
+      .single()
+
+    if (error || !updated) return null
+    return { id: updated.public_id ?? publicId }
   },
 
   async getPayableDetails(publicId: string): Promise<PayableOrder> {
-    const [row] = await db
-      .select({
-        id: orders.id,
-        publicId: orders.publicId,
-        userId: orders.userId,
-        status: orders.status,
-        amount: orders.amount,
-        variantId: orders.variantId,
-        paymentRef: orders.paymentRef,
-        paymentProvider: orders.paymentProvider,
-        fulfillmentType: productVariants.fulfillmentType,
-      })
-      .from(orders)
-      .leftJoin(productVariants, eq(orders.variantId, productVariants.id))
-      .where(eq(orders.publicId, publicId))
+    const { data: rows, error } = await supabaseAdmin
+      .from(ORDERS)
+      .select(`
+        id,
+        public_id,
+        user_id,
+        status,
+        amount,
+        variant_id,
+        payment_ref,
+        payment_provider
+      `)
+      .eq('public_id', publicId)
+      .limit(1)
 
-    if (!row) throw new NotFoundError('Order not found')
-    return row as PayableOrder
+    if (error) throw new Error(error.message)
+    if (!rows || rows.length === 0) throw new NotFoundError('Order not found')
+
+    const row = rows[0] as any
+
+    let fulfillmentType = 'vault'
+    if (row.variant_id) {
+      const { data: variant } = await supabaseAdmin
+        .from(PRODUCT_VARIANTS)
+        .select('fulfillment_type')
+        .eq('id', row.variant_id)
+        .limit(1)
+      if (variant && variant.length > 0) {
+        fulfillmentType = variant[0].fulfillment_type
+      }
+    }
+
+    return {
+      id: row.id,
+      publicId: row.public_id,
+      userId: row.user_id,
+      status: row.status,
+      amount: row.amount,
+      variantId: row.variant_id,
+      paymentRef: row.payment_ref,
+      paymentProvider: row.payment_provider,
+      fulfillmentType,
+    }
   },
 
   async findPayableByProviderRef(providerRef: string): Promise<PayableOrder | null> {
-    const [row] = await db
-      .select({
-        id: orders.id,
-        publicId: orders.publicId,
-        userId: orders.userId,
-        status: orders.status,
-        amount: orders.amount,
-        variantId: orders.variantId,
-        paymentRef: orders.paymentRef,
-        paymentProvider: orders.paymentProvider,
-        fulfillmentType: productVariants.fulfillmentType,
-      })
-      .from(orders)
-      .leftJoin(productVariants, eq(orders.variantId, productVariants.id))
-      // Gateways echo back OUR order id (e.g. SumoPod data.order_id), not the
-      // gateway-side payment_id stored in payment_ref — match either.
-      .where(or(eq(orders.paymentRef, providerRef), eq(orders.publicId, providerRef)))
+    const { data: rows, error } = await supabaseAdmin
+      .from(ORDERS)
+      .select(`
+        id,
+        public_id,
+        user_id,
+        status,
+        amount,
+        variant_id,
+        payment_ref,
+        payment_provider
+      `)
+      .or(`payment_ref.eq.${providerRef},public_id.eq.${providerRef}`)
+      .limit(1)
 
-    return (row as PayableOrder) ?? null
+    if (error) throw new Error(error.message)
+    if (!rows || rows.length === 0) return null
+
+    const row = rows[0] as any
+
+    let fulfillmentType = 'vault'
+    if (row.variant_id) {
+      const { data: variant } = await supabaseAdmin
+        .from(PRODUCT_VARIANTS)
+        .select('fulfillment_type')
+        .eq('id', row.variant_id)
+        .limit(1)
+      if (variant && variant.length > 0) {
+        fulfillmentType = variant[0].fulfillment_type
+      }
+    }
+
+    return {
+      id: row.id,
+      publicId: row.public_id,
+      userId: row.user_id,
+      status: row.status,
+      amount: row.amount,
+      variantId: row.variant_id,
+      paymentRef: row.payment_ref,
+      paymentProvider: row.payment_provider,
+      fulfillmentType,
+    }
   },
 
   async setProviderRef(publicId: string, provider: string, providerRef: string) {
-    await db
-      .update(orders)
-      .set({ paymentProvider: provider, paymentRef: providerRef })
-      .where(eq(orders.publicId, publicId))
+    const { error } = await supabaseAdmin
+      .from(ORDERS)
+      .update({ payment_provider: provider, payment_ref: providerRef })
+      .eq('public_id', publicId)
+
+    if (error) throw new Error(error.message)
   },
 
-  async setVaultItem(internalOrderId: string, vaultItemId: string) {
-    await db
-      .update(orders)
-      .set({ vaultItemId })
-      .where(eq(orders.id, internalOrderId))
+  async setVaultItem(orderId: string, vaultItemId: string) {
+    const { error } = await supabaseAdmin
+      .from(ORDERS)
+      .update({ vault_item_id: vaultItemId })
+      .eq('id', orderId)
+
+    if (error) throw new Error(error.message)
   },
 
   async listAll(params: { status?: string; q?: string; limit?: number; offset?: number; oldest?: boolean; sort?: string; sortDir?: string } = {}) {
     const { status, q, limit = 50, offset = 0, oldest = false, sort, sortDir } = params
-    const conditions = []
-    // Comma-separated statuses power the combined action queue (PENDING,PAID).
+
+    let query = supabaseAdmin
+      .from(ORDERS)
+      .select(`
+        *,
+        ${PRODUCTS} (
+          name
+        ),
+        ${PRODUCT_VARIANTS} (
+          public_id,
+          fulfillment_type
+        ),
+        ${PROFILES} (
+          email
+        )
+      `)
+
     if (status) {
       const list = status.split(',').map((s) => s.trim()).filter(Boolean)
-      conditions.push(list.length > 1 ? inArray(orders.status, list as any) : eq(orders.status, list[0] as any))
+      if (list.length === 1) {
+        query = query.eq('status', list[0])
+      } else {
+        query = query.in('status', list)
+      }
     }
+
     if (q) {
       const like = `%${q}%`
-      conditions.push(
-        or(
-          ilike(orders.publicId, like),
-          ilike(sql`${orders.userId}::text`, like),
-          ilike(orders.variantNameSnapshot, like),
-          ilike(orders.baseNameSnapshot, like),
-          ilike(orders.paymentRef, like),
-          ilike(products.name, like),
-          ilike(profiles.email, like)
-        )
-      )
+      query = query.or(`public_id.ilike.${like},user_id.ilike.${like},products.name.ilike.${like},profiles.email.ilike.${like},variant_name_snapshot.ilike.${like},base_name_snapshot.ilike.${like},payment_ref.ilike.${like}`)
     }
-    const whereClause = conditions.length > 0 ? and(...conditions) : undefined
 
-    // Parallelize data + count + statusCounts (3 independent queries)
-    const [rows, [{ count: total }], statusCounts] = await Promise.all([
-      db
-        .select({
-          id: orders.publicId,
-          userId: orders.userId,
-          customerEmail: profiles.email,
-          productId: orders.productId,
-          variantId: orders.variantId,
-          variantPublicId: productVariants.publicId,
-          status: orders.status,
-          amount: orders.amount,
-          paymentRef: orders.paymentRef,
-          paymentProvider: orders.paymentProvider,
-          fulfillmentType: productVariants.fulfillmentType,
-          createdAt: orders.createdAt,
-          paidAt: orders.paidAt,
-          productName: products.name,
-          variantNameSnapshot: orders.variantNameSnapshot,
-          baseNameSnapshot: orders.baseNameSnapshot,
-        })
-        .from(orders)
-        .leftJoin(products, eq(orders.productId, products.id))
-        .leftJoin(productVariants, eq(orders.variantId, productVariants.id))
-        .leftJoin(profiles, eq(orders.userId, profiles.id))
-        .where(whereClause)
-        .orderBy(sort === 'amount' ? (sortDir === 'asc' ? sql`${orders.amount} asc` : desc(orders.amount))
-          : sort === 'status' ? (sortDir === 'asc' ? sql`${orders.status} asc` : desc(orders.status))
-          : oldest ? sql`${orders.createdAt} asc` : desc(orders.createdAt))
-        .limit(limit)
-        .offset(offset),
-      db
-        .select({ count: sql<number>`cast(count(*) as int)` })
-        .from(orders)
-        .leftJoin(products, eq(orders.productId, products.id))
-        .leftJoin(profiles, eq(orders.userId, profiles.id))
-        .where(whereClause),
-      getStatusCounts(),
-    ] as any[])
+    const [{ data: rows, error }, { count: total }] = await Promise.all([
+      query.range(offset, offset + limit - 1),
+      (async () => {
+        let countQuery = supabaseAdmin.from(ORDERS).select('*', { count: 'exact', head: true })
+        if (status) {
+          const list = status.split(',').map((s) => s.trim()).filter(Boolean)
+          if (list.length === 1) {
+            countQuery = countQuery.eq('status', list[0])
+          } else {
+            countQuery = countQuery.in('status', list)
+          }
+        }
+        if (q) {
+          const like = `%${q}%`
+          countQuery = countQuery.or(`public_id.ilike.${like},user_id.ilike.${like},products.name.ilike.${like},profiles.email.ilike.${like},variant_name_snapshot.ilike.${like},base_name_snapshot.ilike.${like},payment_ref.ilike.${like}`)
+        }
+        return countQuery
+      })(),
+    ])
 
-    const counts: Record<string, number> = { ALL: total }
-    for (const r of statusCounts) counts[r.status] = r.count
+    if (error) throw new Error(error.message)
 
-    // Batched vault availability for the page (2 queries, not N+1).
-    // on_demand variants map to 9999; legacy variant-less rows get null.
-    const variantIds = [...new Set(rows.map((r: any) => r.variantId).filter(Boolean))] as string[]
+    let sorted = rows || []
+    if (sort === 'amount') {
+      sorted.sort((a: any, b: any) => {
+        const av = parseInt(a.amount || '0', 10)
+        const bv = parseInt(b.amount || '0', 10)
+        return sortDir === 'asc' ? av - bv : bv - av
+      })
+    } else if (sort === 'status') {
+      sorted.sort((a: any, b: any) => {
+        return sortDir === 'asc' ? a.status.localeCompare(b.status) : b.status.localeCompare(a.status)
+      })
+    } else if (oldest) {
+      sorted.sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+    } else {
+      sorted.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    }
+
+    const paginated = sorted.slice(offset, offset + limit)
+
+    const statusCounts = await getStatusCounts()
+    const counts: Record<string, number> = { ALL: total || 0 }
+    for (const r of statusCounts) {
+      counts[r.status] = r.count
+    }
+
+    // Batched vault availability for the page
+    const variantIds = [...new Set(paginated.map((r: any) => r.variant_id).filter(Boolean))] as string[]
     const stockByVariant = await getStockCounts(variantIds)
 
     return {
-      orders: rows.map((r: any) => ({
-        ...r,
-        productName: r.variantNameSnapshot ?? r.baseNameSnapshot ?? r.productName ?? 'Produk',
-        fulfillmentType: r.fulfillmentType ?? 'vault',
-        vaultAvailable: r.variantId ? stockByVariant.get(r.variantId) ?? 0 : null,
-      })),
-      total,
+      orders: paginated.map((r: any) => {
+        const productVariant = Array.isArray(r.product_variants) ? r.product_variants[0] : (r.product_variants || {})
+        const profile = Array.isArray(r.profiles) ? r.profiles[0] : (r.profiles || {})
+        return {
+          ...mapOrderRow(r),
+          fulfillmentType: productVariant?.fulfillment_type ?? 'vault',
+          variantPublicId: productVariant?.public_id ?? null,
+          customerEmail: profile?.email ?? null,
+          vaultAvailable: r.variant_id ? stockByVariant.get(r.variant_id) ?? 0 : null,
+        }
+      }),
+      total: total || 0,
       counts,
     }
   },
 
-  // ─── Flow-aware delivery (admin ticket queue) ─────────────────────────────
-  // PAID -> DELIVERED with allocation:
-  //  - vault: allocate_credential RPC; zero stock -> ConflictError STOK_HABIS,
-  //    order stays PAID for refund-or-restock handling.
-  //  - on_demand: requires a credential — encrypt-imports ONE vault row, then
-  //    allocates it in the same call (no orphan stock between import/deliver).
-  // Retry-safe: an already-allocated order skips straight to deliver.
-  // Never logs the raw credential — audit snapshots only reference the order.
   async deliverWithCredential(publicId: string, rawCredential?: string | null) {
     const order = await this.getPayableDetails(publicId)
+    console.error('[deliverWithCredential] order', { publicId, order })
+
     if (order.status !== 'PAID') {
       throw new ConflictError(`Cannot deliver order in ${order.status} status`)
     }
@@ -359,6 +419,8 @@ export const ordersService = {
       return this.transitionStatus(publicId, 'deliver')
     }
 
+    let allocated: { id: string; variantId: string | null; productId: string | null } | null = null
+
     if ((order.fulfillmentType ?? 'vault') === 'on_demand') {
       const line = (rawCredential ?? '').trim()
       if (!line) throw new BadRequestError('Credential required for on-demand delivery')
@@ -366,22 +428,38 @@ export const ordersService = {
       if (!aesSecret) throw new Error('AES_SECRET_KEY not configured')
       const key = await importKeyFromBase64(aesSecret)
       const payload = await encrypt(key, line)
-      const [variant] = await db
-        .select({ productId: productVariants.productId })
-        .from(productVariants)
-        .where(eq(productVariants.id, order.variantId))
-      await db.insert(vaultItems).values({
-        variantId: order.variantId,
-        productId: variant?.productId ?? null,
-        credentialPayload: JSON.stringify(payload),
-        status: 'AVAILABLE',
-      })
+
+      const { data: variant, error: variantError } = await supabaseAdmin
+        .from(PRODUCT_VARIANTS)
+        .select('product_id')
+        .eq('id', order.variantId)
+        .single()
+
+      if (variantError) throw new Error(variantError.message)
+
+      const { data: inserted, error: insertError } = await supabaseAdmin
+        .from(VAULT_ITEMS)
+        .insert({
+          variant_id: order.variantId,
+          product_id: variant?.product_id ?? null,
+          credential_payload: JSON.stringify(payload),
+          status: 'AVAILABLE',
+        })
+        .select('id')
+        .single()
+
+      if (insertError) throw new Error(insertError.message)
+
+      allocated = { id: inserted.id, variantId: order.variantId, productId: variant?.product_id ?? null }
+    } else {
+      console.error('[deliverWithCredential] calling allocateCredential', { variantId: order.variantId, orderId: order.id })
+      allocated = await allocateCredential(order.variantId, order.id)
+      console.error('[deliverWithCredential] allocateCredential result', { variantId: order.variantId, orderId: order.id, allocated })
+      if (!allocated) {
+        throw new ConflictError(`STOK_HABIS: no vault stock available for variant ${order.variantId}`)
+      }
     }
 
-    const allocated = await allocateCredential(order.variantId, order.id)
-    if (!allocated) {
-      throw new ConflictError('STOK_HABIS: no vault stock available for this variant')
-    }
     await this.setVaultItem(order.id, allocated.id)
     return this.transitionStatus(publicId, 'deliver')
   },

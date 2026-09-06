@@ -71,7 +71,7 @@ export default function Overview() {
 
     const s = (await statsRes.json()) as Stats
     const a = (await analyticsRes.json()) as unknown as { dailySales: unknown[]; byStatus: unknown[]; byCategory: unknown[]; topProducts: unknown[] }
-    const o = (await ordersRes.json()) as { orders: Order[] }
+    const o = (await ordersRes.json()) as any as { orders: Order[] }
     const ls = (await lowStockRes.json()) as LowStockVariant[] | { rows: LowStockVariant[]; outOfStock: number; runningLow: number }
     const lsRows = Array.isArray(ls) ? ls : (ls.rows ?? [])
 

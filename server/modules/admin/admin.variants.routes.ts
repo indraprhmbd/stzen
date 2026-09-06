@@ -1,9 +1,7 @@
 import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
-import { eq } from 'drizzle-orm'
-import { db } from '../../shared/db'
-import { productVariants, products } from '../../shared/db/schema'
+import { supabaseAdmin } from '../../shared/db'
 import { type AuthEnv } from '../../shared/middleware/auth'
 import { requireRole } from '../../shared/middleware/require-role'
 import { generatePublicId } from '../../shared/lib/publicId'
@@ -11,6 +9,11 @@ import { generateSku, composeVariantName } from '../../shared/lib/sku'
 import { BulkStockSchema } from '../products/products.schema'
 import { vaultService } from '../vault/vault.service'
 import { appendAudit } from '../../shared/lib/audit'
+import { getStockCounts } from '../../shared/lib/db-helpers'
+
+const PRODUCTS = 'products'
+const PRODUCT_VARIANTS = 'product_variants'
+const VAULT_ITEMS = 'vault_items'
 
 const VariantCreateSchema = z.object({
   productId: z.string().min(1),
@@ -44,207 +47,290 @@ const VariantUpdateSchema = z.object({
 
 type VariantEnv = AuthEnv
 export const adminVariantRoutes = new Hono<VariantEnv>()
-  // Auth is enforced globally in app.ts; this only adds the role check.
   .use('*', requireRole('admin'))
 
-  // GET / — list variants with stock
   .get('/', async (c) => {
-  const { sql, eq } = await import('drizzle-orm')
-  const { vaultItems, products } = await import('../../shared/db/schema')
-  const rows = await db
-    .select({
-      id: productVariants.publicId,
-      publicId: productVariants.publicId,
-      internalId: productVariants.id,
-      productId: products.publicId,
-      internalProductId: productVariants.productId,
-      sku: productVariants.sku,
-      name: productVariants.name,
-      price: productVariants.price,
-      compareAtPrice: productVariants.compareAtPrice,
-      badge: productVariants.badge,
-      durationMonths: productVariants.durationMonths,
-      durationUnit: productVariants.durationUnit,
-      accountType: productVariants.accountType,
-      conditions: productVariants.conditions,
-      fulfillmentType: productVariants.fulfillmentType,
-      isActive: productVariants.isActive,
-      baseName: products.name,
-      category: products.category,
-      createdAt: productVariants.createdAt,
-    })
-    .from(productVariants)
-    .leftJoin(products, eq(productVariants.productId, products.id))
-    .orderBy(productVariants.createdAt)
-  const counts = await db.select({ variantId: vaultItems.variantId, count: sql<number>`cast(count(*) as int)` }).from(vaultItems).where(eq(vaultItems.status, 'AVAILABLE')).groupBy(vaultItems.variantId)
-  const map = new Map(counts.map((x) => [x.variantId, x.count]))
-  const withStock = rows.map((r: any) => ({ ...r, stockCount: r.fulfillmentType === 'on_demand' ? 9999 : map.get(r.internalId) ?? 0 }))
-  return c.json(withStock)
-})
+    const { data: variants, error } = await supabaseAdmin
+      .from(PRODUCT_VARIANTS)
+      .select(`
+        *,
+        ${PRODUCTS} (
+          id,
+          public_id,
+          name,
+          category
+        )
+      `)
+      .order('created_at', { ascending: true })
 
-// GET /:id/detail — single variant with overview/description for edit form.
-// List query omits these fields to reduce payload; edit fetches on demand.
+    if (error) throw new Error(error.message)
+
+    const variantIds = (variants || []).map((v: any) => v.id)
+    const stockByVariant = await getStockCounts(variantIds)
+
+    const withStock = (variants || []).map((v: any) => {
+      const product = Array.isArray(v.products) ? v.products[0] : (v.products || {})
+      return {
+        id: v.public_id,
+        publicId: v.public_id,
+        internalId: v.id,
+        productId: product?.public_id,
+        internalProductId: v.product_id,
+        sku: v.sku,
+        name: v.name,
+        price: v.price,
+        compareAtPrice: v.compare_at_price,
+        badge: v.badge,
+        durationMonths: v.duration_months,
+        durationUnit: v.duration_unit,
+        accountType: v.account_type,
+        conditions: v.conditions,
+        fulfillmentType: v.fulfillment_type,
+        isActive: v.is_active,
+        baseName: product?.name,
+        category: product?.category,
+        createdAt: v.created_at,
+        stockCount: v.fulfillment_type === 'on_demand' ? 9999 : (stockByVariant.get(v.id) ?? 0),
+      }
+    })
+
+    return c.json(withStock)
+  })
+
   .get('/:id/detail', async (c) => {
-  const { sql } = await import('drizzle-orm')
-  const { vaultItems, products } = await import('../../shared/db/schema')
-  const publicId = c.req.param('id')
-  const [row] = await db
-    .select({
-      id: productVariants.publicId,
-      overview: productVariants.overview,
-      description: productVariants.description,
-    })
-    .from(productVariants)
-    .where(eq(productVariants.publicId, publicId))
-  if (!row) return c.json({ error: 'Variant not found' }, 404)
-  return c.json(row)
-})
+    const publicId = c.req.param('id')
+    const { data: rows, error } = await supabaseAdmin
+      .from(PRODUCT_VARIANTS)
+      .select('overview, description')
+      .eq('public_id', publicId)
+      .limit(1)
 
-// POST / — create variant, composite name + auto sku
+    if (error) throw new Error(error.message)
+    if (!rows || rows.length === 0) return c.json({ error: 'Variant not found' }, 404)
+
+    return c.json(rows[0])
+  })
+
   .post('/', zValidator('json', VariantCreateSchema), async (c) => {
-  const data = c.req.valid('json') as any
-  const [base] = await db.select({ name: products.name }).from(products).where(eq(products.publicId, data.productId))
-  // allow productId as publicId or internal
-  let baseName = base?.name ?? 'Product'
-  let baseId: string | null = null
-  const [p] = await db.select({ id: products.id, name: products.name }).from(products).where(eq(products.publicId, data.productId))
-  if (p) { baseName = p.name; baseId = p.id }
-  else {
-    const [p2] = await db.select({ id: products.id, name: products.name }).from(products).where(eq(products.id, data.productId))
-    if (p2) { baseName = p2.name; baseId = p2.id }
-  }
-  const name = composeVariantName(baseName, data.durationMonths, data.durationUnit, data.accountType, data.conditions)
-  const sku = generateSku(baseName, data.durationMonths, data.durationUnit, data.accountType)
-  const publicId = generatePublicId()
-  const priceInt = parseInt(data.price, 10)
-  let compareAt: number | null = null
-  if (data.compareAtPrice) {
-    const v = parseInt(data.compareAtPrice, 10)
-    if (v > priceInt) compareAt = v
-  }
-  const [created] = await db.insert(productVariants).values({
-    publicId,
-    productId: baseId,
-    sku,
-    name,
-    price: priceInt,
-    compareAtPrice: compareAt,
-    badge: data.badge,
-    overview: data.overview ?? null,
-    description: data.description ?? null,
-    durationMonths: data.durationMonths,
-    accountType: data.accountType,
-    conditions: data.conditions,
-    fulfillmentType: data.fulfillmentType ?? 'vault',
-    isActive: data.isActive ?? true,
-  } as any).returning()
-  const { publicId: pid, ...rest } = created as any
-  const user = c.get('user')
-  await appendAudit({
-    action: 'variant:create',
-    resourceType: 'variant',
-    resourcePublicId: pid,
-    resourceName: (created as any).name ?? sku,
-    snapshotText: `Varian ${sku} dibuat oleh ${user.email ?? user.sub} ${new Date().toLocaleString('id-ID')}`,
-    actorId: user.sub,
-    actorEmail: user.email ?? null,
-    actorType: 'admin',
-  }).catch((e) => console.error('[audit] admin variant action failed', e))
-  return c.json({ ...rest, id: pid, sku, name }, 201)
-})
+    const data = c.req.valid('json') as any
 
-// PUT /:id — update variant
+    let baseName = 'Product'
+    let baseId: string | null = null
+
+    const { data: base } = await supabaseAdmin
+      .from(PRODUCTS)
+      .select('id, name')
+      .eq('public_id', data.productId)
+      .limit(1)
+
+    if (base && base.length > 0) {
+      baseName = base[0].name
+      baseId = base[0].id
+    } else {
+      const { data: base2 } = await supabaseAdmin
+        .from(PRODUCTS)
+        .select('id, name')
+        .eq('id', data.productId)
+        .limit(1)
+
+      if (base2 && base2.length > 0) {
+        baseName = base2[0].name
+        baseId = base2[0].id
+      }
+    }
+
+    const name = composeVariantName(baseName, data.durationMonths, data.durationUnit, data.accountType, data.conditions)
+    const sku = generateSku(baseName, data.durationMonths, data.durationUnit, data.accountType)
+    const publicId = generatePublicId()
+    const priceInt = parseInt(data.price, 10)
+    let compareAt: number | null = null
+    if (data.compareAtPrice) {
+      const v = parseInt(data.compareAtPrice, 10)
+      if (v > priceInt) compareAt = v
+    }
+
+    const { data: created, error } = await supabaseAdmin
+      .from(PRODUCT_VARIANTS)
+      .insert({
+        public_id: publicId,
+        product_id: baseId,
+        sku,
+        name,
+        price: priceInt,
+        compare_at_price: compareAt,
+        badge: data.badge,
+        overview: data.overview ?? null,
+        description: data.description ?? null,
+        duration_months: data.durationMonths,
+        account_type: data.accountType,
+        conditions: data.conditions,
+        fulfillment_type: data.fulfillmentType ?? 'vault',
+        is_active: data.isActive ?? true,
+      })
+      .select()
+      .single()
+
+    if (error) throw new Error(error.message)
+
+    const user = c.get('user')
+    await appendAudit({
+      action: 'variant:create',
+      resourceType: 'variant',
+      resourcePublicId: publicId,
+      resourceName: created?.name ?? sku,
+      snapshotText: `Varian ${sku} dibuat oleh ${user.email ?? user.sub} ${new Date().toLocaleString('id-ID')}`,
+      actorId: user.sub,
+      actorEmail: user.email ?? null,
+      actorType: 'admin',
+    }).catch((e) => console.error('[audit] admin variant action failed', e))
+
+    return c.json({ ...created, id: publicId, sku, name }, 201)
+  })
+
   .put('/:id', zValidator('json', VariantUpdateSchema), async (c) => {
-  const publicId = c.req.param('id')
-  const data = c.req.valid('json') as any
-  if (data.price !== undefined) data.price = parseInt(data.price, 10)
-  if (data.compareAtPrice !== undefined) {
-    data.compareAtPrice = !data.compareAtPrice ? null : parseInt(data.compareAtPrice, 10)
-    if (data.compareAtPrice !== null) {
-      let effPrice = data.price
-      if (effPrice === undefined) {
-        const [cur] = await db.select({ price: productVariants.price }).from(productVariants).where(eq(productVariants.publicId, publicId))
-        effPrice = cur?.price
-      }
-      if (effPrice === undefined || data.compareAtPrice <= effPrice) data.compareAtPrice = null
-    }
-  }
-  // resolve productId publicId → internal uuid
-  if (data.productId) {
-    const [p] = await db.select({ id: products.id }).from(products).where(eq(products.publicId, data.productId))
-    data.productId = p?.id ?? null
-  }
-  // recompose name if relevant fields changed (including a move to another induk)
-  if (data.durationMonths !== undefined || data.durationUnit !== undefined || data.accountType !== undefined || data.conditions !== undefined || data.productId) {
-    const [cur] = await db.select().from(productVariants).where(eq(productVariants.publicId, publicId))
-    if (cur) {
-      const targetBaseId = (data.productId as string | undefined) ?? (cur as any).productId
-      const [base] = targetBaseId ? await db.select({ name: products.name }).from(products).where(eq(products.id, targetBaseId)) : [{ name: cur.name }]
-      const baseName = base?.name ?? cur.name
-      const unit = data.durationUnit ?? (cur as any).durationUnit ?? 'month'
-      const newName = composeVariantName(baseName, data.durationMonths ?? (cur as any).durationMonths, unit, data.accountType ?? (cur as any).accountType, data.conditions ?? (cur as any).conditions)
-      data.name = newName
-      if (data.durationMonths !== undefined || data.durationUnit !== undefined || data.accountType !== undefined || data.productId) {
-        data.sku = generateSku(baseName, data.durationMonths ?? (cur as any).durationMonths, unit, data.accountType ?? (cur as any).accountType)
-      }
-    }
-  }
-  const [updated] = await db.update(productVariants).set({ ...data, updatedAt: new Date() } as any).where(eq(productVariants.publicId, publicId)).returning()
-  if (!updated) return c.json({ error: 'Variant not found' }, 404)
-  const { publicId: pid, ...rest } = updated as any
-  const user = c.get('user')
-  await appendAudit({
-    action: 'variant:update',
-    resourceType: 'variant',
-    resourcePublicId: pid,
-    resourceName: (updated as any).name ?? '',
-    snapshotText: `Varian ${(updated as any).name} diperbarui oleh ${user.email ?? user.sub} ${new Date().toLocaleString('id-ID')}`,
-    actorId: user.sub,
-    actorEmail: user.email ?? null,
-    actorType: 'admin',
-  }).catch((e) => console.error('[audit] admin variant action failed', e))
-  return c.json({ ...rest, id: pid })
-})
+    const publicId = c.req.param('id')
+    const data = c.req.valid('json') as any
 
-// DELETE /:id
+    if (data.price !== undefined) data.price = parseInt(data.price, 10)
+    if (data.compareAtPrice !== undefined) {
+      data.compareAtPrice = !data.compareAtPrice ? null : parseInt(data.compareAtPrice, 10)
+      if (data.compareAtPrice !== null) {
+        let effPrice = data.price
+        if (effPrice === undefined) {
+          const { data: cur } = await supabaseAdmin
+            .from(PRODUCT_VARIANTS)
+            .select('price')
+            .eq('public_id', publicId)
+            .limit(1)
+          effPrice = cur?.[0]?.price
+        }
+        if (effPrice === undefined || data.compareAtPrice <= effPrice) data.compareAtPrice = null
+      }
+    }
+
+    if (data.productId !== undefined && data.productId !== '') {
+      const { data: p } = await supabaseAdmin
+        .from(PRODUCTS)
+        .select('id')
+        .eq('public_id', data.productId)
+        .limit(1)
+      data.productId = p?.[0]?.id ?? null
+    } else if (data.productId === '') {
+      data.productId = null
+    }
+
+    if (data.durationMonths !== undefined || data.durationUnit !== undefined || data.accountType !== undefined || data.conditions !== undefined || data.productId) {
+      const { data: cur } = await supabaseAdmin
+        .from(PRODUCT_VARIANTS)
+        .select('*')
+        .eq('public_id', publicId)
+        .limit(1)
+
+      if (cur && cur.length > 0) {
+        const current = cur[0]
+        const targetBaseId = data.productId ?? current.product_id
+        const { data: base } = targetBaseId ? await supabaseAdmin
+          .from(PRODUCTS)
+          .select('name')
+          .eq('id', targetBaseId)
+          .limit(1) : { data: [{ name: current.name }] }
+
+        const baseName = base?.[0]?.name ?? current.name
+        const unit = data.durationUnit ?? current.duration_unit ?? 'month'
+        data.name = composeVariantName(baseName, data.durationMonths ?? current.duration_months, unit, data.accountType ?? current.account_type, data.conditions ?? current.conditions)
+        if (data.durationMonths !== undefined || data.durationUnit !== undefined || data.accountType !== undefined || data.productId) {
+          data.sku = generateSku(baseName, data.durationMonths ?? current.duration_months, unit, data.accountType ?? current.account_type)
+        }
+      }
+    }
+
+    const updateData: any = { ...data, updated_at: new Date().toISOString() }
+    delete updateData.id
+    for (const [key, value] of Object.entries(updateData)) {
+      if (value === undefined) delete updateData[key]
+    }
+
+    const { data: updated, error } = await supabaseAdmin
+      .from(PRODUCT_VARIANTS)
+      .update(updateData)
+      .eq('public_id', publicId)
+      .select()
+      .single()
+
+    if (error) throw new Error(error.message)
+    if (!updated) return c.json({ error: 'Variant not found' }, 404)
+
+    const user = c.get('user')
+    await appendAudit({
+      action: 'variant:update',
+      resourceType: 'variant',
+      resourcePublicId: publicId,
+      resourceName: updated.name ?? '',
+      snapshotText: `Varian ${updated.name} diperbarui oleh ${user.email ?? user.sub} ${new Date().toLocaleString('id-ID')}`,
+      actorId: user.sub,
+      actorEmail: user.email ?? null,
+      actorType: 'admin',
+    }).catch((e) => console.error('[audit] admin variant action failed', e))
+
+    return c.json({ ...updated, id: publicId })
+  })
+
   .delete('/:id', async (c) => {
-  const publicId = c.req.param('id')
-  const [deleted] = await db.delete(productVariants).where(eq(productVariants.publicId, publicId)).returning()
-  if (!deleted) return c.json({ error: 'Variant not found' }, 404)
-  const user = c.get('user')
-  await appendAudit({
-    action: 'variant:delete',
-    resourceType: 'variant',
-    resourcePublicId: publicId,
-    resourceName: (deleted as any).name ?? '',
-    snapshotText: `Varian ${(deleted as any).name} dihapus oleh ${user.email ?? user.sub} ${new Date().toLocaleString('id-ID')}`,
-    actorId: user.sub,
-    actorEmail: user.email ?? null,
-    actorType: 'admin',
-  }).catch((e) => console.error('[audit] admin variant action failed', e))
-  return c.json({ success: true })
-})
+    const publicId = c.req.param('id')
+    const { data: deleted, error } = await supabaseAdmin
+      .from(PRODUCT_VARIANTS)
+      .delete()
+      .eq('public_id', publicId)
+      .select()
+      .single()
 
-// POST /:id/stock — bulk import for variant (skip on_demand)
+    if (error) throw new Error(error.message)
+    if (!deleted) return c.json({ error: 'Variant not found' }, 404)
+
+    const user = c.get('user')
+    await appendAudit({
+      action: 'variant:delete',
+      resourceType: 'variant',
+      resourcePublicId: publicId,
+      resourceName: deleted.name ?? '',
+      snapshotText: `Varian ${deleted.name} dihapus oleh ${user.email ?? user.sub} ${new Date().toLocaleString('id-ID')}`,
+      actorId: user.sub,
+      actorEmail: user.email ?? null,
+      actorType: 'admin',
+    }).catch((e) => console.error('[audit] admin variant action failed', e))
+
+    return c.json({ success: true })
+  })
+
   .post('/:id/stock', zValidator('json', BulkStockSchema), async (c) => {
     const publicId = c.req.param('id')
     const { credentials } = c.req.valid('json')
     if (!credentials || !credentials.trim()) return c.json({ error: 'No valid credential lines' }, 400)
-  const [variant] = await db.select({ id: productVariants.id, name: productVariants.name, fulfillmentType: productVariants.fulfillmentType }).from(productVariants).where(eq(productVariants.publicId, publicId))
-  if (!variant) return c.json({ error: 'Variant not found' }, 404)
-  if (variant.fulfillmentType === 'on_demand') return c.json({ error: 'Varian on demand tidak memerlukan impor stok' }, 400)
-  const lines = credentials.split('\n').map((l: string) => l.trim()).filter((l: string) => l.length > 0)
-  const result = await vaultService.importCredentials(variant.id, lines)
-  const user = c.get('user')
-  await appendAudit({
-    action: 'stock:import',
-    resourceType: 'stock',
-    resourcePublicId: publicId,
-    resourceName: variant.name,
-    snapshotText: `Stok ${result.imported} ditambah ke ${variant.name} (${publicId}) oleh ${user.email ?? user.sub} ${new Date().toLocaleString('id-ID')}`,
-    actorId: user.sub,
-    actorEmail: user.email ?? null,
-    actorType: 'admin',
-  }).catch((e) => console.error('[audit] admin variant action failed', e))
-  return c.json(result)
-})
+
+    const { data: variant, error } = await supabaseAdmin
+      .from(PRODUCT_VARIANTS)
+      .select('id, name, fulfillment_type')
+      .eq('public_id', publicId)
+      .limit(1)
+
+    if (error) throw new Error(error.message)
+    if (!variant || variant.length === 0) return c.json({ error: 'Variant not found' }, 404)
+    if (variant[0].fulfillment_type === 'on_demand') return c.json({ error: 'Varian on demand tidak memerlukan impor stok' }, 400)
+
+    const lines = credentials.split('\n').map((l: string) => l.trim()).filter((l: string) => l.length > 0)
+    const result = await vaultService.importCredentials(variant[0].id, lines)
+
+    const user = c.get('user')
+    await appendAudit({
+      action: 'stock:import',
+      resourceType: 'stock',
+      resourcePublicId: publicId,
+      resourceName: variant[0].name,
+      snapshotText: `Stok ${result.imported} ditambah ke ${variant[0].name} (${publicId}) oleh ${user.email ?? user.sub} ${new Date().toLocaleString('id-ID')}`,
+      actorId: user.sub,
+      actorEmail: user.email ?? null,
+      actorType: 'admin',
+    }).catch((e) => console.error('[audit] admin variant action failed', e))
+
+    return c.json(result)
+  })

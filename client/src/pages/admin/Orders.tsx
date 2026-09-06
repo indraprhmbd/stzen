@@ -95,7 +95,7 @@ export default function Orders() {
     if (q) query.q = q
     if (sortKey) { query.sort = sortKey; query.sortDir = sortDir ?? 'desc' }
     const res = await authedApiRequest((c) => c.api.v1.admin.orders.$get({ query }))
-    return (await res.json()) as { orders: AdminOrder[]; total: number; counts: Record<string, number> }
+    return (await res.json()) as any as { orders: AdminOrder[]; total: number; counts: Record<string, number> }
   }, [tab, q, offset, sortKey, sortDir])
   const orders = data?.orders ?? []
   const total = data?.total ?? 0
@@ -221,7 +221,7 @@ export default function Orders() {
       if (activeTab.statuses) query.status = activeTab.statuses
       if (q) query.q = q
       const res = await authedApiRequest((c) => c.api.v1.admin.orders.$get({ query }))
-      const json = (await res.json()) as { orders: AdminOrder[] }
+      const json = (await res.json()) as any as { orders: AdminOrder[] }
       const head = ['id', 'tanggal', 'produk', 'jumlah', 'status', 'ref']
       const lines = json.orders.map((o) =>
         [o.id, o.createdAt, o.productName, o.amount, o.status, o.paymentRef ?? '']

@@ -1,17 +1,14 @@
-import { eq } from 'drizzle-orm'
-import { db } from '../../shared/db'
-import { products, productVariants } from '../../shared/db/schema'
+import { supabaseAdmin } from '../../shared/db'
 import { productsService } from '../products/products.service'
 import { ordersService } from '../orders/orders.service'
 import { getStockCount } from '../../shared/lib/db-helpers'
 import { NotFoundError, ConflictError } from '../../shared/errors/http'
 
-// ─── Checkout Service ───────────────────────────────────────────────────────
-// Orchestrates order creation: product check + stock check + insert.
+const PRODUCTS = 'products'
+const PRODUCT_VARIANTS = 'product_variants'
 
 export const checkoutService = {
   async createOrder(userId: string, publicId: string) {
-    // 1. Check variant exists and is active (publicId is variant)
     let variant: any
     try {
       variant = await productsService.getById(publicId)
@@ -23,23 +20,31 @@ export const checkoutService = {
       throw new NotFoundError('Product not found or unavailable')
     }
 
-    // Resolve internal variant id
-    const [internal] = await db.select({ id: productVariants.id, productId: productVariants.productId, fulfillmentType: productVariants.fulfillmentType }).from(productVariants).where(eq(productVariants.publicId, publicId))
-    // fallback legacy product
+    const { data: internal, error } = await supabaseAdmin
+      .from(PRODUCT_VARIANTS)
+      .select('id, product_id, fulfillment_type')
+      .eq('public_id', publicId)
+      .limit(1)
+
     let internalId: string
     let internalProductId: string | null = null
     let fulfillmentType: string = 'vault'
-    if (internal) {
-      internalId = internal.id
-      internalProductId = internal.productId
-      fulfillmentType = internal.fulfillmentType
+
+    if (internal && internal.length > 0) {
+      internalId = internal[0].id
+      internalProductId = internal[0].product_id
+      fulfillmentType = internal[0].fulfillment_type
     } else {
-      const [p] = await db.select({ id: products.id }).from(products).where(eq(products.publicId, publicId))
-      if (!p) throw new NotFoundError('Product not found or unavailable')
-      internalId = p.id
+      const { data: p, error: pError } = await supabaseAdmin
+        .from(PRODUCTS)
+        .select('id')
+        .eq('public_id', publicId)
+        .limit(1)
+
+      if (pError || !p || p.length === 0) throw new NotFoundError('Product not found or unavailable')
+      internalId = p[0].id
     }
 
-    // 2. Check stock > 0 per variant (skip for on_demand)
     if (fulfillmentType !== 'on_demand') {
       const stock = await getStockCount(internalId)
       if (stock === 0) {
@@ -47,14 +52,13 @@ export const checkoutService = {
       }
     }
 
-    // 3. Create order with variant snapshot
     const order = await ordersService.create({
       userId,
-      productId: internalProductId as any,
+      productId: internalProductId,
       variantId: internal ? internalId : undefined,
       amount: variant.price,
       variantSnapshot: variant,
-    } as any)
+    })
 
     return {
       orderId: order.id,

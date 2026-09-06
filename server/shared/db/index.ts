@@ -1,17 +1,26 @@
-import { drizzle } from 'drizzle-orm/postgres-js'
-import postgres from 'postgres'
-import * as schema from './schema'
+import { createClient } from '@supabase/supabase-js'
+import type { SupabaseClient } from '@supabase/supabase-js'
 
-if (!process.env.DATABASE_URL) {
-  throw new Error('DATABASE_URL environment variable is required')
+const supabaseUrl = process.env.SUPABASE_URL || ''
+const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || ''
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error('SUPABASE_URL and SUPABASE_ANON_KEY environment variables are required')
 }
 
-// postgres.js client with PgBouncer transaction pooler compatibility
-// prepare: false is MANDATORY — PgBouncer does not support prepared statements
-// max: 10 allows concurrent admin dashboard requests (was 1, caused GET hang on parallel stats)
-const client = postgres(process.env.DATABASE_URL, {
-  prepare: false,
-  max: 10,
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    autoRefreshToken: false,
+    persistSession: false,
+  },
 })
 
-export const db = drizzle(client, { schema })
+export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey, {
+  auth: {
+    autoRefreshToken: false,
+    persistSession: false,
+  },
+})
+
+export type DbSupabaseClient = SupabaseClient

@@ -1,94 +1,81 @@
 import { Hono } from 'hono'
-import { eq, and } from 'drizzle-orm'
-import { db } from '../../shared/db'
-import { orders, vaultItems, products } from '../../shared/db/schema'
+import { supabaseAdmin } from '../../shared/db'
 import { type AuthEnv } from '../../shared/middleware/auth'
 import { vaultService } from '../vault/vault.service'
 import { NotFoundError, ConflictError } from '../../shared/errors/http'
 
-// ─── Credentials Routes ─────────────────────────────────────────────────────
-// Decrypt and return credentials for verified order owner.
-// Mounted as sub-route: orderRoutes.route('/:id/credentials', credentialsRoutes)
+const ORDERS = 'orders'
+const PRODUCTS = 'products'
+const VAULT_ITEMS = 'vault_items'
 
 type CredentialsEnv = AuthEnv
 
 const credentialsRoutes = new Hono<CredentialsEnv>()
-  // Auth is enforced globally in app.ts.
-
-  // GET /:id/credentials — Decrypt vault item for this order
   .get('/', async (c) => {
-  const user = c.get('user')
-  const orderId = c.req.param('id')
-  if (!orderId) throw new NotFoundError('Order not found')
+    const user = c.get('user')
+    const orderId = c.req.param('id')
+    if (!orderId) throw new NotFoundError('Order not found')
 
-  // 1. Get order + verify ownership (orderId is public_id)
-  const [order] = await db
-    .select({
-      id: orders.publicId,
-      userId: orders.userId,
-      status: orders.status,
-      vaultItemId: orders.vaultItemId,
-      productName: products.name,
-      productId: orders.productId,
+    const { data: orders, error } = await supabaseAdmin
+      .from(ORDERS)
+      .select(`
+        *,
+        ${PRODUCTS} (
+          id,
+          name,
+          instructions
+        )
+      `)
+      .eq('public_id', orderId)
+      .limit(1)
+
+    if (error) throw new Error(error.message)
+    if (!orders || orders.length === 0) throw new NotFoundError('Order not found')
+
+    const order = orders[0] as any
+
+    if (order.user_id !== user.sub) {
+      throw new NotFoundError('Order not found')
+    }
+
+    if (order.status !== 'DELIVERED') {
+      throw new ConflictError('Credentials available after delivery')
+    }
+
+    if (!order.vault_item_id) {
+      throw new ConflictError('No credentials allocated for this order')
+    }
+
+    if (!order.product_id) {
+      throw new NotFoundError('Order not found')
+    }
+
+    const { data: vaultItems, error: vaultError } = await supabaseAdmin
+      .from(VAULT_ITEMS)
+      .select('*')
+      .eq('id', order.vault_item_id)
+      .limit(1)
+
+    if (vaultError) throw new Error(vaultError.message)
+    if (!vaultItems || vaultItems.length === 0) {
+      throw new NotFoundError('Credential record not found')
+    }
+
+    const vaultItem = vaultItems[0] as any
+
+    if (vaultItem.status === 'REVOKED') {
+      throw new ConflictError('Kredensial ini dicabut karena laporan kendala, hubungi admin untuk penggantian')
+    }
+
+    const product = Array.isArray(order.products) ? order.products[0] : (order.products || {})
+
+    const credentials = await vaultService.decryptCredential(vaultItem.credential_payload)
+
+    return c.json({
+      credentials,
+      instructions: product?.instructions ?? null,
+      productName: order.variant_name_snapshot ?? order.base_name_snapshot ?? product?.name ?? 'Produk',
     })
-    .from(orders)
-    .innerJoin(products, eq(orders.productId, products.id))
-    .where(eq(orders.publicId, orderId))
-
-  if (!order) {
-    throw new NotFoundError('Order not found')
-  }
-
-  if (order.userId !== user.sub) {
-    throw new NotFoundError('Order not found')
-  }
-
-  // 2. Only delivered orders can view credentials
-  if (order.status !== 'DELIVERED') {
-    throw new ConflictError('Credentials available after delivery')
-  }
-
-  if (!order.vaultItemId) {
-    throw new ConflictError('No credentials allocated for this order')
-  }
-
-  if (!order.productId) {
-    throw new NotFoundError('Order not found')
-  }
-
-  // 3. Get vault item
-  const [vaultItem] = await db
-    .select()
-    .from(vaultItems)
-    .where(eq(vaultItems.id, order.vaultItemId))
-
-  if (!vaultItem) {
-    throw new NotFoundError('Credential record not found')
-  }
-
-  // Revoked after a failed-cred report: buyer sees a contact message, never
-  // stale or dead plaintext. Replacement (if any) arrives via order:replace
-  // which repoints vaultItemId, so this same card picks it up next open.
-  if (vaultItem.status === 'REVOKED') {
-    throw new ConflictError('Kredensial ini dicabut karena laporan kendala, hubungi admin untuk penggantian')
-  }
-
-  // 4. Decrypt credential payload
-  const credentials = await vaultService.decryptCredential(
-    vaultItem.credentialPayload
-  )
-
-  // 5. Get product instructions
-  const [product] = await db
-    .select({ instructions: products.instructions })
-    .from(products)
-    .where(eq(products.id, order.productId))
-
-  return c.json({
-    credentials,
-    instructions: product?.instructions ?? null,
-    productName: order.productName,
   })
-})
 
 export { credentialsRoutes }
