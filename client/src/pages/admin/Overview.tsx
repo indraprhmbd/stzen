@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { authedApiRequest } from '../../lib/api'
 import { useAdminQuery } from '../../hooks/useAdminQuery'
@@ -59,7 +59,14 @@ export default function Overview() {
   const [range, setRange] = useState<'7d' | '30d' | '90d'>('30d')
   const navigate = useNavigate()
   const [actionLoading, setActionLoading] = useState<string | null>(null)
-  const [showRevenue, setShowRevenue] = useState(true)
+  const [showRevenue, setShowRevenue] = useState(() => {
+    const stored = localStorage.getItem('admin:showRevenue')
+    return stored ? stored === 'true' : true
+  })
+
+  useEffect(() => {
+    localStorage.setItem('admin:showRevenue', String(showRevenue))
+  }, [showRevenue])
   const rangeLabel = range === '7d' ? '7 hari' : range === '90d' ? '90 hari' : '30 hari'
   const { data, loading, error, fetchedAt, refetch: fetchAll } = useAdminQuery(async () => {
     const [statsRes, analyticsRes, ordersRes, lowStockRes] = await Promise.all([
