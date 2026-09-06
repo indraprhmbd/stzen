@@ -247,10 +247,15 @@
   overflow-x: auto;
   white-space: nowrap;
   max-width: 200px;
-  scrollbar-width: thin;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.admin-soft .ad-scrollx::-webkit-scrollbar {
+  display: none;
 }
 @media (min-width: 640px) {
   .admin-soft .ad-scrollx {
-    max-width: 420px;
+    width: 100%;
+    max-width: none;
   }
 }
