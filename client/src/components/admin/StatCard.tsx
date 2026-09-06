@@ -6,11 +6,25 @@ interface StatCardProps {
   sub?: string
   icon?: ComponentType<{ width?: number | string; height?: number | string; strokeWidth?: number | string; className?: string }>
   action?: ReactNode
+  onNavigate?: () => void
 }
 
-export default function StatCard({ value, label, sub, icon: Icon, action }: StatCardProps) {
+export default function StatCard({ value, label, sub, icon: Icon, action, onNavigate }: StatCardProps) {
   return (
-    <div className="ad-card-flat p-3 sm:p-4 flex items-start gap-2.5 sm:gap-3">
+    <div
+      className={`ad-card-flat p-3 sm:p-4 flex items-start gap-2.5 sm:gap-3 ${onNavigate ? 'cursor-pointer transition-colors hover:border-[#d1d1d6]' : ''}`}
+      {...(onNavigate ? {
+        role: 'link',
+        tabIndex: 0,
+        onClick: onNavigate,
+        onKeyDown: (e: React.KeyboardEvent) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            onNavigate()
+          }
+        },
+      } : {})}
+    >
       {Icon && (
         <span className="ad-squircle">
           <Icon width={22} height={22} strokeWidth={1.5} />

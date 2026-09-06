@@ -43,10 +43,10 @@ function formatAge(iso: string): string {
 }
 
 const statDefs = [
-  { key: 'totalProducts' as const, label: 'Produk Aktif', sub: 'katalog', icon: Cube },
-  { key: 'totalStock' as const, label: 'Stok Tersedia', sub: 'vault', icon: Archive },
-  { key: 'pendingOrders' as const, label: 'Perlu Tindakan', sub: 'pending', icon: ShoppingBag },
-  { key: 'revenue' as const, label: 'Pendapatan', sub: 'paid + delivered', icon: GraphUp },
+  { key: 'totalProducts' as const, label: 'Produk Aktif', sub: 'katalog', icon: Cube, to: '/admin/products' },
+  { key: 'totalStock' as const, label: 'Stok Tersedia', sub: 'vault', icon: Archive, to: '/admin/products?tab=stok' },
+  { key: 'pendingOrders' as const, label: 'Perlu Tindakan', sub: 'pending', icon: ShoppingBag, to: '/admin/orders' },
+  { key: 'revenue' as const, label: 'Pendapatan', sub: 'paid + delivered', icon: GraphUp, to: '/admin/orders?status=semua' },
 ]
 
 const pieColors: Record<string, string> = { PENDING: '#d97706', PAID: '#3b82f6', DELIVERED: '#16a34a', REJECTED: '#dc2626', REFUNDED: '#7c3aed' }
@@ -149,9 +149,10 @@ export default function Overview() {
             label={c.label}
             sub={c.sub}
             icon={c.icon}
+            onNavigate={() => navigate(c.to)}
             action={c.key === 'revenue' ? (
               <button
-                onClick={() => setShowRevenue((s) => !s)}
+                onClick={(e) => { e.stopPropagation(); setShowRevenue((s) => !s) }}
                 title={showRevenue ? 'Sembunyikan pendapatan' : 'Tampilkan pendapatan'}
                 aria-label={showRevenue ? 'Sembunyikan pendapatan' : 'Tampilkan pendapatan'}
                 aria-pressed={showRevenue}
