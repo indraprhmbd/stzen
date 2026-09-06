@@ -169,7 +169,7 @@ export default function SearchableSelect({
                 onMouseEnter={() => setActiveIndex(i)}
                 onClick={() => commit(o)}
                 className={`px-3 py-2 text-sm cursor-pointer flex flex-col gap-0.5 ${
-                  o.disabled ? 'opacity-40 cursor-not-allowed' : i === activeIndex ? 'bg-[#1d1d1f] text-white' : 'hover:bg-[#f5f5f7]'
+                  o.disabled ? 'opacity-40 cursor-not-allowed' : i === activeIndex ? 'bg-[#f5f5f7] text-[#1d1d1f]' : 'hover:bg-[#f5f5f7]'
                 }`}
               >
                 {o.groupLabel && (
@@ -177,7 +177,7 @@ export default function SearchableSelect({
                 )}
                 <span className="whitespace-normal break-words">{o.label}</span>
                 {o.sublabel && (
-                  <span className={`text-[11px] font-mono ${i === activeIndex ? 'text-[#d1d1d6]' : 'text-[#aeaeb2]'}`}>{o.sublabel}</span>
+                  <span className="text-[11px] font-mono text-[#aeaeb2]">{o.sublabel}</span>
                 )}
               </li>
             ))}
