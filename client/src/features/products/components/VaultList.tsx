@@ -193,6 +193,12 @@ export default function VaultList({ variants, fetchedAt, initialVariantId, onVar
                             <button onClick={() => { setPendingRotate({ orderId: item.orderPublicId! }); openConfirm('vault-rotate') }} title="Cabut + ganti" className="ad-btn ad-btn-dark !px-2"><Redo width={14} height={14} strokeWidth={1.5} /></button>
                           </>
                         )}
+                        {item.status === 'AVAILABLE' && item.orderPublicId && (
+                          <>
+                            <button onClick={() => { setPendingRevoke({ id: item.id }); openConfirm('vault-revoke') }} title="Cabut saja" className="ad-btn !px-2"><Prohibition width={14} height={14} strokeWidth={1.5} /></button>
+                            <button onClick={() => { setPendingRotate({ orderId: item.orderPublicId! }); openConfirm('vault-rotate') }} title="Cabut + ganti" className="ad-btn ad-btn-dark !px-2"><Redo width={14} height={14} strokeWidth={1.5} /></button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>

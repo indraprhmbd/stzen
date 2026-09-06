@@ -447,7 +447,7 @@ export const ordersService = {
           variant_id: order.variantId,
           product_id: variant?.product_id ?? null,
           credential_payload: JSON.stringify(payload),
-          status: 'AVAILABLE',
+          status: 'SOLD',
         })
         .select('id')
         .single()

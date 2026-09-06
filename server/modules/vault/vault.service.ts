@@ -237,7 +237,8 @@ export const vaultService = {
 
     if (error) throw new Error(error.message)
     if (!item || item.length === 0) throw new NotFoundError('Credential not found')
-    if (item[0].status !== 'SOLD') throw new ConflictError('Only delivered (SOLD) credentials can be revoked')
+    const status = item[0].status
+    if (status !== 'SOLD' && status !== 'AVAILABLE') throw new ConflictError('Only delivered or available credentials can be revoked')
 
     const { error: updateError } = await supabaseAdmin
       .from(VAULT_ITEMS)
@@ -259,7 +260,7 @@ export const vaultService = {
     return { id }
   },
 
-  async replace(orderPublicId: string, actor: { sub: string; email?: string | null }) {
+  async replace(orderPublicId: string, actor: { sub: string; email?: string | null }, opts?: { credential?: string | null; fallbackVariantId?: string | null }) {
     const { data: orderRows, error } = await supabaseAdmin
       .from(ORDERS)
       .select('*')
@@ -274,15 +275,78 @@ export const vaultService = {
     if (!order.vault_item_id) throw new ConflictError('Order has no credential allocated')
     if (!order.variant_id) throw new ConflictError('Order has no variant linked')
 
-    const { data: result, error: rpcError } = await supabaseAdmin.rpc('replace_order_credential', {
-      p_variant_id: order.variant_id,
-      p_order_id: order.id,
-    })
+    const oldId = order.vault_item_id
 
-    if (rpcError) throw new Error(rpcError.message)
-    if (!result || result.length === 0) throw new ConflictError('STOK_HABIS: no replacement stock for this variant')
+    // Mark old credential revoked first
+    await supabaseAdmin
+      .from(VAULT_ITEMS)
+      .update({ status: 'REVOKED' })
+      .eq('id', oldId)
 
-    const { oldId, newId } = result[0]
+    let newId: string | null = null
+
+    // 1) Try auto-replace on the same variant
+    if (!newId) {
+      try {
+        const { data: result } = await supabaseAdmin.rpc('replace_order_credential', {
+          p_variant_id: order.variant_id,
+          p_order_id: order.id,
+        })
+        if (result && result.length > 0) {
+          newId = result[0].newId
+        }
+      } catch {
+        // ignore, try fallbacks below
+      }
+    }
+
+    // 2) Try explicit fallback variant
+    if (!newId && opts?.fallbackVariantId) {
+      try {
+        const { data: result } = await supabaseAdmin.rpc('replace_order_credential', {
+          p_variant_id: opts.fallbackVariantId,
+          p_order_id: order.id,
+        })
+        if (result && result.length > 0) {
+          newId = result[0].newId
+        }
+      } catch {
+        // ignore
+      }
+    }
+
+    // 3) Manual credential fallback: encrypt and insert as new AVAILABLE vault item
+    if (!newId && opts?.credential && opts.credential.trim()) {
+      const aesSecret = process.env.AES_SECRET_KEY
+      if (!aesSecret) throw new Error('AES_SECRET_KEY not configured')
+      const key = await importKeyFromBase64(aesSecret)
+      const payload = await encrypt(key, opts.credential.trim())
+
+      const targetVariantId = opts.fallbackVariantId || order.variant_id
+
+      const { data: inserted, error: insertError } = await supabaseAdmin
+        .from(VAULT_ITEMS)
+        .insert({
+          variant_id: targetVariantId,
+          product_id: order.product_id ?? null,
+          credential_payload: JSON.stringify(payload),
+          status: 'AVAILABLE',
+        })
+        .select('id')
+        .single()
+
+      if (insertError) throw new Error(insertError.message)
+      newId = inserted.id
+    }
+
+    if (!newId) {
+      throw new ConflictError('STOK_HABIS: no replacement stock for this variant')
+    }
+
+    await supabaseAdmin
+      .from(ORDERS)
+      .update({ vault_item_id: newId })
+      .eq('id', order.id)
 
     await appendAudit({
       action: 'order:replace',
