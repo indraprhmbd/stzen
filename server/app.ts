@@ -75,14 +75,18 @@ export function createApp() {
       c.json({ status: 'ok', timestamp: new Date().toISOString() })
     )
     // Public storefront settings (unversioned, infrastructure endpoint).
-    // Hardcoded allowlist: store.* only. Payment and support internals
-    // never leave the admin route.
+    // Hardcoded allowlist: store identity plus support contacts (already
+    // public by design: footer links and WA report buttons). Payment and
+    // operational internals never leave the admin route.
     .get('/api/settings/public', async (c) => {
-      const [name, announcement] = await Promise.all([
+      const [name, announcement, whatsapp, telegram, email] = await Promise.all([
         getSetting('store.name', ''),
         getSetting('store.announcement', ''),
+        getSetting('support.whatsapp', ''),
+        getSetting('support.telegram', ''),
+        getSetting('support.email', ''),
       ])
-      return c.json({ name, announcement })
+      return c.json({ name, announcement, whatsapp, telegram, email })
     })
     .route('/api/v1/products', productRoutes)
     .route('/api/v1/checkout', checkoutRoutes)

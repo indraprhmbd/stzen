@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { Tray, Lock } from '@phosphor-icons/react'
 import { useAuth } from '../hooks/useAuth'
 import { useBrand } from '../hooks/useBrand'
+import { usePublicSettings } from '../hooks/usePublicSettings'
 import { useCopy } from '../hooks/useCopy'
 import { authedApiRequest } from '../lib/api'
 import { initiatePayment, deleteOrder } from '../lib/pay'
@@ -36,8 +37,9 @@ type FilterTab = 'ALL' | 'PENDING' | 'PAID' | 'DELIVERED' | 'REJECTED'
 
 export default function Dashboard() {
   const { user, session } = useAuth()
-  const brand = useBrand()
-  const { t } = useCopy()
+const brand = useBrand()
+const support = usePublicSettings()
+const { t } = useCopy()
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<FilterTab>('ALL')
@@ -175,7 +177,7 @@ export default function Dashboard() {
   }
 
   function getWhatsAppUrl(orderId: string) {
-    const number = brand.support.whatsappNumber
+    const number = support.whatsapp || brand.support.whatsappNumber
     const text = encodeURIComponent(`Issue with Order #${orderId}`)
     return `https://wa.me/${number}?text=${text}`
   }
