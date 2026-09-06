@@ -7,7 +7,7 @@ import DataTable from '../../components/admin/DataTable'
 import StatusChip from '../../components/admin/StatusChip'
 import CopyCell from '../../components/admin/CopyCell'
 import { SkeletonRows, SkeletonCards } from '../../components/admin/TableSkeleton'
-import { Refresh, Cube, Archive, ShoppingBag, GraphUp, Plus } from 'iconoir-react'
+import { Refresh, Cube, Archive, ShoppingBag, GraphUp, Plus, Eye, EyeClosed } from 'iconoir-react'
 import { AreaChart, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell, Area } from 'recharts'
 
 interface Stats {
@@ -59,6 +59,7 @@ export default function Overview() {
   const [range, setRange] = useState<'7d' | '30d' | '90d'>('30d')
   const navigate = useNavigate()
   const [actionLoading, setActionLoading] = useState<string | null>(null)
+  const [showRevenue, setShowRevenue] = useState(true)
   const rangeLabel = range === '7d' ? '7 hari' : range === '90d' ? '90 hari' : '30 hari'
   const { data, loading, error, fetchedAt, refetch: fetchAll } = useAdminQuery(async () => {
     const [statsRes, analyticsRes, ordersRes, lowStockRes] = await Promise.all([
@@ -116,7 +117,7 @@ export default function Overview() {
     totalProducts: String(stats?.totalProducts ?? 0),
     totalStock: String(stats?.totalStock ?? 0),
     pendingOrders: String(stats?.pendingOrders ?? 0),
-    revenue: stats?.revenue ? `Rp ${Number(stats.revenue).toLocaleString('id-ID')}` : 'Rp 0',
+    revenue: showRevenue && stats?.revenue ? `Rp ${Number(stats.revenue).toLocaleString('id-ID')}` : '*****',
   }
 
   return (
@@ -142,7 +143,26 @@ export default function Overview() {
       {loading ? <SkeletonCards count={4} /> : (
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {statDefs.map((c) => (
-          <StatCard key={c.key} value={values[c.key]} label={c.label} sub={c.sub} icon={c.icon} />
+          <StatCard
+            key={c.key}
+            value={values[c.key]}
+            label={c.label}
+            sub={c.sub}
+            icon={c.icon}
+            action={c.key === 'revenue' ? (
+              <button
+                onClick={() => setShowRevenue((s) => !s)}
+                title={showRevenue ? 'Sembunyikan pendapatan' : 'Tampilkan pendapatan'}
+                aria-label={showRevenue ? 'Sembunyikan pendapatan' : 'Tampilkan pendapatan'}
+                aria-pressed={showRevenue}
+                className="grid h-6 w-6 place-items-center rounded-[7px] text-[#1d1d1f] transition-colors hover:bg-[#f5f5f7]"
+              >
+                {showRevenue
+                  ? <Eye width={15} height={15} strokeWidth={1.5} />
+                  : <EyeClosed width={15} height={15} strokeWidth={1.5} />}
+              </button>
+            ) : undefined}
+          />
         ))}
       </div>
       )}

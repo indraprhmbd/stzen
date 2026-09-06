@@ -72,6 +72,14 @@
   height: 32px;
   border-radius: 9px;
 }
+/* 2-col stat grid on phones: shrink the icon tile so values fit */
+@media (max-width: 639px) {
+  .admin-soft .ad-squircle {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+  }
+}
 
 /* Buttons */
 .admin-soft .ad-btn {
