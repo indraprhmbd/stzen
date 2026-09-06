@@ -335,11 +335,11 @@ export default function Orders() {
               <td><CopyCell value={o.id} display={o.id.slice(0, 8).toUpperCase()} className="ad-num text-xs font-semibold" /></td>
               <td className="text-xs ad-num text-[#6e6e73] whitespace-nowrap">{new Date(o.createdAt).toLocaleDateString('id-ID', { day:'2-digit', month:'short', year:'numeric' })}</td>
               <td className={`text-xs ad-num whitespace-nowrap ${overdue ? 'text-red-600 font-semibold' : 'text-[#6e6e73]'}`}>{formatAge(o.createdAt)}</td>
-              <td className="text-[13px] font-medium max-w-[180px] truncate">{o.productName}</td>
+              <td className="text-[13px] ad-num font-medium">{o.productName}</td>
               <td className="whitespace-nowrap text-xs ad-num">
                 {[o.fulfillmentType === 'on_demand' ? 'On-demand' : 'Vault', stockout ? 'Stok habis' : null].filter(Boolean).join(', ')}
               </td>
-              <td className="ad-num text-xs text-[#6e6e73] max-w-[160px] truncate" title={o.customerEmail ?? o.userId}>{o.customerEmail ?? o.userId.slice(0, 8)}</td>
+              <td className="ad-num text-xs text-[#6e6e73]" title={o.customerEmail ?? o.userId}>{o.customerEmail ?? o.userId.slice(0, 8)}</td>
               <td className="text-[13px] ad-num font-semibold">Rp {Number(o.amount).toLocaleString('id-ID')}</td>
               <td><StatusChip status={o.status}>{o.status}</StatusChip></td>
               <td className="text-right">
