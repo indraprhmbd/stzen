@@ -3,7 +3,7 @@ import { Dashboard, Cube, ShoppingBag, ClockRotateRight, Settings } from 'iconoi
 
 // ─── Admin Bottom Nav (mobile) ──────────────────────────────────────────────
 // 5 sections pinned to 1/4 width each with horizontal scroll, same pattern as
-// before. Soft light bar with blur, active tab ink plus dot.
+// before. Solid white bar, active tab ink plus dot.
 const tabs = [
   { to: '/admin', label: 'Ringkasan', Icon: Dashboard, end: true },
   { to: '/admin/products', label: 'Produk', Icon: Cube, end: false },
@@ -15,7 +15,7 @@ const tabs = [
 export default function AdminBottomNav() {
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-50 bg-white/85 backdrop-blur-md border-t border-[#e8e8ed] lg:hidden"
+      className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-[#e8e8ed] lg:hidden"
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
       <div className="flex overflow-x-auto no-scrollbar">
