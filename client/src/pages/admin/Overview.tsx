@@ -1,11 +1,13 @@
 import { useState, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { authedApiRequest } from '../../lib/api'
 import { useAdminQuery } from '../../hooks/useAdminQuery'
 import StatCard from '../../components/admin/StatCard'
 import DataTable from '../../components/admin/DataTable'
 import StatusChip from '../../components/admin/StatusChip'
+import CopyCell from '../../components/admin/CopyCell'
 import { SkeletonRows, SkeletonCards } from '../../components/admin/TableSkeleton'
-import { Refresh, Cube, Archive, ShoppingBag, GraphUp } from 'iconoir-react'
+import { Refresh, Cube, Archive, ShoppingBag, GraphUp, Plus } from 'iconoir-react'
 import { AreaChart, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell, Area } from 'recharts'
 
 interface Stats {
@@ -18,15 +20,26 @@ interface Stats {
 interface Order {
   id: string
   productName: string
+  customerEmail: string | null
   amount: string
   status: string
   createdAt: string
 }
 
-interface Product {
+interface LowStockVariant {
   id: string
   name: string
-  stockCount: number
+  sku: string
+  product_name: string
+  stock_count: number
+}
+
+function formatAge(iso: string): string {
+  const mins = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 60000))
+  if (mins < 60) return `${mins}m`
+  const hours = Math.floor(mins / 60)
+  if (hours < 48) return `${hours}j ${mins % 60}m`
+  return `${Math.floor(hours / 24)}h ${hours % 24}j`
 }
 
 const statDefs = [
@@ -44,19 +57,21 @@ const tooltipStyle = { fontSize: 12, border: '1px solid #e8e8ed', borderRadius: 
 
 export default function Overview() {
   const [range, setRange] = useState<'7d' | '30d' | '90d'>('30d')
+  const navigate = useNavigate()
+  const [actionLoading, setActionLoading] = useState<string | null>(null)
   const rangeLabel = range === '7d' ? '7 hari' : range === '90d' ? '90 hari' : '30 hari'
   const { data, loading, error, fetchedAt, refetch: fetchAll } = useAdminQuery(async () => {
     const [statsRes, analyticsRes, ordersRes, lowStockRes] = await Promise.all([
       authedApiRequest((c) => c.api.v1.admin.stats.$get()),
       authedApiRequest((c) => c.api.v1.admin.analytics.$get({ query: { range } })),
-      authedApiRequest((c) => c.api.v1.admin.orders.$get({ query: { limit: '5' } })),
+      authedApiRequest((c) => c.api.v1.admin.orders.$get({ query: { limit: '5', status: 'PENDING,PAID', oldest: '1' } })),
       authedApiRequest((c) => c.api.v1.admin.stats['low-stock'].$get({ query: { threshold: '5', limit: '5' } })),
     ])
 
     const s = (await statsRes.json()) as Stats
     const a = (await analyticsRes.json()) as unknown as { dailySales: unknown[]; byStatus: unknown[]; byCategory: unknown[]; topProducts: unknown[] }
     const o = (await ordersRes.json()) as { orders: Order[] }
-    const ls = (await lowStockRes.json()) as Product[]
+    const ls = (await lowStockRes.json()) as LowStockVariant[]
 
     return {
       stats: s,
@@ -75,6 +90,20 @@ export default function Overview() {
   const byCategory = useMemo(() => analytics?.byCategory ?? [], [analytics])
   const topProducts = useMemo(() => analytics?.topProducts ?? [], [analytics])
   const byStatus = useMemo(() => (analytics?.byStatus ?? []) as { status: string; count: number }[], [analytics])
+
+  async function approve(orderId: string) {
+    setActionLoading(orderId)
+    try {
+      const res = await authedApiRequest(
+        (c) => c.api.v1.admin.orders[':id'].approve.$post({ param: { id: orderId } }),
+        { headers: { 'Idempotency-Key': crypto.randomUUID() } }
+      )
+      if (!res.ok) return
+      await fetchAll()
+    } finally {
+      setActionLoading(null)
+    }
+  }
 
   if (error) return <div className="ad-card-flat p-8 text-center"><div className="text-sm font-semibold text-red-600">Gagal memuat ringkasan</div><div className="text-xs text-[#6e6e73] mt-1">{error}</div><button onClick={fetchAll} className="ad-btn ad-btn-dark mt-4">Coba lagi</button></div>
 
@@ -217,29 +246,39 @@ export default function Overview() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         <div className="ad-card">
           <div className="ad-card-head">
-            <div className="ad-card-title">Pesanan Terbaru</div>
-            <span className="ad-card-hint ad-num">{orders.length} entri</span>
+            <div className="ad-card-title">Butuh Tindakan</div>
+            <span className="ad-card-hint ad-num">{orders.length} antre</span>
           </div>
           {loading ? (
-            <DataTable columns={[{ label: 'PRODUK' }, { label: 'JUMLAH' }, { label: 'STATUS' }]} empty={false}>
-              <SkeletonRows rows={3} cols={3} />
+            <DataTable columns={[{ label: 'UMUR' }, { label: 'PRODUK' }, { label: 'PELANGGAN' }, { label: 'JUMLAH' }, { label: 'AKSI', className: 'text-right' }]} empty={false}>
+              <SkeletonRows rows={3} cols={5} />
             </DataTable>
           ) : orders.length === 0 ? (
             <div className="p-8 text-center">
-              <div className="text-sm font-medium">Belum ada pesanan</div>
-              <div className="text-xs text-[#6e6e73] mt-1">Transaksi terbaru akan tercatat di sini.</div>
+              <div className="text-sm font-medium">Antrian kosong</div>
+              <div className="text-xs text-[#6e6e73] mt-1">Tidak ada pesanan menunggu tindakan.</div>
             </div>
           ) : (
-            <DataTable columns={[{ label: 'PRODUK' }, { label: 'JUMLAH' }, { label: 'STATUS' }]} empty={false}>
+            <DataTable columns={[{ label: 'UMUR' }, { label: 'PRODUK' }, { label: 'PELANGGAN' }, { label: 'JUMLAH' }, { label: 'AKSI', className: 'text-right' }]} empty={false}>
               {orders.map((o) => (
                 <tr key={o.id}>
-                  <td className="text-[13px] font-medium">{o.productName}</td>
+                  <td className="text-xs ad-num whitespace-nowrap text-[#6e6e73]">{formatAge(o.createdAt)}</td>
+                  <td className="text-[13px] font-medium max-w-[160px] truncate" title={o.productName}>{o.productName}</td>
+                  <td className="text-xs ad-num text-[#6e6e73] max-w-[140px] truncate" title={o.customerEmail ?? '-'}>{o.customerEmail ?? '-'}</td>
                   <td className="text-[13px] ad-num">Rp {Number(o.amount).toLocaleString('id-ID')}</td>
-                  <td><StatusChip status={o.status}>{o.status}</StatusChip></td>
+                  <td className="text-right">
+                    <div className="flex justify-end gap-1.5">
+                      {o.status === 'PENDING' && (
+                        <button disabled={actionLoading === o.id} onClick={() => approve(o.id)} className="ad-btn ad-btn-dark">Setujui</button>
+                      )}
+                      <button onClick={() => navigate('/admin/orders')} className="ad-btn">Buka</button>
+                    </div>
+                  </td>
                 </tr>
               ))}
             </DataTable>
           )}
+          <button onClick={() => navigate('/admin/orders')} className="w-full px-4 py-2.5 text-center text-xs font-semibold text-[#6e6e73] hover:text-[#1d1d1f] border-t border-[#f1f1f4]">Lihat semua antrean</button>
         </div>
 
         <div className="ad-card">
@@ -248,24 +287,31 @@ export default function Overview() {
             <span className="ad-card-hint ad-num">ambang &lt; 5</span>
           </div>
           {loading ? (
-            <DataTable columns={[{ label: 'PRODUK' }, { label: 'SISA' }]} empty={false}>
-              <SkeletonRows rows={3} cols={2} />
+            <DataTable columns={[{ label: 'VARIAN' }, { label: 'SISA' }, { label: 'AKSI', className: 'text-right' }]} empty={false}>
+              <SkeletonRows rows={3} cols={3} />
             </DataTable>
           ) : lowStock.length === 0 ? (
             <div className="p-8 text-center">
               <div className="text-sm font-medium">Stok aman</div>
-              <div className="text-xs text-[#6e6e73] mt-1">Tidak ada produk di bawah ambang.</div>
+              <div className="text-xs text-[#6e6e73] mt-1">Tidak ada varian di bawah ambang.</div>
             </div>
           ) : (
-            <DataTable columns={[{ label: 'PRODUK' }, { label: 'SISA' }]} empty={false}>
+            <DataTable columns={[{ label: 'VARIAN' }, { label: 'SISA' }, { label: 'AKSI', className: 'text-right' }]} empty={false}>
               {lowStock.map((p) => (
                 <tr key={p.id}>
-                  <td className="text-[13px] font-medium">{p.name}</td>
-                  <td><StatusChip tone={p.stockCount === 0 ? 'red' : 'amber'}>{p.stockCount}</StatusChip></td>
+                  <td>
+                    <div className="text-[13px] font-medium">{p.name}</div>
+                    <div className="text-[11px] text-[#6e6e73]">{p.product_name} · <CopyCell value={p.sku} className="ad-num" /></div>
+                  </td>
+                  <td><StatusChip tone={p.stock_count === 0 ? 'red' : 'amber'}>{p.stock_count}</StatusChip></td>
+                  <td className="text-right">
+                    <button onClick={() => navigate(`/admin/products?tab=stok&variant=${p.id}&import=1`)} className="ad-btn ad-btn-dark"><Plus width={14} height={14} strokeWidth={1.5} />Tambah</button>
+                  </td>
                 </tr>
               ))}
             </DataTable>
           )}
+          <button onClick={() => navigate('/admin/products?tab=stok')} className="w-full px-4 py-2.5 text-center text-xs font-semibold text-[#6e6e73] hover:text-[#1d1d1f] border-t border-[#f1f1f4]">Kelola stok</button>
         </div>
       </div>
     </div>

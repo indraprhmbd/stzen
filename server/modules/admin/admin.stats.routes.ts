@@ -33,19 +33,24 @@ export const adminStatsRoutes = new Hono<AdminStatsEnv>()
   }
 })
 
-  // GET /low-stock — top N products below threshold. Single query, no full product table scan.
+  // GET /low-stock — bottom N variants by AVAILABLE stock. Single query.
+  // Variant-level (not product-level): matches the vault model where stock
+  // is imported per variant. Vault-type active variants only; on_demand
+  // never runs out. Cheap: indexed joins, in-memory aggregate (~0.5ms).
   .get('/low-stock', async (c) => {
   const threshold = parseInt(c.req.query('threshold') || '5', 10)
   const limit = Math.min(parseInt(c.req.query('limit') || '10', 10), 50)
 
   try {
     const rows = await db.execute(sql`
-      select p.public_id as id, p.name, p.category,
-             coalesce(sum(case when v.status = 'AVAILABLE' then 1 else 0 end), 0)::int as stock_count
-      from products p
-      left join vault_items v on v.product_id = p.id
-      group by p.public_id, p.name, p.category
-      having coalesce(sum(case when v.status = 'AVAILABLE' then 1 else 0 end), 0) < ${threshold}
+      select v.public_id as id, v.name, v.sku, p.name as product_name,
+             coalesce(sum(case when vi.status = 'AVAILABLE' then 1 else 0 end), 0)::int as stock_count
+      from product_variants v
+      join products p on p.id = v.product_id
+      left join vault_items vi on vi.variant_id = v.id
+      where v.is_active and v.fulfillment_type != 'on_demand'
+      group by v.public_id, v.name, v.sku, p.name
+      having coalesce(sum(case when vi.status = 'AVAILABLE' then 1 else 0 end), 0) < ${threshold}
       order by stock_count asc
       limit ${limit}
     `) as unknown as any[]
