@@ -29,8 +29,7 @@ export default function Settings() {
   const { user } = useAuth()
   const navigate = useNavigate()
   const [draft, setDraft] = useState<Record<string, string> | null>(null)
-  const [saving, setSaving] = useState(false)
-  const [msg, setMsg] = useState<string | null>(null)
+  const [pwCur, setPwCur] = useState('')
   const [pw1, setPw1] = useState('')
   const [pw2, setPw2] = useState('')
   const [pwMsg, setPwMsg] = useState<string | null>(null)
@@ -41,37 +40,62 @@ export default function Settings() {
 
   const keys = data?.keys ?? []
   const values = draft ?? data?.values ?? {}
-  const dirty = draft !== null && JSON.stringify(draft) !== JSON.stringify(data?.values ?? {})
+  const base = data?.values ?? {}
+  const [savingGroup, setSavingGroup] = useState<string | null>(null)
+  const [msg, setMsg] = useState<{ group: string; text: string } | null>(null)
 
-  async function handleSave() {
-    if (!dirty) return
-    setSaving(true)
+  function groupDirty(items: string[]): boolean {
+    if (!draft) return false
+    return items.some((k) => (draft[k] ?? base[k] ?? '') !== (base[k] ?? ''))
+  }
+
+  async function handleSaveGroup(group: string, items: string[]) {
+    if (!groupDirty(items) || savingGroup) return
+    setSavingGroup(group)
     setMsg(null)
     try {
-      const res = await authedApiRequest((c) => c.api.v1.admin.settings.$put({ json: { values: draft ?? {} } }))
+      const subset: Record<string, string> = {}
+      for (const k of items) subset[k] = draft?.[k] ?? base[k] ?? ''
+      const res = await authedApiRequest((c) => c.api.v1.admin.settings.$put({ json: { values: subset } }))
       if (!res.ok) {
         const err = (await res.json().catch(() => ({}))) as { error?: string }
         throw new Error(err.error || 'Gagal menyimpan')
       }
       setDraft(null)
-      setMsg('Pengaturan disimpan')
+      setMsg({ group, text: `${group} disimpan` })
       await refetch()
     } catch (e: unknown) {
-      setMsg(e instanceof Error ? e.message : 'Gagal menyimpan')
+      setMsg({ group, text: e instanceof Error ? e.message : 'Gagal menyimpan' })
     } finally {
-      setSaving(false)
+      setSavingGroup(null)
     }
+  }
+
+  // Re-auth gate: every account action re-verifies the current password
+  // against Supabase before touching credentials or sessions.
+  async function confirmCurrentPassword(): Promise<boolean> {
+    if (!user?.email || !pwCur) {
+      setPwMsg('Masukkan kata sandi saat ini untuk konfirmasi')
+      return false
+    }
+    const { error } = await supabase.auth.signInWithPassword({ email: user.email, password: pwCur })
+    if (error) {
+      setPwMsg('Kata sandi saat ini salah')
+      return false
+    }
+    return true
   }
 
   async function handlePassword() {
     setPwMsg(null)
     if (pw1.length < 8) { setPwMsg('Kata sandi minimal 8 karakter'); return }
     if (pw1 !== pw2) { setPwMsg('Konfirmasi tidak cocok'); return }
+    if (!(await confirmCurrentPassword())) return
     setPwSaving(true)
     try {
       const { error: err } = await supabase.auth.updateUser({ password: pw1 })
       if (err) throw err
-      setPw1(''); setPw2('')
+      setPwCur(''); setPw1(''); setPw2('')
       setPwMsg('Kata sandi diperbarui')
     } catch {
       setPwMsg('Gagal memperbarui kata sandi')
@@ -81,6 +105,8 @@ export default function Settings() {
   }
 
   async function signOutEverywhere() {
+    setPwMsg(null)
+    if (!(await confirmCurrentPassword())) return
     await supabase.auth.signOut({ scope: 'global' }).catch(() => {})
     navigate('/login', { replace: true })
   }
@@ -97,17 +123,24 @@ export default function Settings() {
           <h1 className="text-[22px] font-semibold tracking-tight">Pengaturan</h1>
           {fetchedAt && <p className="text-[13px] text-[#aeaeb2] mt-0.5">Disinkron {new Date(fetchedAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</p>}
         </div>
-        <button onClick={handleSave} disabled={!dirty || saving} className="ad-btn ad-btn-dark">
-          {saving ? 'Menyimpan...' : 'Simpan'}
-        </button>
       </div>
 
-      {msg && <p className="text-xs font-semibold text-[#1d1d1f]">{msg}</p>}
-
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
-      {grouped.map(({ group, items }) => (
+      {grouped.map(({ group, items }) => {
+        const isDirty = groupDirty(items)
+        const isSaving = savingGroup === group
+        return (
         <div key={group} className="ad-card p-5 flex flex-col gap-4">
-          <div className="ad-card-title text-[#aeaeb2]">{group}</div>
+          <div className="flex items-center justify-between gap-2">
+            <div className="ad-card-title text-[#aeaeb2]">{group}</div>
+            <button
+              onClick={() => handleSaveGroup(group, items)}
+              disabled={!isDirty || savingGroup !== null}
+              className="ad-btn ad-btn-dark !py-1.5 !text-xs"
+            >
+              {isSaving ? 'Menyimpan...' : 'Simpan'}
+            </button>
+          </div>
           {items.map((k) => {
             const meta = LABELS[k] ?? { group: 'Lainnya', label: k }
             return (
@@ -125,8 +158,10 @@ export default function Settings() {
               </label>
             )
           })}
+          {msg?.group === group && <p className="text-xs font-semibold text-[#1d1d1f]">{msg.text}</p>}
         </div>
-      ))}
+        )
+      })}
 
       <div className="ad-card p-5 flex flex-col gap-4">
         <div className="ad-card-title text-[#aeaeb2]">Akun</div>
@@ -135,6 +170,10 @@ export default function Settings() {
           <span className="font-semibold ad-num">{user?.email ?? '-'}</span>
         </div>
         <div className="flex flex-col gap-3">
+          <label className="ad-label">
+            Kata sandi saat ini
+            <input type="password" value={pwCur} onChange={(e) => setPwCur(e.target.value)} placeholder="Konfirmasi untuk setiap tindakan akun" autoComplete="current-password" className="ad-input mt-1.5" />
+          </label>
           <label className="ad-label">
             Kata sandi baru
             <input type="password" value={pw1} onChange={(e) => setPw1(e.target.value)} placeholder="Minimal 8 karakter" autoComplete="new-password" className="ad-input mt-1.5" />
