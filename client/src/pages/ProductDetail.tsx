@@ -367,7 +367,7 @@ export default function ProductDetail() {
               {pct !== null && (
                 <div className="flex justify-between gap-3 py-1">
                   <span className="opacity-60">DISKON</span>
-                  <span className="font-bold whitespace-nowrap">-{pct}%</span>
+                  <span className="font-bold whitespace-nowrap">(-{brand.storefront.currencySymbol} {(Number(product.compareAtPrice) - Number(product.price)).toLocaleString('id-ID')})</span>
                 </div>
               )}
               {!isOnDemand && (
