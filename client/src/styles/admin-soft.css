@@ -256,6 +256,9 @@
 @media (min-width: 640px) {
   .admin-soft .ad-scrollx {
     width: 100%;
-    max-width: none;
+    /* Fluid cap: viewport minus sidebar (240) minus main padding (48)
+       minus card padding (32) minus sibling columns (~480). Floored so
+       narrow windows never collapse the cell. */
+    max-width: max(240px, min(640px, calc(100vw - 800px)));
   }
 }
