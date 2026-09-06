@@ -370,12 +370,10 @@ export default function ProductDetail() {
                   <span className="font-bold whitespace-nowrap">-{brand.storefront.currencySymbol}{(Number(product.compareAtPrice) - Number(product.price)).toLocaleString('id-ID')} ({pct}%)</span>
                 </div>
               )}
-              {!isOnDemand && (
-                <div className="flex justify-between gap-3 py-1">
-                  <span className="opacity-60">STOK</span>
-                  <span className="font-bold whitespace-nowrap">{product.stockCount > 3 ? product.stockCount : `${t.products.onlyXLeft} ${product.stockCount}`}</span>
-                </div>
-              )}
+              <div className="flex justify-between gap-3 py-1">
+                <span className="opacity-60">QTY</span>
+                <span className="font-bold whitespace-nowrap">1</span>
+              </div>
               <div className="border-t-2 border-dashed border-black/60 mt-2 pt-2 flex justify-between items-center gap-3">
                 <span className="font-black text-sm">TOTAL</span>
                 <span className="font-black text-xl whitespace-nowrap">{brand.storefront.currencySymbol} {Number(product.price).toLocaleString('id-ID')}</span>
