@@ -12,6 +12,7 @@ import { routes as checkoutRoutes } from './modules/checkout'
 import { routes as adminRoutes } from './modules/admin'
 import { paymentsRoutes, webhooksRoutes } from './modules/payments'
 import { getSetting } from './shared/lib/settings'
+import { publicSettingsRoutes } from './modules/admin'
 
 // ─── App Factory ────────────────────────────────────────────────────────────
 // Creates the Hono app with all modules composed.
@@ -45,7 +46,7 @@ export function createApp() {
       },
     })
   )
-  const corsOrigins = (process.env.CORS_ALLOWED_ORIGINS || 'http://localhost:5173,http://localhost:4173')
+  const corsOrigins = (process.env.CORS_ALLOWED_ORIGINS || 'http://localhost:5173,http://localhost:4173,https://collected-ankle-dynamic.ngrok-free.dev')
     .split(',')
     .map((s) => s.trim())
     .filter(Boolean)
@@ -98,24 +99,13 @@ export function createApp() {
   // runtime but leave AppType as the blank base Hono — silently voiding all
   // hono/client type safety. ReturnType<typeof createApp> must be the chain.
   const app = base
+    // Public settings (no auth)
+    .route('/api/settings/public', publicSettingsRoutes)
+
     // Health check (unversioned, infrastructure endpoint)
     .get('/api/health', (c) =>
       c.json({ status: 'ok', timestamp: new Date().toISOString() })
     )
-    // Public storefront settings (unversioned, infrastructure endpoint).
-    // Hardcoded allowlist: store identity plus support contacts (already
-    // public by design: footer links and WA report buttons). Payment and
-    // operational internals never leave the admin route.
-    .get('/api/settings/public', async (c) => {
-      const [name, announcement, whatsapp, telegram, email] = await Promise.all([
-        getSetting('store.name', ''),
-        getSetting('store.announcement', ''),
-        getSetting('support.whatsapp', ''),
-        getSetting('support.telegram', ''),
-        getSetting('support.email', ''),
-      ])
-      return c.json({ name, announcement, whatsapp, telegram, email })
-    })
     .route('/api/v1/auth', authRoutes)
     .route('/api/v1/products', productRoutes)
     .route('/api/v1/checkout', checkoutRoutes)
