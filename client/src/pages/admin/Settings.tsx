@@ -91,7 +91,7 @@ export default function Settings() {
   if (other.length > 0) grouped.push({ group: 'Lainnya', items: other })
 
   return (
-    <div className="flex flex-col gap-4 max-w-xl">
+    <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-[22px] font-semibold tracking-tight">Pengaturan</h1>
@@ -104,6 +104,7 @@ export default function Settings() {
 
       {msg && <p className="text-xs font-semibold text-[#1d1d1f]">{msg}</p>}
 
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
       {grouped.map(({ group, items }) => (
         <div key={group} className="ad-card p-5 flex flex-col gap-4">
           <div className="ad-card-title text-[#aeaeb2]">{group}</div>
@@ -148,6 +149,7 @@ export default function Settings() {
             <button onClick={signOutEverywhere} className="ad-btn ad-btn-danger">Keluar dari semua perangkat</button>
           </div>
         </div>
+      </div>
       </div>
     </div>
   )
