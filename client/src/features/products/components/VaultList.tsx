@@ -264,14 +264,14 @@ export default function VaultList({ variants, fetchedAt, initialVariantId, onVar
                     : 'Varian saat ini tidak punya stok tersedia. Kamu bisa memasukkan kredensial manual atau pilih varian lain.'}
                 </p>
                 <div className="mt-4 flex flex-col gap-3">
-                  <label className="ad-input">
+                  <div>
                     <span className="text-xs font-semibold mb-1 block">
                       Kredensial manual {rotateFallback.message === 'ON_DEMAND_REQUIRES_CREDENTIAL' ? '(wajib)' : '(opsional)'}
                     </span>
-                    <textarea value={rotateCredential} onChange={(e) => setRotateCredential(e.target.value)} rows={4} placeholder="user@email.com:password123" className="font-mono text-xs" />
-                  </label>
+                    <textarea value={rotateCredential} onChange={(e) => setRotateCredential(e.target.value)} rows={4} placeholder="user@email.com:password123" className="ad-input font-mono text-xs w-full" />
+                  </div>
                   {rotateFallback.message !== 'ON_DEMAND_REQUIRES_CREDENTIAL' && (
-                    <label className="ad-input">
+                    <div>
                       <span className="text-xs font-semibold mb-1 block">Varian cadangan (opsional)</span>
                       <select value={rotateFallbackVariantId} onChange={(e) => setRotateFallbackVariantId(e.target.value)} className="ad-input">
                         <option value="">Gunakan varian order asli</option>
@@ -279,7 +279,7 @@ export default function VaultList({ variants, fetchedAt, initialVariantId, onVar
                           <option key={opt.value} value={opt.value}>{opt.label} {opt.sublabel ? `(${opt.sublabel})` : ''}</option>
                         ))}
                       </select>
-                    </label>
+                    </div>
                   )}
                 </div>
                 <div className="flex justify-end gap-2 mt-4">
