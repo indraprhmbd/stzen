@@ -8,7 +8,7 @@ import StatusChip from '../../components/admin/StatusChip'
 import ConfirmDialog, { openConfirm } from '../../components/admin/ConfirmDialog'
 import DeliverDialog, { openConfirm as openDialog } from '../../components/admin/DeliverDialog'
 import { printReceipt as printOrderReceipt } from '../../lib/receipt'
-import { Refresh, Plus, Search, NavArrowLeft, NavArrowRight, Key, EditPencil, Trash } from 'iconoir-react'
+import { Refresh, Plus, Search, NavArrowLeft, NavArrowRight, Key, EditPencil, Trash, Notes } from 'iconoir-react'
 import { SkeletonRows } from '../../components/admin/TableSkeleton'
 import { useTableSort } from '../../hooks/useTableSort'
 
@@ -336,9 +336,8 @@ export default function Orders() {
               <td className="text-xs ad-num text-[#6e6e73] whitespace-nowrap">{new Date(o.createdAt).toLocaleDateString('id-ID', { day:'2-digit', month:'short', year:'numeric' })}</td>
               <td className={`text-xs ad-num whitespace-nowrap ${overdue ? 'text-red-600 font-semibold' : 'text-[#6e6e73]'}`}>{formatAge(o.createdAt)}</td>
               <td className="text-[13px] font-medium max-w-[180px] truncate">{o.productName}</td>
-              <td className="whitespace-nowrap">
-                <StatusChip tone={o.fulfillmentType === 'on_demand' ? 'amber' : 'zinc'}>{o.fulfillmentType === 'on_demand' ? 'ON-DEMAND' : 'VAULT'}</StatusChip>
-                {stockout && <StatusChip tone="red" className="ml-1">STOK HABIS</StatusChip>}
+              <td className="whitespace-nowrap text-xs ad-num">
+                {[o.fulfillmentType === 'on_demand' ? 'On-demand' : 'Vault', stockout ? 'Stok habis' : null].filter(Boolean).join(', ')}
               </td>
               <td className="ad-num text-xs text-[#6e6e73] max-w-[160px] truncate" title={o.customerEmail ?? o.userId}>{o.customerEmail ?? o.userId.slice(0, 8)}</td>
               <td className="text-[13px] ad-num font-semibold">Rp {Number(o.amount).toLocaleString('id-ID')}</td>
@@ -362,7 +361,7 @@ export default function Orders() {
                   )}
                   {actionLoading === o.id && <span className="loading loading-spinner loading-xs"></span>}
                   {o.status !== 'PENDING' && (
-                    <button onClick={() => openReceipt(o)} className="ad-btn">Struk</button>
+                    <button onClick={() => openReceipt(o)} className="ad-btn"><Notes width={14} height={14} strokeWidth={1.5} />Struk</button>
                   )}
                   {!['PENDING','PAID'].includes(o.status) && <span className="text-xs text-[#aeaeb2]">-</span>}
                 </div>
