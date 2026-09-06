@@ -48,13 +48,10 @@ function Catalog() {
 
   return (
     <Layout>
-      {announcement && (
-        <div className="mb-3 bg-white px-4 py-3 text-center shadow-comic">
-          <p className="text-base font-black tracking-wide text-neutral">{announcement}</p>
-        </div>
-      )}
+      {/* Announcement marquee above hero: admin text wins, falls back to default copy */}
+      <Marquee items={announcement ? [announcement] : t.marquee} className="mb-3" />
       {/* ═══ HERO 2/3 + FEATURED CARD 1/3 ═══ */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
         {/* Hero — 2/3 */}
         <section className="md:col-span-2 relative overflow-hidden bg-secondary border-comic shadow-comic p-4 md:p-6 bg-halftone">
           <div className="absolute inset-0 bg-white/10 pointer-events-none" />
@@ -114,8 +111,6 @@ function Catalog() {
           </div>
         </Link>
       </div>
-
-      <Marquee items={t.marquee} />
 
       {/* ═══ HOW IT WORKS — comic strip ═══ */}
       <section className="mb-3">
