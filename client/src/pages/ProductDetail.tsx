@@ -376,9 +376,9 @@ export default function ProductDetail() {
                   <span className="font-bold whitespace-nowrap">{product.stockCount > 3 ? product.stockCount : `${t.products.onlyXLeft} ${product.stockCount}`}</span>
                 </div>
               )}
-              <div className="border-t-2 border-dashed border-black/60 mt-2 pt-2 flex justify-between gap-3">
-                <span className="font-black">TOTAL</span>
-                <span className="font-black whitespace-nowrap">{brand.storefront.currencySymbol} {Number(product.price).toLocaleString('id-ID')}</span>
+              <div className="border-t-2 border-dashed border-black/60 mt-2 pt-2 flex justify-between items-center gap-3">
+                <span className="font-black text-sm">TOTAL</span>
+                <span className="font-black text-xl whitespace-nowrap">{brand.storefront.currencySymbol} {Number(product.price).toLocaleString('id-ID')}</span>
               </div>
             </div>
             <div className="bg-primary/20 border-2 border-black p-2.5 text-xs font-bold text-neutral leading-relaxed">
