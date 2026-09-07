@@ -8,6 +8,7 @@ import { duitkuProvider } from './providers/duitku'
 import { sumopodProvider } from './providers/sumopod'
 import type { PaymentProvider } from './payments.types'
 import type { PayableOrder } from '../orders/orders.types'
+import { getEnv } from '../../shared/lib/runtime-env'
 
 // ─── Payments Service ───────────────────────────────────────────────────────
 // Registry of providers + orchestration for initiating payments and handling
@@ -29,7 +30,7 @@ function getProvider(name: string): PaymentProvider {
 }
 
 function getActiveProviderName(): string {
-  return process.env.PAYMENT_ACTIVE_PROVIDER || 'manual'
+  return getEnv('PAYMENT_ACTIVE_PROVIDER') || 'manual'
 }
 
 export const paymentsService = {

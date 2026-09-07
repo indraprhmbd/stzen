@@ -13,10 +13,13 @@ import { routes as adminRoutes } from './modules/admin'
 import { paymentsRoutes, webhooksRoutes } from './modules/payments'
 import { getSetting } from './shared/lib/settings'
 import { publicSettingsRoutes } from './modules/admin'
+import { getEnv, isProd } from './shared/lib/runtime-env'
 
 // ─── App Factory ────────────────────────────────────────────────────────────
 // Creates the Hono app with all modules composed.
 // Export AppType for end-to-end type safety with hono/client.
+// NOTE: no Bindings generic. Workers bindings arrive via setRuntimeEnv() and
+// are read through getEnv(), so c.env stays unused and AuthEnv suffices.
 
 export function createApp() {
   const base = new Hono<AuthEnv>()
@@ -26,7 +29,12 @@ export function createApp() {
   base.use(
     '*',
     secureHeaders({
-      strictTransportSecurity: 'max-age=63072000; includeSubDomains; preload',
+      // HSTS only on production HTTPS. Emitting it over http://localhost
+      // or Pages preview poisons nothing (header ignored on HTTP) but flags
+      // false and risks includeSubDomains preload confusion, so gate it.
+      strictTransportSecurity: isProd()
+        ? 'max-age=63072000; includeSubDomains; preload'
+        : false,
       referrerPolicy: 'strict-origin-when-cross-origin',
       permissionsPolicy: {
         geolocation: [],
@@ -46,7 +54,7 @@ export function createApp() {
       },
     })
   )
-  const corsOrigins = (process.env.CORS_ALLOWED_ORIGINS || 'http://localhost:5173,http://localhost:4173,https://collected-ankle-dynamic.ngrok-free.dev')
+  const corsOrigins = (getEnv('CORS_ALLOWED_ORIGINS') || 'http://localhost:5173,http://localhost:4173')
     .split(',')
     .map((s) => s.trim())
     .filter(Boolean)

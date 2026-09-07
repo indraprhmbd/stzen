@@ -7,13 +7,14 @@
 
 import { timingSafeEqual } from './hmac'
 import { getIntSetting } from './settings'
+import { getEnv } from './runtime-env'
 
 const encoder = new TextEncoder()
 
 const DEFAULT_TTL_MS = 10 * 60 * 1000
 
 function unlockSecret(): string {
-  const s = process.env.AES_SECRET_KEY
+  const s = getEnv('AES_SECRET_KEY')
   if (!s) throw new Error('AES_SECRET_KEY not configured')
   return s
 }

@@ -16,7 +16,6 @@
   "dependencies": {
     "@cloudflare/vite-plugin": "^1.54.4",
     "@hono/zod-validator": "^0.9.0",
-    "dotenv": "^17.4.2",
     "drizzle-orm": "^0.45.2",
     "hono": "^4.13.5",
     "jose": "^6.0.11",
@@ -27,6 +26,7 @@
   "devDependencies": {
     "@hono/node-server": "^1.14.0",
     "@types/node": "^22.0.0",
+    "dotenv": "^17.4.2",
     "drizzle-kit": "^0.30.5",
     "tsx": "^4.19.0",
     "typescript": "^5.8.3"

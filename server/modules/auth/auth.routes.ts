@@ -2,12 +2,20 @@ import { Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import { supabaseAdmin } from '../../shared/db'
 import { type AuthEnv } from '../../shared/middleware/auth'
+import { getEnv } from '../../shared/lib/runtime-env'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 type CallbackEnv = AuthEnv
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function sessionCookie(c: { req: { url: string } }, accessToken: string): string {
+  // Secure only over HTTPS. Hardcoding it breaks http://localhost and
+  // Pages preview logins (browsers drop Secure cookies on HTTP).
+  const https = new URL(c.req.url).protocol === 'https:' || getEnv('ENV') === 'production'
+  return `sb_access_token=${accessToken}; HttpOnly;${https ? ' Secure;' : ''} SameSite=Lax; Path=/; Max-Age=3600`
+}
 
 function isSafeNext(next: string | undefined): boolean {
   if (!next || next === '/dashboard') return true
@@ -69,7 +77,7 @@ authRoutes.get('/callback', async (c) => {
   }
 
   // Set HTTP-only session cookie
-  const cookie = `sb_access_token=${data.session.access_token}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=3600`
+  const cookie = sessionCookie(c, data.session.access_token)
 
   return c.newResponse(null, {
     status: 302,
@@ -120,7 +128,7 @@ authRoutes.post('/callback', async (c) => {
     if (insertError) throw new Error(insertError.message)
   }
 
-  const cookie = `sb_access_token=${data.session.access_token}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=3600`
+  const cookie = sessionCookie(c, data.session.access_token)
 
   return c.json({ ok: true, user: { id: user.id, email: user.email } }, 302, {
     'Set-Cookie': cookie,

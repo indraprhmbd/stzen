@@ -1,6 +1,7 @@
 import { createRemoteJWKSet, jwtVerify, type JWTPayload } from 'jose'
 import { createMiddleware } from 'hono/factory'
 import { HTTPException } from 'hono/http-exception'
+import { getEnv } from '../lib/runtime-env'
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -19,11 +20,13 @@ export interface AuthEnv {
 // Lazy-initialized — one JWKS fetch per cold start, cached in memory
 
 let jwks: ReturnType<typeof createRemoteJWKSet> | null = null
+let jwksUrl = ''
 
 function getJWKS(): ReturnType<typeof createRemoteJWKSet> {
-  if (!jwks) {
-    const supabaseUrl = process.env.SUPABASE_URL
-    if (!supabaseUrl) throw new Error('SUPABASE_URL environment variable is required')
+  const supabaseUrl = getEnv('SUPABASE_URL')
+  if (!supabaseUrl) throw new Error('SUPABASE_URL environment variable is required')
+  if (!jwks || jwksUrl !== supabaseUrl) {
+    jwksUrl = supabaseUrl
     jwks = createRemoteJWKSet(
       new URL(`${supabaseUrl}/auth/v1/.well-known/jwks.json`)
     )
@@ -45,7 +48,7 @@ export const authMiddleware = createMiddleware<AuthEnv>(async (c, next) => {
   const token = authHeader.slice(7)
 
   try {
-    const supabaseUrl = process.env.SUPABASE_URL
+    const supabaseUrl = getEnv('SUPABASE_URL')
     if (!supabaseUrl) throw new Error('SUPABASE_URL required')
 
     const { payload } = await jwtVerify(token, getJWKS(), {

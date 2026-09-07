@@ -1,4 +1,5 @@
 import type { PaymentProvider } from '../payments.types'
+import { getEnv } from '../../../shared/lib/runtime-env'
 
 // ─── Duitku Provider (STUB) ──────────────────────────────────────────────────
 // Flavor: Pop redirect (paymentUrl). No duitku.js popup.
@@ -16,9 +17,9 @@ import type { PaymentProvider } from '../payments.types'
 // supported by shared/lib/hmac.ts already.
 
 function requireConfig() {
-  const merchantCode = process.env.PAYMENT_DUITKU_MERCHANT_CODE
-  const apiKey = process.env.PAYMENT_DUITKU_API_KEY
-  const baseUrl = process.env.PAYMENT_DUITKU_BASE_URL
+  const merchantCode = getEnv('PAYMENT_DUITKU_MERCHANT_CODE')
+  const apiKey = getEnv('PAYMENT_DUITKU_API_KEY')
+  const baseUrl = getEnv('PAYMENT_DUITKU_BASE_URL')
   if (!merchantCode || !apiKey || !baseUrl) {
     throw new Error(
       'Duitku is not configured. Set PAYMENT_DUITKU_MERCHANT_CODE, PAYMENT_DUITKU_API_KEY, PAYMENT_DUITKU_BASE_URL in server/.env.'

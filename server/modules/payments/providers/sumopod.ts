@@ -2,6 +2,7 @@ import type { PaymentProvider, WebhookResult } from '../payments.types'
 import { WebhookCaptureError } from '../payments.types'
 import { ForbiddenError, BadRequestError, ConflictError } from '../../../shared/errors/http'
 import { verifySvixSignature, verifyWebhookToken } from '../../../shared/lib/hmac'
+import { getEnv } from '../../../shared/lib/runtime-env'
 
 // ─── SumoPod Provider ────────────────────────────────────────────────────────
 // Sandbox: api-pay-sandbox.sumopod.com/api/v1 (pre-KYC, QRIS-only). Redirect
@@ -20,8 +21,8 @@ import { verifySvixSignature, verifyWebhookToken } from '../../../shared/lib/hma
 const CREATE_TIMEOUT_MS = 30_000
 
 function requireConfig() {
-  const apiKey = process.env.PAYMENT_SUMOPOD_API_KEY
-  const baseUrl = (process.env.PAYMENT_SUMOPOD_BASE_URL || 'https://api-pay-sandbox.sumopod.com/api/v1').replace(/\/+$/, '')
+  const apiKey = getEnv('PAYMENT_SUMOPOD_API_KEY')
+  const baseUrl = (getEnv('PAYMENT_SUMOPOD_BASE_URL') || 'https://api-pay-sandbox.sumopod.com/api/v1').replace(/\/+$/, '')
   if (!apiKey) {
     throw new Error(
       'SumoPod is not configured. Set PAYMENT_SUMOPOD_API_KEY in server/.env.'
@@ -86,15 +87,15 @@ export const sumopodProvider: PaymentProvider = {
     if (!/^[A-Za-z0-9-_]{1,64}$/.test(input.orderPublicId)) {
       throw new BadRequestError('Order id is not SumoPod-compatible')
     }
-    const expiryMinutes = Number(process.env.PAYMENT_DEFAULT_EXPIRY_MINUTES ?? 60)
-    const appBase = (process.env.PAYMENT_APP_BASE_URL || '').replace(/\/+$/, '')
+    const expiryMinutes = Number(getEnv('PAYMENT_DEFAULT_EXPIRY_MINUTES') || 60)
+    const appBase = (getEnv('PAYMENT_APP_BASE_URL') || '').replace(/\/+$/, '')
     const json = await postJson(`${baseUrl}/payments`, apiKey, {
       order_id: input.orderPublicId,
       amount: input.amount,
       currency: 'IDR',
       // Sandbox rejects ambiguous invoices when the merchant has several
       // methods active — pin one (QRIS). Overridable per deploy if needed.
-      payment_method_type_code: process.env.PAYMENT_SUMOPOD_METHOD_CODE || 'QRIS',
+      payment_method_type_code: getEnv('PAYMENT_SUMOPOD_METHOD_CODE') || 'QRIS',
       expires_in_hours: Math.max(1, Math.ceil(expiryMinutes / 60)),
       ...(appBase.startsWith('https://')
         ? {
@@ -110,14 +111,14 @@ export const sumopodProvider: PaymentProvider = {
   },
 
   async parseWebhook(c) {
-    const webhookSecret = process.env.PAYMENT_SUMOPOD_WEBHOOK_SECRET || ''
-    const webhookToken = process.env.PAYMENT_SUMOPOD_WEBHOOK_TOKEN || ''
+    const webhookSecret = getEnv('PAYMENT_SUMOPOD_WEBHOOK_SECRET') || ''
+    const webhookToken = getEnv('PAYMENT_SUMOPOD_WEBHOOK_TOKEN') || ''
     const raw = await c.req.text()
 
     // Sandbox onboarding: explicit flag, or no credentials at all — capture
     // the test delivery for shape inspection, answer 200, trust nothing.
     // Any configured value (even a placeholder) disables auto-capture.
-    if (process.env.PAYMENT_SUMOPOD_CAPTURE === '1' || (!webhookSecret && !webhookToken)) {
+    if (getEnv('PAYMENT_SUMOPOD_CAPTURE') === '1' || (!webhookSecret && !webhookToken)) {
       const headers: Record<string, string> = {}
       c.req.raw.headers.forEach((v, k) => { headers[k] = v })
       throw new WebhookCaptureError('sumopod', raw, headers)

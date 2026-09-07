@@ -1,4 +1,5 @@
 import { supabaseAdmin } from '../../shared/db'
+import { getEnv } from '../../shared/lib/runtime-env'
 import { NotFoundError, ConflictError } from '../../shared/errors/http'
 import { appendAudit } from '../../shared/lib/audit'
 import {
@@ -16,7 +17,7 @@ const ORDERS = 'orders'
 let cachedKey: CryptoKey | null = null
 async function getKey(): Promise<CryptoKey> {
   if (!cachedKey) {
-    const aesSecret = process.env.AES_SECRET_KEY
+    const aesSecret = getEnv('AES_SECRET_KEY')
     if (!aesSecret) throw new Error('AES_SECRET_KEY not configured')
     cachedKey = await importKeyFromBase64(aesSecret)
   }
@@ -301,7 +302,7 @@ export const vaultService = {
         throw new ConflictError('ON_DEMAND_REQUIRES_CREDENTIAL')
       }
 
-      const aesSecret = process.env.AES_SECRET_KEY
+      const aesSecret = getEnv('AES_SECRET_KEY')
       if (!aesSecret) throw new Error('AES_SECRET_KEY not configured')
       const key = await importKeyFromBase64(aesSecret)
       const payload = await encrypt(key, credential)
@@ -372,7 +373,7 @@ export const vaultService = {
 
     // 3) Manual credential fallback: encrypt and insert as new SOLD vault item
     if (!newId && opts?.credential && opts.credential.trim()) {
-      const aesSecret = process.env.AES_SECRET_KEY
+      const aesSecret = getEnv('AES_SECRET_KEY')
       if (!aesSecret) throw new Error('AES_SECRET_KEY not configured')
       const key = await importKeyFromBase64(aesSecret)
       const payload = await encrypt(key, opts.credential.trim())

@@ -1,4 +1,5 @@
 import { supabaseAdmin } from '../../shared/db'
+import { getEnv } from '../../shared/lib/runtime-env'
 import type { PayableOrder, OrderWithProduct, OrderAction } from './orders.types'
 import { NotFoundError, ConflictError, BadRequestError } from '../../shared/errors/http'
 import { generatePublicId } from '../../shared/lib/publicId'
@@ -428,7 +429,7 @@ export const ordersService = {
     if ((order.fulfillmentType ?? 'vault') === 'on_demand') {
       const line = (rawCredential ?? '').trim()
       if (!line) throw new BadRequestError('Credential required for on-demand delivery')
-      const aesSecret = process.env.AES_SECRET_KEY
+      const aesSecret = getEnv('AES_SECRET_KEY')
       if (!aesSecret) throw new Error('AES_SECRET_KEY not configured')
       const key = await importKeyFromBase64(aesSecret)
       const payload = await encrypt(key, line)

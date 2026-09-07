@@ -2,14 +2,43 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "store-subs-api",
   "main": "./workers-entry.ts",
-  "compatibility_date": "2026-09-06",
+  "compatibility_date": "2026-09-07",
   "compatibility_flags": ["nodejs_compat"],
+  "minify": true,
+  // Secrets live in the secret store (wrangler secret put --env ...), never here:
+  // SUPABASE_SERVICE_ROLE_KEY, AES_SECRET_KEY, PAYMENT_SUMOPOD_API_KEY,
+  // PAYMENT_SUMOPOD_WEBHOOK_SECRET, PAYMENT_SUMOPOD_WEBHOOK_TOKEN,
+  // PAYMENT_DUITKU_MERCHANT_CODE, PAYMENT_DUITKU_API_KEY
   "vars": {
     "SUPABASE_URL": "https://kqgfbmehepanzkhypzdw.supabase.co",
-    "SUPABASE_ANON_KEY": "***REMOVED***",
-    "SUPABASE_SERVICE_ROLE_KEY": "***REMOVED***",
-    "AES_SECRET_KEY": "***REMOVED***",
-    "CORS_ALLOWED_ORIGINS": "http://localhost:5173,http://localhost:4173,https://collected-ankle-dynamic.ngrok-free.dev"
+    "SUPABASE_ANON_KEY": "",
+    "ENV": "staging",
+    "CORS_ALLOWED_ORIGINS": "http://localhost:5173,http://localhost:4173",
+    "PAYMENT_APP_BASE_URL": "",
+    "PAYMENT_ACTIVE_PROVIDER": "manual"
+  },
+  "env": {
+    "production": {
+      "vars": {
+        "SUPABASE_URL": "https://kqgfbmehepanzkhypzdw.supabase.co",
+        "SUPABASE_ANON_KEY": "",
+        "ENV": "production",
+        "CORS_ALLOWED_ORIGINS": "https://app.YOURDOMAIN",
+        "PAYMENT_APP_BASE_URL": "https://app.YOURDOMAIN",
+        "PAYMENT_ACTIVE_PROVIDER": "manual"
+      },
+      "routes": [{ "pattern": "api.YOURDOMAIN", "custom_domain": true }]
+    },
+    "staging": {
+      "vars": {
+        "SUPABASE_URL": "https://kqgfbmehepanzkhypzdw.supabase.co",
+        "SUPABASE_ANON_KEY": "",
+        "ENV": "staging",
+        "CORS_ALLOWED_ORIGINS": "http://localhost:5173,http://localhost:4173,https://dev.YOURDOMAIN",
+        "PAYMENT_APP_BASE_URL": "https://dev.YOURDOMAIN",
+        "PAYMENT_ACTIVE_PROVIDER": "manual"
+      }
+    }
   },
   "observability": {
     "enabled": true

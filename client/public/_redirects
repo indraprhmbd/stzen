@@ -1,0 +1,3 @@
+# SPA fallback: BrowserRouter paths (/, /dashboard, /admin/*, /auth/callback, …)
+# have no static file. Serve index.html with 200 so client routing resolves.
+/* /index.html 200
