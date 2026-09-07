@@ -419,7 +419,10 @@ export const ordersService = {
       sorted.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
     }
 
-    const paginated = sorted.slice(offset, offset + limit)
+    // Rows already carry the DB page via .range() above (line ~377). Sort
+    // in memory only; slicing again here would drop every page past the
+    // first (page 2 fetches rows 10-19 then slice(10,20) yields nothing).
+    const paginated = sorted
 
     const statusCounts = await getStatusCounts()
     const counts: Record<string, number> = { ALL: total || 0 }
