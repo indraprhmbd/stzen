@@ -56,15 +56,15 @@ function App() {
           <Route path="/profile" element={<Profile />} />
           <Route path="/payment/return" element={<PaymentReturn />} />
 
-          {/* Admin — POS shell */}
+          {/* Admin — concealed scope. RequireAdmin alone: no session or
+              wrong role renders the generic 404, never redirects. No
+              RequireAuth wrapper here, it would leak /admin via /login. */}
           <Route
             path="/admin"
             element={
-              <RequireAuth>
-                <RequireAdmin>
-                  <AdminLayout />
-                </RequireAdmin>
-              </RequireAuth>
+              <RequireAdmin>
+                <AdminLayout />
+              </RequireAdmin>
             }
           >
             <Route index element={<Overview />} />
