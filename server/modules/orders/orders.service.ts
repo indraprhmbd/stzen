@@ -408,6 +408,11 @@ export const ordersService = {
       sorted.sort((a: any, b: any) => {
         return sortDir === 'asc' ? a.status.localeCompare(b.status) : b.status.localeCompare(a.status)
       })
+    } else if (sort === 'createdAt') {
+      sorted.sort((a: any, b: any) => {
+        const diff = new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+        return sortDir === 'asc' ? diff : -diff
+      })
     } else if (oldest) {
       sorted.sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
     } else {
