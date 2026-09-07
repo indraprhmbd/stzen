@@ -3,12 +3,13 @@ import { useSearchParams, useNavigate } from 'react-router-dom'
 import { authedApiRequest } from '../../lib/api'
 import { useAdminQuery } from '../../hooks/useAdminQuery'
 import DataTable from '../../components/admin/DataTable'
+import TablePagination from '../../components/admin/TablePagination'
 import CopyCell from '../../components/admin/CopyCell'
 import StatusChip from '../../components/admin/StatusChip'
 import ConfirmDialog, { openConfirm } from '../../components/admin/ConfirmDialog'
 import DeliverDialog, { openConfirm as openDialog } from '../../components/admin/DeliverDialog'
 import { printReceipt as printOrderReceipt } from '../../lib/receipt'
-import { Refresh, Plus, Search, NavArrowLeft, NavArrowRight, Key, EditPencil, Trash, Notes } from 'iconoir-react'
+import { Refresh, Plus, Search, Key, EditPencil, Trash, Notes } from 'iconoir-react'
 import { SkeletonRows } from '../../components/admin/TableSkeleton'
 import { useTableSort } from '../../hooks/useTableSort'
 
@@ -62,7 +63,7 @@ export default function Orders() {
     if (urlQ) setQ(urlQ)
   }, [searchParams])
   const [offset, setOffset] = useState(0)
-  const limit = 20
+  const [limit, setLimit] = useState(10)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [actionErr, setActionErr] = useState<string | null>(null)
   const [pendingReject, setPendingReject] = useState<AdminOrder | null>(null)
@@ -101,12 +102,12 @@ export default function Orders() {
     if (sortKey) { query.sort = sortKey; query.sortDir = sortDir ?? 'desc' }
     const res = await authedApiRequest((c) => c.api.v1.admin.orders.$get({ query }))
     return (await res.json()) as any as { orders: AdminOrder[]; total: number; counts: Record<string, number> }
-  }, [tab, q, offset, sortKey, sortDir])
+  }, [tab, q, offset, limit, sortKey, sortDir])
   const orders = data?.orders ?? []
   const total = data?.total ?? 0
   const counts = data?.counts ?? { ALL: 0 }
 
-  useEffect(() => { setOffset(0) }, [tab, q, sortKey, sortDir])
+  useEffect(() => { setOffset(0) }, [tab, q, limit, sortKey, sortDir])
 
   function switchTab(key: TabKey) {
     setQ('')
@@ -375,13 +376,14 @@ export default function Orders() {
             )
           })}
         </DataTable>
-        <div className="flex items-center justify-between px-4 py-3 border-t border-[#f1f1f4]">
-          <span className="text-xs ad-num text-[#6e6e73]">{total} pesanan</span>
-          <div className="flex gap-1.5">
-            <button onClick={() => { setOffset((o) => Math.max(0, o - limit)); }} title="Sebelumnya" aria-label="Halaman sebelumnya" className="ad-btn !px-2.5" disabled={offset === 0}><NavArrowLeft width={15} height={15} strokeWidth={1.5} /></button>
-            <button onClick={() => { setOffset((o) => o + limit); }} title="Berikutnya" aria-label="Halaman berikutnya" className="ad-btn !px-2.5" disabled={offset + limit >= total}><NavArrowRight width={15} height={15} strokeWidth={1.5} /></button>
-          </div>
-        </div>
+        <TablePagination
+          total={total}
+          limit={limit}
+          offset={offset}
+          onLimitChange={setLimit}
+          onOffsetChange={setOffset}
+          unit="pesanan"
+        />
       </div>
       <dialog id="receipt_modal" className="modal">
         <div className="modal-box ad-dialog max-w-md p-6">

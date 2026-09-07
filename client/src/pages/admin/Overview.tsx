@@ -72,7 +72,7 @@ export default function Overview() {
     const [statsRes, analyticsRes, ordersRes, lowStockRes] = await Promise.all([
       authedApiRequest((c) => c.api.v1.admin.stats.$get()),
       authedApiRequest((c) => c.api.v1.admin.analytics.$get({ query: { range } })),
-      authedApiRequest((c) => c.api.v1.admin.orders.$get({ query: { limit: '5', status: 'PENDING,PAID', oldest: '1' } })),
+      authedApiRequest((c) => c.api.v1.admin.orders.$get({ query: { limit: 5, status: 'PENDING,PAID', oldest: '1' } })),
       authedApiRequest((c) => c.api.v1.admin.stats['low-stock'].$get({ query: { threshold: '5', limit: '5' } })),
     ])
 
