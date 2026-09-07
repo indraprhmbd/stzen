@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { NavArrowRight } from 'iconoir-react'
 import { adminDocSections, adminDocFaq } from '../../config/admin.docs'
 
 // ─── Admin Guide ─────────────────────────────────────────────────────────────
@@ -45,7 +46,7 @@ export default function Guide() {
           <div className="flex flex-wrap gap-1.5 mt-4">
             {s.links.map((l) => (
               <Link key={l.to} to={l.to} className="ad-btn ad-btn-dark">
-                {l.label} →
+                {l.label} <NavArrowRight width={13} height={13} strokeWidth={2} className="inline" />
               </Link>
             ))}
           </div>
@@ -67,7 +68,7 @@ export default function Guide() {
                 <div className="flex flex-wrap gap-1.5 mt-3">
                   {f.links.map((l) => (
                     <Link key={l.to} to={l.to} className="ad-btn ad-btn-dark">
-                      {l.label} →
+                      {l.label} <NavArrowRight width={13} height={13} strokeWidth={2} className="inline" />
                     </Link>
                   ))}
                 </div>
