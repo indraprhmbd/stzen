@@ -17,7 +17,7 @@ export interface Copy {
   footer: { rights: string; howToOrder: string; paymentMethods: string; faq: string; myOrders: string }
   filter: { all: string }
   dashboard: { title: string; subtitle: string; tabs: string[]; noOrders: string; selectOrder: string; payNow: string; cancelOrder: string; viewCredentials: string; receipt: string; reportIssue: string; cancelConfirm: string; paymentVerified: string; accountDelivered: string; paymentFailed: string; orderCancelled: string; loadMore: string }
-  profile: { title: string; guest: string; guestHint: string; language: string; quickLinks: string }
+  profile: { title: string; guest: string; guestHint: string; language: string; quickLinks: string; signOutTitle: string; signOutDesc: string; cancel: string; confirmSignOut: string }
   payment: { waiting: string; paid: string; failed: string; cancelled: string; waitingHint: string; paidHint: string; deliveredHint: string; failedHint: string; toDashboard: string }
   common: { noProducts: string; copiedToClipboard: string }
   pagination: { showing: string; of: string }
@@ -112,7 +112,7 @@ const id: Copy = {
   common: { noProducts: 'Belum ada produk tersedia', copiedToClipboard: 'Disalin ke clipboard!' },
   pagination: { showing: 'Menampilkan', of: 'dari' },
   notFound: { title: 'HALAMAN TIDAK DITEMUKAN', subtitle: 'Alamat yang kamu tuju tidak ada di toko ini.', home: 'KEMBALI KE TOKO', login: 'MASUK' },
-  profile: { title: 'AKUN', guest: 'Belum masuk', guestHint: 'Masuk untuk lacak pesanan dan lihat kredensial', language: 'BAHASA', quickLinks: 'PINTASAN' },
+  profile: { title: 'AKUN', guest: 'Belum masuk', guestHint: 'Masuk untuk lacak pesanan dan lihat kredensial', language: 'BAHASA', quickLinks: 'PINTASAN', signOutTitle: 'KELUAR DARI AKUN?', signOutDesc: 'Kamu harus masuk lagi untuk lacak pesanan dan lihat kredensial.', cancel: 'BATAL', confirmSignOut: 'YA, KELUAR' },
   info: {
     howToOrder: {
       title: 'CARA PESAN',
@@ -228,7 +228,7 @@ const en: Copy = {
   },
   footer: { rights: 'All rights reserved', howToOrder: 'How to Order', paymentMethods: 'Payment Methods', faq: 'FAQ', myOrders: 'My Orders' },
   filter: { all: 'All' },
-  profile: { title: 'ACCOUNT', guest: 'Not signed in', guestHint: 'Sign in to track orders and view credentials', language: 'LANGUAGE', quickLinks: 'SHORTCUTS' },
+  profile: { title: 'ACCOUNT', guest: 'Not signed in', guestHint: 'Sign in to track orders and view credentials', language: 'LANGUAGE', quickLinks: 'SHORTCUTS', signOutTitle: 'SIGN OUT?', signOutDesc: 'You need to sign in again to track orders and view credentials.', cancel: 'CANCEL', confirmSignOut: 'YES, SIGN OUT' },
   dashboard: { title: 'MY ACTIVE PURCHASES', subtitle: 'View and manage your credential orders', tabs: ['All', 'Pending', 'Paid', 'Delivered', 'Rejected', 'Refunded'], noOrders: 'No orders found', selectOrder: 'Select a delivered order to view credentials', payNow: 'PAY', cancelOrder: 'CANCEL', viewCredentials: 'CREDENTIALS', receipt: 'RECEIPT', reportIssue: 'REPORT', cancelConfirm: 'Cancel this order? Unpaid PENDING orders will be deleted.', paymentVerified: 'Payment verified', accountDelivered: 'Account delivered, check credentials', paymentFailed: 'Payment failed', orderCancelled: 'Order cancelled', loadMore: 'LOAD MORE' },
   payment: { waiting: 'Waiting for Payment', paid: 'Payment Successful', failed: 'Payment Failed', cancelled: 'Payment Cancelled', waitingHint: 'Finish the QRIS in the payment tab, status updates automatically…', paidHint: 'Paid, account is being prepared, check dashboard.', deliveredHint: 'Account delivered, check credentials in dashboard.', failedHint: 'Order still PENDING, retry payment from dashboard.', toDashboard: 'To Dashboard' },
   common: { noProducts: 'No products available', copiedToClipboard: 'Copied to clipboard!' },

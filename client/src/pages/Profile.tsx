@@ -1,6 +1,7 @@
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { useCopy } from '../hooks/useCopy'
+import { openSignOutDialog } from '../components/SignOutDialog'
 import Layout from '../components/Layout'
 
 // ─── Profile (account hub) ──────────────────────────────────────────────────
@@ -9,14 +10,8 @@ import Layout from '../components/Layout'
 // bottom-nav tab on mobile, direct URL on desktop.
 
 export default function Profile() {
-  const { user, signOut } = useAuth()
+  const { user } = useAuth()
   const { t, lang, toggle } = useCopy()
-  const navigate = useNavigate()
-
-  async function handleSignOut() {
-    await signOut()
-    navigate('/')
-  }
 
   const isAdmin = user?.app_metadata?.role === 'admin'
   const links = [
@@ -43,7 +38,7 @@ export default function Profile() {
             <>
               <p className="font-mono font-bold text-sm text-black truncate">{user.email}</p>
               <button
-                onClick={handleSignOut}
+                onClick={openSignOutDialog}
                 className="mt-3 w-full bg-white text-red-600 border-2 border-black font-black text-xs uppercase px-4 py-2 shadow-comic-sm btn-brutal-interactive"
                 style={{ fontFamily: "'Space Grotesk', sans-serif" }}
               >

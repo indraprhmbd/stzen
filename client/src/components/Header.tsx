@@ -3,9 +3,10 @@ import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { useCopy } from '../hooks/useCopy'
 import SearchOverlay from './SearchOverlay'
+import SignOutDialog, { openSignOutDialog } from './SignOutDialog'
 
 export default function Header() {
-  const { user, signOut } = useAuth()
+  const { user } = useAuth()
   const location = useLocation()
   const { t, lang, toggle } = useCopy()
   const [scrolled, setScrolled] = useState(false)
@@ -158,7 +159,7 @@ export default function Header() {
                         </Link>
                       </div>
                       <div className="border-t-2 border-black">
-                        <button onClick={() => { signOut(); setMenuOpen(false) }} className="w-full flex items-center gap-2 px-3 py-2 text-[11px] font-bold text-red-600 hover:bg-red-50 transition-colors" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                        <button onClick={() => { openSignOutDialog(); setMenuOpen(false) }} className="w-full flex items-center gap-2 px-3 py-2 text-[11px] font-bold text-red-600 hover:bg-red-50 transition-colors" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
                           <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
                           {t.auth.signOut}
                         </button>
@@ -190,6 +191,7 @@ export default function Header() {
       </header>
 
       <SearchOverlay open={searchOpen} onClose={() => setSearchOpen(false)} />
+      <SignOutDialog />
     </>
   )
 }
