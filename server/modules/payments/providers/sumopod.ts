@@ -79,6 +79,9 @@ const OUTCOME: Record<string, WebhookResult['outcome']> = {
 
 export const sumopodProvider: PaymentProvider = {
   name: 'sumopod',
+  // Sandbox and production deliveries carry data.amount. A callback without
+  // it cannot be reconciled against the order, so the handler rejects.
+  amountRequired: true,
 
   async createInvoice(input) {
     const { apiKey, baseUrl } = requireConfig()
@@ -155,12 +158,18 @@ export const sumopodProvider: PaymentProvider = {
     if (!providerRef) {
       throw new BadRequestError('SumoPod webhook is missing data.order_id')
     }
+    // Event id is the only replay guard in static-token mode (no signed
+    // timestamp there). Require it in every mode so the handler dedup path
+    // can never be skipped with a null key.
+    const eventId: string | null = body?.id ?? c.req.header('svix-id') ?? null
+    if (!eventId) {
+      throw new BadRequestError('SumoPod webhook is missing event id')
+    }
     return {
       providerRef,
       outcome,
       amount: typeof body?.data?.amount === 'number' ? body.data.amount : undefined,
-      // Fall back to the Svix message id — always present on signed deliveries.
-      eventId: body?.id ?? c.req.header('svix-id'),
+      eventId,
     }
   },
 }

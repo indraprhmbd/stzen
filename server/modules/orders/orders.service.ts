@@ -102,20 +102,22 @@ export const ordersService = {
   },
 
   async deleteOwnOrder(publicId: string, userId: string) {
-    const order = await this.getById(publicId, userId)
-    if (order.status !== 'PENDING') {
-      throw new ConflictError('Only PENDING orders can be cancelled')
-    }
-    if ((order as any).payment_ref) {
-      throw new ConflictError('Order already invoiced, contact admin to cancel')
-    }
-
-    const { error } = await supabaseAdmin
+    // Conditional delete: a webhook claimPaid landing between the checks and
+    // the delete must not orphan a paid order. No row returned means the
+    // order moved out from under us — report conflict, never silently drop.
+    const { data: deleted, error } = await supabaseAdmin
       .from(ORDERS)
       .delete()
       .eq('public_id', publicId)
+      .eq('user_id', userId)
+      .eq('status', 'PENDING')
+      .is('payment_ref', null)
+      .select('public_id')
 
     if (error) throw new Error(error.message)
+    if (!deleted || deleted.length === 0) {
+      throw new ConflictError('Order no longer cancellable')
+    }
     return { ok: true }
   },
 

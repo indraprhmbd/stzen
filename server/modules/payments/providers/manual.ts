@@ -9,6 +9,9 @@ import type { PaymentProvider } from '../payments.types'
 
 export const manualProvider: PaymentProvider = {
   name: 'manual',
+  // No gateway, no callback amount to reconcile. Admin approval is the
+  // verification; parseWebhook always rejects.
+  amountRequired: false,
 
   async createInvoice(input) {
     // Nothing to redirect to — the order stays PENDING until an admin

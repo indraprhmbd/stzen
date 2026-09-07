@@ -30,6 +30,9 @@ function requireConfig() {
 
 export const duitkuProvider: PaymentProvider = {
   name: 'duitku',
+  // Callback carries merchantOrderId plus amountSignature. Enforced once
+  // the stub is wired; createInvoice currently throws before any invoice.
+  amountRequired: true,
 
   async createInvoice(_input) {
     requireConfig()

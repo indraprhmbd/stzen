@@ -30,6 +30,10 @@ export interface WebhookResult {
 
 export interface PaymentProvider {
   name: string
+  // True when the gateway contract always carries the paid amount and the
+  // handler must reject callbacks that omit it. Missing amount with
+  // amountRequired silently skips the reconcile guard, so this fails closed.
+  amountRequired: boolean
   createInvoice(input: CreateInvoiceInput): Promise<CreateInvoiceResult>
   // Reads the raw request (raw body / form body) itself — never call
   // c.req.json() upstream, it re-serializes and breaks signature checks.

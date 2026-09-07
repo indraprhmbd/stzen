@@ -41,6 +41,7 @@ export async function appendAudit(params: {
 }
 
 export async function findAuditByIdempotencyKey(key: string): Promise<any | null> {
+
   const { data: rows, error } = await supabaseAdmin
     .from('audit_logs')
     .select('diff')
@@ -53,4 +54,20 @@ export async function findAuditByIdempotencyKey(key: string): Promise<any | null
   const row = rows[0]
   if (!row.diff) return null
   return typeof row.diff === 'string' ? JSON.parse(row.diff) : row.diff
+}
+
+// ─── Atomic Idempotency Claim ───────────────────────────────────────────────
+// Insert-first into idempotency_claims (PRIMARY KEY on key). Returns true for
+// the winner, false on unique violation (23505) meaning a concurrent or
+// retried request already owns this key. Workers isolates share nothing, so
+// the database constraint is the only airtight guard. Other errors throw.
+
+export async function claimIdempotencyKey(key: string): Promise<boolean> {
+  const { error } = await supabaseAdmin
+    .from('idempotency_claims')
+    .insert({ key })
+
+  if (!error) return true
+  if ((error as any).code === '23505') return false
+  throw new Error(error.message)
 }

@@ -1,8 +1,8 @@
 import type { Context } from 'hono'
 import { ordersService } from '../orders/orders.service'
 import { allocateCredential } from '../../shared/lib/db-helpers'
-import { appendAudit, findAuditByIdempotencyKey } from '../../shared/lib/audit'
-import { NotFoundError, ConflictError } from '../../shared/errors/http'
+import { appendAudit, claimIdempotencyKey, findAuditByIdempotencyKey } from '../../shared/lib/audit'
+import { NotFoundError, ConflictError, BadRequestError } from '../../shared/errors/http'
 import { manualProvider } from './providers/manual'
 import { duitkuProvider } from './providers/duitku'
 import { sumopodProvider } from './providers/sumopod'
@@ -65,18 +65,30 @@ export const paymentsService = {
     const provider = getProvider(providerName)
     const parsed = await provider.parseWebhook(c)
 
-    const idempotencyKey = parsed.eventId ? `webhook:${providerName}:${parsed.eventId}` : null
-    if (idempotencyKey) {
+    // Event id is mandatory (providers reject deliveries without one). Claim
+    // first: unique violation means retried or replayed delivery, return the
+    // stored outcome instead of re-running fulfillment.
+    if (!parsed.eventId) {
+      throw new BadRequestError('Webhook event is missing event id')
+    }
+    const idempotencyKey = `webhook:${providerName}:${parsed.eventId}`
+    const claimed = await claimIdempotencyKey(idempotencyKey).catch(() => null)
+    if (claimed === false) {
       const prior = await findAuditByIdempotencyKey(idempotencyKey).catch(() => null)
-      if (prior) return prior
+      return prior ?? { status: 'duplicate', skipped: true }
     }
 
     const order = await ordersService.findPayableByProviderRef(parsed.providerRef)
     if (!order) throw new NotFoundError('Order not found for provider reference')
 
     // Callback amount must match what the invoice was issued for — never
-    // fulfill an underpaying (or cross-wired) gateway notification.
-    if (parsed.amount != null && Number(parsed.amount) !== Number(order.amount)) {
+    // fulfill an underpaying (or cross-wired) gateway notification. Providers
+    // whose contract always carries the amount fail closed on omission.
+    if (parsed.amount == null) {
+      if (provider.amountRequired) {
+        throw new ConflictError('Webhook callback is missing amount')
+      }
+    } else if (Number(parsed.amount) !== Number(order.amount)) {
       throw new ConflictError(`Amount mismatch: callback ${parsed.amount} vs order ${order.amount}`)
     }
 
