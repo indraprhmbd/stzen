@@ -34,7 +34,7 @@ export default function DeliverDialog({ id, productName, onConfirm }: DeliverDia
           Kirim on-demand
         </h3>
         <p className="text-sm text-[#6e6e73] mt-2">
-          {productName} — kredensial diimpor ke vault lalu dialokasikan ke pesanan ini dalam satu aksi.
+          {productName}. Kredensial diimpor ke vault lalu dialokasikan ke pesanan ini dalam satu aksi.
         </p>
         <label className="ad-label block mt-4">
           Kredensial
