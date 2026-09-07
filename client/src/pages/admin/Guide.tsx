@@ -19,18 +19,18 @@ export default function Guide() {
       <div className="ad-card-flat p-3">
         <div className="flex flex-wrap gap-1.5">
           {adminDocSections.map((s) => (
-            <a key={s.id} href={`#panduan-${s.id}`} className="ad-btn">
+            <a key={s.id} href={`#guide-${s.id}`} className="ad-btn">
               {s.title}
             </a>
           ))}
-          <a href="#panduan-faq" className="ad-btn ad-btn-dark">
+          <a href="#guide-faq" className="ad-btn ad-btn-dark">
             Tanya-Jawab
           </a>
         </div>
       </div>
 
       {adminDocSections.map((s) => (
-        <section key={s.id} id={`panduan-${s.id}`} className="ad-card p-5 scroll-mt-4">
+        <section key={s.id} id={`guide-${s.id}`} className="ad-card p-5 scroll-mt-4">
           <h2 className="font-semibold text-[17px] tracking-tight">{s.title}</h2>
           <p className="text-[13px] text-[#6e6e73] mt-1">{s.intro}</p>
           <ul className="mt-3 flex flex-col gap-2">
@@ -54,7 +54,7 @@ export default function Guide() {
       ))}
 
       {/* FAQ */}
-      <section id="panduan-faq" className="ad-card p-5 scroll-mt-4">
+      <section id="guide-faq" className="ad-card p-5 scroll-mt-4">
         <h2 className="font-semibold text-[17px] tracking-tight">Tanya-Jawab</h2>
         <p className="text-[13px] text-[#6e6e73] mt-1">
           Masalah umum dan cara menyelesaikannya.

@@ -8,7 +8,7 @@ const items = [
   { to: '/admin/orders', label: 'Pesanan', Icon: ShoppingBag, end: false },
   { to: '/admin/history', label: 'Riwayat', Icon: ClockRotateRight, end: false },
   { to: '/admin/settings', label: 'Pengaturan', Icon: Settings, end: false },
-  { to: '/admin/panduan', label: 'Panduan', Icon: Book, end: false },
+  { to: '/admin/guide', label: 'Panduan', Icon: Book, end: false },
 ]
 
 export default function AdminSidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => void }) {

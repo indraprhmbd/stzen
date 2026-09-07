@@ -73,7 +73,7 @@ function App() {
             <Route path="orders" element={<AdminOrders />} />
             <Route path="history" element={<History />} />
             <Route path="settings" element={<Settings />} />
-            <Route path="panduan" element={<Guide />} />
+            <Route path="guide" element={<Guide />} />
           </Route>
 
           {/* Catch-all: same generic 404 the concealed admin scope renders */}
