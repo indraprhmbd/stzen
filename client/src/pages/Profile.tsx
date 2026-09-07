@@ -18,7 +18,9 @@ export default function Profile() {
     navigate('/')
   }
 
+  const isAdmin = user?.app_metadata?.role === 'admin'
   const links = [
+    ...(isAdmin ? [{ to: '/admin', label: t.nav.admin }] : []),
     { to: '/dashboard', label: t.nav.myOrders },
     { to: '/how-to-order', label: t.footer.howToOrder },
     { to: '/payment-methods', label: t.footer.paymentMethods },
