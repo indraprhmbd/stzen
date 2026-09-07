@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, Link, useSearchParams } from 'react-router-dom'
+import { Eye, EyeSlash } from '@phosphor-icons/react'
 import { useAuth } from '../hooks/useAuth'
 import { useBrand } from '../hooks/useBrand'
 import { useCopy } from '../hooks/useCopy'
@@ -9,6 +10,7 @@ export default function Login() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [showPw, setShowPw] = useState(false)
   const { signInWithGoogle, signInWithEmail } = useAuth()
   const brand = useBrand()
   const navigate = useNavigate()
@@ -86,14 +88,25 @@ export default function Login() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
-              <input
-                type="password"
-                placeholder={t.auth.password}
-                required
-                className="auth-input"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
+              <div className="relative">
+                <input
+                  type={showPw ? 'text' : 'password'}
+                  placeholder={t.auth.password}
+                  required
+                  className="auth-input pr-10 [&::-ms-reveal]:hidden"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+                <button
+                  type="button"
+                  tabIndex={-1}
+                  aria-label={showPw ? 'Hide password' : 'Show password'}
+                  onClick={() => setShowPw((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#0D110F]/60 hover:text-[#0D110F]"
+                >
+                  {showPw ? <EyeSlash size={18} weight="bold" /> : <Eye size={18} weight="bold" />}
+                </button>
+              </div>
 
               {error && (
                 <div className="auth-alert">

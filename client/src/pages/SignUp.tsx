@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
+import { Eye, EyeSlash } from '@phosphor-icons/react'
 import { useAuth } from '../hooks/useAuth'
 import { useBrand } from '../hooks/useBrand'
 import { useCopy } from '../hooks/useCopy'
@@ -11,6 +12,7 @@ export default function SignUp() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
+  const [showPw, setShowPw] = useState(false)
   const { signUp, signInWithGoogle } = useAuth()
   const brand = useBrand()
   const navigate = useNavigate()
@@ -83,24 +85,46 @@ export default function SignUp() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
-              <input
-                type="password"
-                placeholder={t.auth.password}
-                required
-                minLength={8}
-                className="auth-input"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-              <input
-                type="password"
-                placeholder={t.auth.confirmPassword}
-                required
-                minLength={8}
-                className="auth-input"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-              />
+              <div className="relative">
+                <input
+                  type={showPw ? 'text' : 'password'}
+                  placeholder={t.auth.password}
+                  required
+                  minLength={8}
+                  className="auth-input pr-10 [&::-ms-reveal]:hidden"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+                <button
+                  type="button"
+                  tabIndex={-1}
+                  aria-label={showPw ? 'Hide password' : 'Show password'}
+                  onClick={() => setShowPw((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#0D110F]/60 hover:text-[#0D110F]"
+                >
+                  {showPw ? <EyeSlash size={18} weight="bold" /> : <Eye size={18} weight="bold" />}
+                </button>
+              </div>
+              <div className="relative">
+                <input
+                  type={showPw ? 'text' : 'password'}
+                  placeholder={t.auth.confirmPassword}
+                  required
+                  minLength={8}
+                  className="auth-input pr-10 [&::-ms-reveal]:hidden"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                />
+                <button
+                  type="button"
+                  tabIndex={-1}
+                  aria-label={showPw ? 'Hide password' : 'Show password'}
+                  onClick={() => setShowPw((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#0D110F]/60 hover:text-[#0D110F]"
+                >
+                  {showPw ? <EyeSlash size={18} weight="bold" /> : <Eye size={18} weight="bold" />}
+                </button>
+              </div>
 
               {error && (
                 <div className="auth-alert">
