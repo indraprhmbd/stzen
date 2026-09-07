@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { useNavigate, Link, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { useBrand } from '../hooks/useBrand'
 import { useCopy } from '../hooks/useCopy'
@@ -13,6 +13,17 @@ export default function Login() {
   const brand = useBrand()
   const navigate = useNavigate()
   const { t } = useCopy()
+  const [searchParams, setSearchParams] = useSearchParams()
+
+  // OAuth failures land here as ?error= (AuthCallback). Surface it instead of
+  // a silent stuck login page, then clear the param so refresh stays clean.
+  useEffect(() => {
+    const oauthError = searchParams.get('error')
+    if (oauthError) {
+      setError(decodeURIComponent(oauthError))
+      setSearchParams({}, { replace: true })
+    }
+  }, [searchParams, setSearchParams])
 
   async function handleGoogleLogin() {
     try {

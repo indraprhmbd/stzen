@@ -1,10 +1,16 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase-browser'
+
+// Module scope: survives StrictMode remounts. One PKCE code exchanges exactly
+// once — the second dev-effect run with the same code would burn the consumed
+// verifier and bounce a logged-in user back to /login?error=.
+const exchangedCodes = new Set<string>()
 
 export default function AuthCallback() {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
+  const ran = useRef(false)
 
   useEffect(() => {
     let cancelled = false
@@ -24,6 +30,15 @@ export default function AuthCallback() {
         navigate('/login?error=missing_code', { replace: true })
         return
       }
+
+      if (ran.current || exchangedCodes.has(code)) {
+        // StrictMode second run, or back-button revisit: exchange already
+        // in flight or done. Dashboard resolves session from storage.
+        navigate('/dashboard', { replace: true })
+        return
+      }
+      ran.current = true
+      exchangedCodes.add(code)
 
       try {
         const { data, error } = await supabase.auth.exchangeCodeForSession(code)

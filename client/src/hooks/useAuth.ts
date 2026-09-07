@@ -50,11 +50,15 @@ export function useAuth() {
   }
 
   const signInWithEmail = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
+    // A stalled tunnel (ngrok hiccup, captive portal) leaves the promise
+    // pending forever and the login button spinning. Fail loudly instead.
+    const timeout = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('Login timed out — check connection and retry')), 20000)
+    )
+    const attempt = supabase.auth.signInWithPassword({ email, password }).then(({ error }) => {
+      if (error) throw error
     })
-    if (error) throw error
+    await Promise.race([attempt, timeout])
   }
 
   const signUp = async (email: string, password: string) => {

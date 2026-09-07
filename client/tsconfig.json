@@ -6,6 +6,6 @@
     "jsxImportSource": "react",
     "composite": false
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx", "../server/app.ts"],
+  "include": ["src/**/*.ts", "src/**/*.tsx", "../server/app.ts", "../server/worker-configuration.d.ts"],
   "exclude": ["node_modules", "dist"]
 }
