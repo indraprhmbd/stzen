@@ -20,6 +20,7 @@ const Profile = lazy(() => import('./pages/Profile'))
 // Admin shell stays out of the main bundle — loads only on /admin visits.
 const AdminLayout = lazy(() => import('./layouts/AdminLayout'))
 const PaymentReturn = lazy(() => import('./pages/PaymentReturn'))
+const NotFound = lazy(() => import('./pages/NotFound'))
 const Overview = lazy(() => import('./pages/admin/Overview'))
 const AdminProducts = lazy(() => import('./pages/admin/Products'))
 const AdminOrders = lazy(() => import('./pages/admin/Orders'))
@@ -72,6 +73,9 @@ function App() {
             <Route path="history" element={<History />} />
             <Route path="settings" element={<Settings />} />
           </Route>
+
+          {/* Catch-all: same generic 404 the concealed admin scope renders */}
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>
     </BrandProvider>
