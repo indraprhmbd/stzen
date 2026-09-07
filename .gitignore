@@ -43,3 +43,6 @@ skills-lock.json
 _temp/
 .kilo/
 .wrangler/
+
+# Wrangler generated Env types are committed (config drift fails compile)
+!server/worker-configuration.d.ts

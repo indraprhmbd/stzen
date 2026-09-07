@@ -5,26 +5,22 @@
 // back to process.env for `tsx` node dev. One lookup path, both runtimes.
 // Env is constant per Worker isolate, so module-level storage is safe.
 
-export interface WorkerEnv {
-  SUPABASE_URL?: string
-  SUPABASE_ANON_KEY?: string
+export interface SecretKeys {
   SUPABASE_SERVICE_ROLE_KEY?: string
   AES_SECRET_KEY?: string
-  CORS_ALLOWED_ORIGINS?: string
-  PAYMENT_APP_BASE_URL?: string
-  PAYMENT_ACTIVE_PROVIDER?: string
-  PAYMENT_DEFAULT_EXPIRY_MINUTES?: string
   PAYMENT_SUMOPOD_API_KEY?: string
-  PAYMENT_SUMOPOD_BASE_URL?: string
-  PAYMENT_SUMOPOD_METHOD_CODE?: string
   PAYMENT_SUMOPOD_WEBHOOK_SECRET?: string
   PAYMENT_SUMOPOD_WEBHOOK_TOKEN?: string
   PAYMENT_SUMOPOD_CAPTURE?: string
   PAYMENT_DUITKU_MERCHANT_CODE?: string
   PAYMENT_DUITKU_API_KEY?: string
-  PAYMENT_DUITKU_BASE_URL?: string
-  ENV?: string
 }
+
+// Var keys come from wrangler.jsonc via `wrangler types` (regenerate after
+// config edits). The generated file declares a global Env (script, no exports),
+// referenced directly below. Secret keys are declared here because the secret
+// store is invisible to the type generator. Both stay visible to getEnv().
+export interface WorkerEnv extends Partial<Env>, SecretKeys {}
 
 const runtime: Record<string, string | undefined> = {}
 
