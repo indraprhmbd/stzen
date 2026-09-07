@@ -4,11 +4,16 @@ import { z } from 'zod'
 import { supabaseAdmin } from '../../shared/db'
 import { type AuthEnv } from '../../shared/middleware/auth'
 import { appendAudit } from '../../shared/lib/audit'
-import { invalidateSettings } from '../../shared/lib/settings'
+import { getSetting, invalidateSettings } from '../../shared/lib/settings'
 
 type SettingsEnv = AuthEnv
 
+// Public storefront surface. Allowlist only: payment keys and ops keys must
+// never leave the server. Response shape is consumed by usePublicSettings
+// ({ announcement, storeName, whatsapp, telegram, email }).
 const PUBLIC_KEYS = [
+  'store.name',
+  'store.announcement',
   'support.whatsapp',
   'support.telegram',
   'support.email',
@@ -40,22 +45,19 @@ const SettingsUpdateSchema = z.object({
 
 export const publicSettingsRoutes = new Hono()
   .get('/', async (c) => {
-    const { data: rows, error } = await supabaseAdmin
-      .from('settings')
-      .select('key, value')
+    // Reads go through the 60s server cache (shared/lib/settings.ts),
+    // invalidated on admin PUT. Edge + browser caching via Cache-Control
+    // below: payload is allowlisted public data, no user content.
+    const [storeName, announcement, whatsapp, telegram, email] = await Promise.all([
+      getSetting('store.name', ''),
+      getSetting('store.announcement', ''),
+      getSetting('support.whatsapp', ''),
+      getSetting('support.telegram', ''),
+      getSetting('support.email', ''),
+    ])
 
-    if (error) throw new Error(error.message)
-
-    const values: Record<string, string> = {}
-    for (const r of rows || []) {
-      values[r.key] = r.value
-    }
-
-    return c.json({
-      whatsapp: values['support.whatsapp'] || '',
-      telegram: values['support.telegram'] || '',
-      email: values['support.email'] || '',
-    })
+    c.header('Cache-Control', 'public, max-age=60, stale-while-revalidate=60')
+    return c.json({ storeName, announcement, whatsapp, telegram, email })
   })
 
 export const adminSettingsRoutes = new Hono<SettingsEnv>()

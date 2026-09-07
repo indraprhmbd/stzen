@@ -1,45 +1,54 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { api } from '../lib/api'
-import { brandConfig } from '../config/brand.config'
 
-// ─── Public Settings ──────────────────────────────────────────────────────────
-// Storefront single source of truth for support contacts. Values come from
-// the admin settings page (support.* keys); brand.config is fallback only
-// (first paint / offline). Module-level promise: one fetch per page load
-// no matter how many components subscribe.
-
-export interface PublicSupport {
+export interface PublicSettings {
+  storeName: string
+  announcement: string
   whatsapp: string
   telegram: string
   email: string
 }
 
-const FALLBACK: PublicSupport = {
-  whatsapp: brandConfig.support.whatsappNumber,
-  telegram: brandConfig.support.telegramUsername,
-  email: brandConfig.support.email,
-}
+const EMPTY: PublicSettings = { storeName: '', announcement: '', whatsapp: '', telegram: '', email: '' }
+const TTL_MS = 60 * 1000
 
-let inflight: Promise<PublicSupport> | null = null
+// Module-level cache shared across mounts: one fetch per minute max, with
+// in-flight dedup so concurrent mounts do not fan out. Mirrors the server
+// 60s TTL (shared/lib/settings.ts) and edge max-age.
+let cached: { data: PublicSettings; ts: number } | null = null
+let inflight: Promise<PublicSettings> | null = null
 
-function fetchSupport(): Promise<PublicSupport> {
+async function load(): Promise<PublicSettings> {
+  if (cached && Date.now() - cached.ts < TTL_MS) return cached.data
   if (!inflight) {
-    inflight = api.api.settings.public.$get()
-      .then((r) => r.json() as Promise<{ whatsapp?: string; telegram?: string; email?: string }>)
-      .then((j) => ({
-        whatsapp: j.whatsapp || FALLBACK.whatsapp,
-        telegram: j.telegram || FALLBACK.telegram,
-        email: j.email || FALLBACK.email,
-      }))
-      .catch(() => FALLBACK)
+    inflight = api.api.settings.public
+      .$get()
+      .then((r) => r.json() as Promise<Partial<PublicSettings>>)
+      .then((j) => ({ ...EMPTY, ...j }))
+      .catch(() => EMPTY)
+      .finally(() => {
+        inflight = null
+      })
+      .then((data) => {
+        cached = { data, ts: Date.now() }
+        return data
+      })
   }
   return inflight
 }
 
-export function usePublicSettings(): PublicSupport {
-  const [support, setSupport] = useState<PublicSupport>(FALLBACK)
+export function usePublicSettings(): PublicSettings {
+  const [data, setData] = useState<PublicSettings>(cached?.data ?? EMPTY)
+
   useEffect(() => {
-    fetchSupport().then(setSupport)
+    let cancelled = false
+    void load().then((d) => {
+      if (!cancelled) setData(d)
+    })
+    return () => {
+      cancelled = true
+    }
   }, [])
-  return support
+
+  return data
 }

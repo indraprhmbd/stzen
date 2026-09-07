@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useCopy } from '../hooks/useCopy'
+import { usePublicSettings } from '../hooks/usePublicSettings'
 import { api } from '../lib/api'
 import Layout from '../components/Layout'
 import Marquee from '../components/Marquee'
@@ -9,16 +10,9 @@ import ShopCtaCardSlim from '../components/ShopCtaCardSlim'
 function Catalog() {
   const { t } = useCopy()
   const stripRef = useRef<HTMLDivElement>(null)
-  const [announcement, setAnnouncement] = useState('')
-
   // Public store announcement (admin settings, store.announcement).
   // Always on while set: admin controls visibility by clearing the text.
-  useEffect(() => {
-    api.api.settings.public.$get()
-      .then((r) => r.json() as Promise<{ announcement?: string }>)
-      .then((j) => { if (j.announcement) setAnnouncement(j.announcement) })
-      .catch(() => {})
-  }, [])
+  const { announcement } = usePublicSettings()
 
   // Desktop has no carousel buttons: vertical wheel over the strip scrolls
   // it horizontally instead of moving the page.
