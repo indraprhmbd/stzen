@@ -33,9 +33,12 @@ export function sortByKey<T>(data: T[], key: string | null, dir: SortDir): T[] {
   return dir === 'desc' ? sorted.reverse() : sorted
 }
 
-function cycleDir(current: SortDir, defaultDir: SortDir): SortDir {
+// Pure three-state rotation: asc -> desc -> unsorted. Never tied to
+// defaultDir, otherwise columns whose desc equals the default can never
+// display their descending state (params wipe on the second click).
+function cycleDir(current: SortDir): SortDir {
   if (current === 'asc') return 'desc'
-  if (current === 'desc') return defaultDir
+  if (current === 'desc') return null
   return 'asc'
 }
 
@@ -55,8 +58,8 @@ export function useTableSort<T>(data: T[], opts: SortOpts = {}): SortResult<T> {
     let newKey: string | null = key
     let newDir: SortDir
     if (currentKey === key) {
-      newDir = cycleDir(currentDir, defaultDir)
-      if (newDir === defaultDir) newKey = null
+      newDir = cycleDir(currentDir)
+      if (newDir === null) newKey = null
     } else {
       newDir = 'asc'
     }
@@ -77,12 +80,12 @@ export function useTableSort<T>(data: T[], opts: SortOpts = {}): SortResult<T> {
   const toggleSortLocal = useCallback((key: string) => {
     setSort((prev) => {
       if (prev.key === key) {
-        const newDir = cycleDir(prev.dir, defaultDir)
-        return { key: newDir === defaultDir ? null : key, dir: newDir }
+        const newDir = cycleDir(prev.dir)
+        return { key: newDir === null ? null : key, dir: newDir }
       }
       return { key, dir: 'asc' }
     })
-  }, [defaultDir])
+  }, [])
 
   const activeKey = isServer ? urlSortKey : sort.key
   const activeDir = isServer ? (urlSortDir ?? defaultDir) : sort.dir
