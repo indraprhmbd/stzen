@@ -45,12 +45,8 @@ export default function AdminSidebar({ collapsed, onToggle }: { collapsed: boole
             title={collapsed ? label : undefined}
             className={({ isActive }) => `ad-navlink ${isActive ? 'ad-navlink-active' : ''} ${collapsed ? 'justify-center px-2' : ''}`}
           >
-            {({ isActive }) => (
-              <>
-                <Icon width={20} height={20} strokeWidth={isActive ? 2 : 1.5} />
-                {!collapsed && label}
-              </>
-            )}
+            <Icon width={20} height={20} strokeWidth={1.5} />
+            {!collapsed && label}
           </NavLink>
         ))}
       </nav>
