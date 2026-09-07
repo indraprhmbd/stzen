@@ -235,15 +235,22 @@ export default function ProductDetail() {
             </div>
           )}
 
-          {/* Back link */}
-          <Link
-            to="/products"
-            className="mt-3 flex items-center justify-center gap-2 border-2 border-black font-black text-[10px] uppercase px-3 py-2 bg-white text-black hover:bg-black hover:text-white transition-colors"
+          {/* Back link: history back preserves scroll/filter/page, with
+              fallback to /products on direct landing (no inward history).
+              ProductList remounts on this nav and always revalidates its
+              fetch, so the list paints fresh, never stale. */}
+          <button
+            onClick={() => {
+              const idx = (window.history.state as { idx?: number } | null)?.idx ?? 0
+              if (idx > 0) navigate(-1)
+              else navigate('/products')
+            }}
+            className="mt-3 flex items-center justify-center gap-2 border-2 border-black font-black text-[10px] uppercase px-3 py-2 bg-white text-black hover:bg-black hover:text-white transition-colors w-full cursor-pointer"
             style={{ fontFamily: "'Space Grotesk', sans-serif" }}
           >
             <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="square" strokeLinejoin="miter"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>
             KEMBALI KE PRODUK
-          </Link>
+          </button>
         </div>
       </div>
 
