@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react'
 import { authedApiRequest } from '../../lib/api'
 import { useAdminQuery } from '../../hooks/useAdminQuery'
 import DataTable from '../../components/admin/DataTable'
+import TablePagination from '../../components/admin/TablePagination'
 import StatusChip from '../../components/admin/StatusChip'
-import { Refresh, Search, NavArrowLeft, NavArrowRight } from 'iconoir-react'
+import { Refresh, Search } from 'iconoir-react'
 import { SkeletonRows } from '../../components/admin/TableSkeleton'
 import { useTableSort } from '../../hooks/useTableSort'
 
@@ -35,7 +36,7 @@ export default function History() {
   const [actor, setActor] = useState('all')
   const [q, setQ] = useState('')
   const [offset, setOffset] = useState(0)
-  const limit = 20
+  const [limit, setLimit] = useState(10)
 
   const { sortKey, sortDir, toggleSort } = useTableSort([], { urlKey: 'sort', defaultKey: 'createdAt', defaultDir: 'desc' })
 
@@ -57,11 +58,11 @@ export default function History() {
       return { logs: json, total: json.length }
     }
     return { logs: [], total: 0 }
-  }, [type, actor, q, offset, sortKey, sortDir])
+  }, [type, actor, q, offset, limit, sortKey, sortDir])
   const logs = data?.logs ?? []
   const total = data?.total ?? 0
 
-  useEffect(() => { setOffset(0) }, [type, actor, q, sortKey, sortDir])
+  useEffect(() => { setOffset(0) }, [type, actor, q, limit, sortKey, sortDir])
 
   if (error) return <div className="ad-card-flat p-8 text-center"><div className="text-sm font-semibold text-red-600">Gagal memuat</div><div className="text-xs text-[#6e6e73] mt-1">{error}</div><button onClick={fetchLogs} className="ad-btn ad-btn-dark mt-4">Coba lagi</button></div>
 
@@ -113,8 +114,7 @@ export default function History() {
           sortDir={sortDir}
           onSort={toggleSort}
         >
-          {loading ? <SkeletonRows rows={10} cols={4} /> : logs.map((l) => (
-            <tr key={l.id}>
+                    {loading ? <SkeletonRows rows={10} cols={4} /> : logs.map((l) => (            <tr key={l.id}>
               <td className="text-xs ad-num whitespace-nowrap text-[#6e6e73]">{formatIdDate(l.created_at)}</td>
               <td className="text-xs ad-num text-[#6e6e73]">{l.actor_email ?? '-'}</td>
               <td><StatusChip>{l.action}</StatusChip></td>
@@ -122,13 +122,13 @@ export default function History() {
             </tr>
           ))}
         </DataTable>
-        <div className="flex items-center justify-between px-4 py-3 border-t border-[#f1f1f4]">
-          <span className="text-xs ad-num text-[#6e6e73]">{total} entri</span>
-          <div className="flex gap-1.5">
-            <button disabled={offset === 0} onClick={() => setOffset((o) => Math.max(0, o - limit))} title="Sebelumnya" aria-label="Halaman sebelumnya" className="ad-btn !px-2.5"><NavArrowLeft width={15} height={15} strokeWidth={1.5} /></button>
-            <button disabled={offset + limit >= total} onClick={() => setOffset((o) => o + limit)} title="Berikutnya" aria-label="Halaman berikutnya" className="ad-btn !px-2.5"><NavArrowRight width={15} height={15} strokeWidth={1.5} /></button>
-          </div>
-        </div>
+        <TablePagination
+          total={total}
+          limit={limit}
+          offset={offset}
+          onLimitChange={setLimit}
+          onOffsetChange={setOffset}
+        />
       </div>
     </div>
   )

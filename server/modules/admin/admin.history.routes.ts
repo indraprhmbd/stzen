@@ -16,16 +16,15 @@ export const adminHistoryRoutes = new Hono<HistoryEnv>()
     type: z.string().optional(),
     actor: z.enum(['admin', 'user', 'system']).optional(),
     q: z.string().optional(),
-    limit: z.string().optional(),
-    offset: z.string().optional(),
+    limit: z.coerce.number().int().min(1).max(100).default(10),
+    offset: z.coerce.number().int().min(0).default(0),
     sort: z.string().optional(),
     sortDir: z.string().optional(),
   })), async (c) => {
     const type = c.req.query('type')
     const actor = c.req.query('actor')
     const q = c.req.query('q')
-    const limit = Math.min(parseInt(c.req.query('limit') || '20', 10), 100)
-    const offset = parseInt(c.req.query('offset') || '0', 10)
+    const { limit, offset } = c.req.valid('query')
     const sort = c.req.query('sort') || 'created_at'
     const sortDir = c.req.query('sortDir') || 'desc'
 
