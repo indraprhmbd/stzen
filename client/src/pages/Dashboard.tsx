@@ -33,7 +33,9 @@ interface Credentials {
   productName: string
 }
 
-type FilterTab = 'ALL' | 'PENDING' | 'PAID' | 'DELIVERED' | 'REJECTED'
+type FilterTab = 'ALL' | 'PENDING' | 'PAID' | 'DELIVERED' | 'REJECTED' | 'REFUNDED'
+
+const PAGE_SIZE = 8
 
 export default function Dashboard() {
   const { user, session } = useAuth()
@@ -42,7 +44,15 @@ const support = usePublicSettings()
 const { t } = useCopy()
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
   const [activeTab, setActiveTab] = useState<FilterTab>('ALL')
+  // Server-paginated, newest first. Page holds PAGE_SIZE rows; load-more
+  // refetches from zero so polling never desyncs the list.
+  const [page, setPage] = useState(1)
+  const [total, setTotal] = useState(0)
+  const [tabCounts, setTabCounts] = useState<Record<FilterTab, number>>({
+    ALL: 0, PENDING: 0, PAID: 0, DELIVERED: 0, REJECTED: 0, REFUNDED: 0,
+  })
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
   const [credentials, setCredentials] = useState<Credentials | null>(null)
   const [loadingCredentials, setLoadingCredentials] = useState(false)
@@ -50,36 +60,62 @@ const { t } = useCopy()
   const [payingId, setPayingId] = useState<string | null>(null)
   const { toasts, showToast, dismissToast } = useToast()
 
-  const fetchOrders = useCallback(async () => {
+  const fetchOrders = useCallback(async (pages: number = 1, tab: FilterTab = 'ALL') => {
     try {
-      const data = await authedApiRequest((c) => c.api.v1.orders.$get())
-      const result = await data.json()
-      setOrders(result as Order[])
+      const query: Record<string, string> = {
+        limit: String(pages * PAGE_SIZE),
+        offset: '0',
+      }
+      if (tab !== 'ALL') query.status = tab
+      const data = await authedApiRequest((c) => c.api.v1.orders.$get({ query }))
+      const result = (await data.json()) as unknown as {
+        orders: Order[]
+        total: number
+        counts: Record<FilterTab, number>
+      }
+      setOrders(result.orders)
+      setTotal(result.total)
+      setTabCounts(result.counts)
     } catch {
       console.error('Failed to fetch orders')
     } finally {
       setLoading(false)
+      setLoadingMore(false)
     }
   }, [])
 
   useEffect(() => {
     if (session) {
-      fetchOrders()
+      void fetchOrders(1, 'ALL')
     } else {
       setLoading(false)
     }
   }, [session, fetchOrders])
+
+  function handleTabChange(tab: FilterTab) {
+    setActiveTab(tab)
+    setPage(1)
+    setLoading(true)
+    void fetchOrders(1, tab)
+  }
+
+  function handleLoadMore() {
+    const next = page + 1
+    setPage(next)
+    setLoadingMore(true)
+    void fetchOrders(next, activeTab)
+  }
 
   // Orders mutate server-side after we leave (webhook fulfills while the buyer
   // is on the SumoPod page). Refetch on focus + poll while anything is PENDING
   // so BAYAR disappears the moment the order moves.
   useEffect(() => {
     if (!session) return
-    const onFocus = () => fetchOrders()
+    const onFocus = () => fetchOrders(page, activeTab)
     window.addEventListener('focus', onFocus)
     const id = setInterval(() => {
       setOrders((prev) => {
-        if (prev.some((o) => o.status === 'PENDING')) fetchOrders()
+        if (prev.some((o) => o.status === 'PENDING')) fetchOrders(page, activeTab)
         return prev
       })
     }, 10000)
@@ -87,7 +123,7 @@ const { t } = useCopy()
       window.removeEventListener('focus', onFocus)
       clearInterval(id)
     }
-  }, [session, fetchOrders])
+  }, [session, fetchOrders, page, activeTab])
 
   // Verification notifications: toast once when a previously-PENDING order
   // moves (webhook landed while polling). First population never fires.
@@ -105,20 +141,10 @@ const { t } = useCopy()
     }
   }, [orders, showToast, t])
 
-  const filteredOrders =
-    activeTab === 'ALL'
-      ? orders
-      : orders.filter((o) => o.status === activeTab)
+  // Orders arrive pre-filtered by tab from the server, newest first.
+  const filteredOrders = orders
 
-  const tabCounts = {
-    ALL: orders.length,
-    PENDING: orders.filter((o) => o.status === 'PENDING').length,
-    PAID: orders.filter((o) => o.status === 'PAID').length,
-    DELIVERED: orders.filter((o) => o.status === 'DELIVERED').length,
-    REJECTED: orders.filter((o) => o.status === 'REJECTED').length,
-  }
-
-  const tabKeys: FilterTab[] = ['ALL', 'PENDING', 'PAID', 'DELIVERED', 'REJECTED']
+  const tabKeys: FilterTab[] = ['ALL', 'PENDING', 'PAID', 'DELIVERED', 'REJECTED', 'REFUNDED']
   const tabLabels = t.dashboard.tabs
 
   async function handlePay(orderId: string) {
@@ -129,7 +155,7 @@ const { t } = useCopy()
       if (checkoutUrl) {
         window.location.href = checkoutUrl
       } else {
-        fetchOrders()
+        fetchOrders(page, activeTab)
       }
     } catch (e: any) {
       showToast(e?.message || 'Gagal membuat pembayaran', 'error')
@@ -143,7 +169,7 @@ const { t } = useCopy()
     try {
       await deleteOrder(orderId)
       showToast(t.dashboard.orderCancelled, 'success')
-      fetchOrders()
+      fetchOrders(page, activeTab)
     } catch (e: any) {
       showToast(e?.message || 'Gagal membatalkan order', 'error')
     }
@@ -234,6 +260,7 @@ const { t } = useCopy()
                 PAID: 'bg-info text-black',
                 DELIVERED: 'bg-primary text-black',
                 REJECTED: 'bg-error text-white',
+                REFUNDED: 'bg-secondary-container text-black',
               }
               const isActive = activeTab === tab
               return (
@@ -241,7 +268,7 @@ const { t } = useCopy()
                   key={tab}
                   className={`shrink-0 border-[3px] border-on-surface font-bold uppercase text-[10px] px-2 py-1 md:text-xs md:px-3 md:py-1.5 transition-all ${isActive ? `${tabColors[tab]} shadow-brutal translate-x-[1px] translate-y-[1px]` : 'bg-surface-container text-on-surface shadow-brutal-sm hover:-translate-x-[1px] hover:-translate-y-[1px]'}`}
                   style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-                  onClick={() => setActiveTab(tab)}
+                  onClick={() => handleTabChange(tab)}
                 >
                   {tabLabels[i]}
                   {tabCounts[tab] > 0 && <span className="ml-1 font-mono text-[9px] md:text-[10px] opacity-70">{tabCounts[tab]}</span>}
@@ -260,20 +287,33 @@ const { t } = useCopy()
               <p className="text-on-surface-variant/50 font-bold">{t.dashboard.noOrders}</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {filteredOrders.map((order) => (
-                <OrderCard
-                  key={order.id}
-                  order={order}
-                  onViewCredentials={order.status === 'DELIVERED' ? () => handleViewCredentials(order.id) : undefined}
-                  onPay={order.status === 'PENDING' ? () => handlePay(order.id) : undefined}
-                  paying={payingId === order.id}
-                  onCancel={order.status === 'PENDING' ? () => handleCancel(order.id) : undefined}
-                  onReport={() => window.open(getWhatsAppUrl(order.id), '_blank')}
-                  onReceipt={() => printReceipt(order)}
-                />
-              ))}
-            </div>
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {filteredOrders.map((order) => (
+                  <OrderCard
+                    key={order.id}
+                    order={order}
+                    onViewCredentials={order.status === 'DELIVERED' ? () => handleViewCredentials(order.id) : undefined}
+                    onPay={order.status === 'PENDING' ? () => handlePay(order.id) : undefined}
+                    paying={payingId === order.id}
+                    onCancel={order.status === 'PENDING' ? () => handleCancel(order.id) : undefined}
+                    onReport={() => window.open(getWhatsAppUrl(order.id), '_blank')}
+                    onReceipt={() => printReceipt(order)}
+                  />
+                ))}
+              </div>
+              {orders.length < total && (
+                <div className="flex justify-center mt-6">
+                  <button
+                    onClick={handleLoadMore}
+                    disabled={loadingMore}
+                    className="btn btn-primary border-comic shadow-comic btn-comic-interactive font-black uppercase text-xs px-6 disabled:opacity-50"
+                  >
+                    {loadingMore ? <span className="loading loading-spinner loading-sm" /> : t.dashboard.loadMore}
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </>
       )}

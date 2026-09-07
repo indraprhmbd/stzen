@@ -58,22 +58,55 @@ async function getStatusCounts(): Promise<any[]> {
 }
 
 export const ordersService = {
-  async listByUser(userId: string): Promise<OrderWithProduct[]> {
-    const { data: rows, error } = await supabaseAdmin
+  async listByUser(
+    userId: string,
+    params: { status?: string; limit?: number; offset?: number } = {}
+  ): Promise<{ orders: OrderWithProduct[]; total: number; counts: Record<string, number> }> {
+    const { status, limit = 8, offset = 0 } = params
+    const statuses = ['PENDING', 'PAID', 'DELIVERED', 'REJECTED', 'REFUNDED'] as const
+
+    let query = supabaseAdmin
       .from(ORDERS)
-      .select(`
+      .select(
+        `
         *,
         ${PRODUCTS} (
           name,
           category
         )
-      `)
+      `
+      )
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
 
-    if (error) throw new Error(error.message)
+    if (status) query = query.eq('status', status)
 
-    return (rows || []).map(mapOrderRow)
+    const [page, ...counts] = await Promise.all([
+      query.range(offset, offset + limit - 1),
+      supabaseAdmin.from(ORDERS).select('*', { count: 'exact', head: true }).eq('user_id', userId),
+      ...statuses.map((s) =>
+        supabaseAdmin.from(ORDERS).select('*', { count: 'exact', head: true }).eq('user_id', userId).eq('status', s)
+      ),
+    ])
+
+    if (page.error) throw new Error(page.error.message)
+
+    const total = status
+      ? (counts[statuses.indexOf(status as (typeof statuses)[number]) + 1]?.count ?? 0)
+      : (counts[0]?.count ?? 0)
+
+    return {
+      orders: (page.data || []).map(mapOrderRow),
+      total,
+      counts: {
+        ALL: counts[0]?.count ?? 0,
+        PENDING: counts[1]?.count ?? 0,
+        PAID: counts[2]?.count ?? 0,
+        DELIVERED: counts[3]?.count ?? 0,
+        REJECTED: counts[4]?.count ?? 0,
+        REFUNDED: counts[5]?.count ?? 0,
+      },
+    }
   },
 
   async getById(publicId: string, userId?: string): Promise<OrderWithProduct> {
