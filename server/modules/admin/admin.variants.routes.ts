@@ -3,7 +3,6 @@ import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
 import { supabaseAdmin } from '../../shared/db'
 import { type AuthEnv } from '../../shared/middleware/auth'
-import { requireRole } from '../../shared/middleware/require-role'
 import { generatePublicId } from '../../shared/lib/publicId'
 import { generateSku, composeVariantName } from '../../shared/lib/sku'
 import { BulkStockSchema } from '../products/products.schema'
@@ -47,7 +46,6 @@ const VariantUpdateSchema = z.object({
 
 type VariantEnv = AuthEnv
 export const adminVariantRoutes = new Hono<VariantEnv>()
-  .use('*', requireRole('admin'))
 
   .get('/', async (c) => {
     const { data: variants, error } = await supabaseAdmin

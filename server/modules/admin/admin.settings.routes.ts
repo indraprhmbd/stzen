@@ -3,7 +3,6 @@ import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
 import { supabaseAdmin } from '../../shared/db'
 import { type AuthEnv } from '../../shared/middleware/auth'
-import { requireRole } from '../../shared/middleware/require-role'
 import { appendAudit } from '../../shared/lib/audit'
 import { invalidateSettings } from '../../shared/lib/settings'
 
@@ -60,7 +59,6 @@ export const publicSettingsRoutes = new Hono()
   })
 
 export const adminSettingsRoutes = new Hono<SettingsEnv>()
-  .use('*', requireRole('admin'))
 
   .get('/', async (c) => {
     const { data: rows, error } = await supabaseAdmin

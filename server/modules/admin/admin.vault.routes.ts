@@ -2,7 +2,6 @@ import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
 import { type AuthEnv } from '../../shared/middleware/auth'
-import { requireRole } from '../../shared/middleware/require-role'
 import { ForbiddenError } from '../../shared/errors/http'
 import { vaultService } from '../vault/vault.service'
 import { mintUnlockToken, verifyUnlockToken } from '../../shared/lib/unlockToken'
@@ -37,8 +36,7 @@ async function unlockGuard(c: { req: { header: (n: string) => string | undefined
 }
 
 export const adminVaultRoutes = new Hono<AuthEnv>()
-  // Auth is enforced globally in app.ts; this only adds the role check.
-  .use('*', requireRole('admin'))
+  // Auth is enforced globally in app.ts; role check lives in admin.routes.ts composer.
 
   // POST /unlock — soft gate, one click, 10 minute token
   .post('/unlock', async (c) => {

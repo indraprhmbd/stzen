@@ -3,12 +3,10 @@ import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
 import { supabaseAdmin } from '../../shared/db'
 import { type AuthEnv } from '../../shared/middleware/auth'
-import { requireRole } from '../../shared/middleware/require-role'
 
 type AnalyticsEnv = AuthEnv
 
 export const adminAnalyticsRoutes = new Hono<AnalyticsEnv>()
-  .use('*', requireRole('admin'))
 
   .get('/', zValidator('query', z.object({ range: z.string().optional() })), async (c) => {
     const range = c.req.query('range') || '30d'

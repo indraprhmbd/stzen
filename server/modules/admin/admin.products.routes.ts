@@ -3,7 +3,6 @@ import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
 import { supabaseAdmin } from '../../shared/db'
 import { type AuthEnv } from '../../shared/middleware/auth'
-import { requireRole } from '../../shared/middleware/require-role'
 import { productsService } from '../products/products.service'
 import { vaultService } from '../vault/vault.service'
 import { generatePublicId } from '../../shared/lib/publicId'
@@ -21,7 +20,6 @@ const VAULT_ITEMS = 'vault_items'
 type AdminProductEnv = AuthEnv
 
 export const adminProductRoutes = new Hono<AdminProductEnv>()
-  .use('*', requireRole('admin'))
 
   .get('/', async (c) => {
     const allProducts = await productsService.listAll()

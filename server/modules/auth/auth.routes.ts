@@ -3,6 +3,7 @@ import { HTTPException } from 'hono/http-exception'
 import { supabaseAdmin } from '../../shared/db'
 import { type AuthEnv } from '../../shared/middleware/auth'
 import { getEnv } from '../../shared/lib/runtime-env'
+import { isSafeNext } from '../../shared/lib/safe-redirect'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -15,17 +16,6 @@ function sessionCookie(c: { req: { url: string } }, accessToken: string): string
   // Pages preview logins (browsers drop Secure cookies on HTTP).
   const https = new URL(c.req.url).protocol === 'https:' || getEnv('ENV') === 'production'
   return `sb_access_token=${accessToken}; HttpOnly;${https ? ' Secure;' : ''} SameSite=Lax; Path=/; Max-Age=3600`
-}
-
-function isSafeNext(next: string | undefined): boolean {
-  if (!next || next === '/dashboard') return true
-  if (next.startsWith('//') || next.startsWith('http://') || next.startsWith('https://')) return false
-  try {
-    const url = new URL(next, 'http://localhost')
-    return url.origin === 'http://localhost'
-  } catch {
-    return false
-  }
 }
 
 // ─── Callback Route ──────────────────────────────────────────────────────────
@@ -46,6 +36,7 @@ authRoutes.get('/callback', async (c) => {
   }
 
   if (!isSafeNext(next)) {
+    console.warn('[redirect_blocked]', { next })
     next = '/dashboard'
   }
 
@@ -99,6 +90,7 @@ authRoutes.post('/callback', async (c) => {
   }
 
   if (!isSafeNext(next)) {
+    console.warn('[redirect_blocked]', { next })
     next = '/dashboard'
   }
 
@@ -130,8 +122,12 @@ authRoutes.post('/callback', async (c) => {
 
   const cookie = sessionCookie(c, data.session.access_token)
 
-  return c.json({ ok: true, user: { id: user.id, email: user.email } }, 302, {
-    'Set-Cookie': cookie,
-    Location: next,
-  })
+  // 200 with the validated destination in the body. Non-browser clients
+  // navigate themselves; a 302 Location here would never be followed for XHR
+  // and raw Location headers on API responses are an open-redirect smell.
+  return c.json(
+    { ok: true, user: { id: user.id, email: user.email }, next },
+    200,
+    { 'Set-Cookie': cookie }
+  )
 })

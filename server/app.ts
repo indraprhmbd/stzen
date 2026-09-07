@@ -3,6 +3,7 @@ import { cors } from 'hono/cors'
 import { logger } from 'hono/logger'
 import { secureHeaders } from 'hono/secure-headers'
 import { errorHandler } from './shared/errors/handler'
+import { NotFoundError } from './shared/errors/http'
 import { rateLimit } from './shared/middleware/ratelimit'
 import { authMiddleware, type AuthEnv } from './shared/middleware/auth'
 import { routes as authRoutes } from './modules/auth'
@@ -82,14 +83,33 @@ export function createApp() {
   // unless explicitly allowlisted here. This replaces per-route-file
   // `.use('*', authMiddleware)` calls: a new route that forgets to wire auth
   // now fails closed (401) instead of silently serving data. Role checks
-  // (requireRole('admin')) still live in each admin route file — this gate
-  // only proves identity, not authorization.
+  // live in each scope composer (e.g. admin.routes.ts central guard) — this
+  // gate only proves identity, not authorization.
+  //
+  // Concealed scope: /api/v1/admin/* never confirms its own existence.
+  // Auth failures there (missing header, bad/expired JWT) are rethrown as
+  // 404 with the standard not-found body, identical to a nonexistent route.
+  // Reason is logged internally for incident response. All other prefixes
+  // keep 401 so the SPA re-login flow keeps working.
   const PUBLIC_API_PREFIXES = ['/api/v1/products', '/api/v1/webhooks', '/api/v1/auth']
+  const isConcealedScope = (path: string) =>
+    path === '/api/v1/admin' || path.startsWith('/api/v1/admin/')
   base.use('/api/v1/*', async (c, next) => {
     if (PUBLIC_API_PREFIXES.some((p) => c.req.path.startsWith(p))) {
       return next()
     }
-    return authMiddleware(c, next)
+    try {
+      return await authMiddleware(c, next)
+    } catch (err) {
+      if (isConcealedScope(c.req.path)) {
+        console.warn('[concealed_not_found]', {
+          path: c.req.path,
+          reason: c.req.header('Authorization') ? 'bad_token' : 'no_token',
+        })
+        throw new NotFoundError('Not found')
+      }
+      throw err
+    }
   })
 
   // Rate limits (in-memory, single instance)

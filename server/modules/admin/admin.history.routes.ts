@@ -3,14 +3,12 @@ import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
 import { supabaseAdmin } from '../../shared/db'
 import { type AuthEnv } from '../../shared/middleware/auth'
-import { requireRole } from '../../shared/middleware/require-role'
 
 const AUDIT_LOGS = 'audit_logs'
 
 type HistoryEnv = AuthEnv
 
 export const adminHistoryRoutes = new Hono<HistoryEnv>()
-  .use('*', requireRole('admin'))
 
   .get('/', zValidator('query', z.object({
     type: z.string().optional(),

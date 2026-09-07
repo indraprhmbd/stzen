@@ -1,13 +1,11 @@
 import { Hono } from 'hono'
 import { supabaseAdmin } from '../../shared/db'
 import { type AuthEnv } from '../../shared/middleware/auth'
-import { requireRole } from '../../shared/middleware/require-role'
 import { getIntSetting } from '../../shared/lib/settings'
 
 type AdminStatsEnv = AuthEnv
 
 export const adminStatsRoutes = new Hono<AdminStatsEnv>()
-  .use('*', requireRole('admin'))
 
   .get('/', async (c) => {
     try {

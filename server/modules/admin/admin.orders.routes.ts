@@ -3,7 +3,6 @@ import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
 import { supabaseAdmin } from '../../shared/db'
 import { type AuthEnv } from '../../shared/middleware/auth'
-import { requireRole } from '../../shared/middleware/require-role'
 import { ordersService } from '../orders/orders.service'
 import { appendAudit, findAuditByIdempotencyKey } from '../../shared/lib/audit'
 
@@ -23,7 +22,6 @@ const ManualOrderSchema = z.object({
 type AdminOrderEnv = AuthEnv
 
 export const adminOrderRoutes = new Hono<AdminOrderEnv>()
-  .use('*', requireRole('admin'))
 
   .get('/', zValidator('query', z.object({
     status: z.string().optional(),
