@@ -1,4 +1,5 @@
 import { NavArrowLeft, NavArrowRight } from 'iconoir-react'
+import { useCopy } from '../../hooks/useCopy'
 
 interface TablePaginationProps {
   total: number
@@ -22,9 +23,14 @@ export default function TablePagination({
   onOffsetChange,
   unit = 'entri',
 }: TablePaginationProps) {
+  const { t } = useCopy()
+  const from = total === 0 ? 0 : offset + 1
+  const to = Math.min(offset + limit, total)
   return (
     <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 border-t border-[#f1f1f4]">
-      <span className="text-xs ad-num text-[#6e6e73]">{total} {unit}</span>
+      <span className="text-xs ad-num text-[#6e6e73]">
+        {t.pagination.showing} <span className="text-[#1d1d1f] font-semibold">{from} - {to}</span> {t.pagination.of} {total} {unit}
+      </span>
       <div className="flex items-center gap-1.5">
         <select
           value={limit}

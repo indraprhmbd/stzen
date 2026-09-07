@@ -20,6 +20,7 @@ export interface Copy {
   profile: { title: string; guest: string; guestHint: string; language: string; quickLinks: string }
   payment: { waiting: string; paid: string; failed: string; cancelled: string; waitingHint: string; paidHint: string; deliveredHint: string; failedHint: string; toDashboard: string }
   common: { noProducts: string; copiedToClipboard: string }
+  pagination: { showing: string; of: string }
   notFound: { title: string; subtitle: string; home: string; login: string }
   info: {
     howToOrder: { title: string; desc: string; steps: { num: string; title: string; desc: string }[] }
@@ -109,6 +110,7 @@ const id: Copy = {
   dashboard: { title: 'PEMBELIAN AKTIF', subtitle: 'Lihat dan kelola pesanan kredensialmu', tabs: ['Semua', 'Menunggu', 'Dibayar', 'Dikirim', 'Ditolak', 'Refund'], noOrders: 'Belum ada pesanan', selectOrder: 'Pilih pesanan yang sudah dikirim untuk melihat kredensial', payNow: 'BAYAR', cancelOrder: 'BATAL', viewCredentials: 'KREDENSIAL', receipt: 'STRUK', reportIssue: 'LAPOR', cancelConfirm: 'Batalkan order ini? Order PENDING yang belum dibayar akan dihapus.', paymentVerified: 'Pembayaran terverifikasi', accountDelivered: 'Akun terkirim, cek kredensial', paymentFailed: 'Pembayaran gagal', orderCancelled: 'Order dibatalkan', loadMore: 'MUAT LEBIH BANYAK' },
   payment: { waiting: 'Menunggu Pembayaran', paid: 'Pembayaran Berhasil', failed: 'Pembayaran Gagal', cancelled: 'Pembayaran Dibatalkan', waitingHint: 'Selesaikan QRIS di tab pembayaran, status terupdate otomatis…', paidHint: 'Lunas, akun sedang disiapkan, cek dashboard.', deliveredHint: 'Akun sudah terkirim, cek kredensial di dashboard.', failedHint: 'Order masih PENDING, ulangi pembayaran dari dashboard.', toDashboard: 'Ke Dashboard' },
   common: { noProducts: 'Belum ada produk tersedia', copiedToClipboard: 'Disalin ke clipboard!' },
+  pagination: { showing: 'Menampilkan', of: 'dari' },
   notFound: { title: 'HALAMAN TIDAK DITEMUKAN', subtitle: 'Alamat yang kamu tuju tidak ada di toko ini.', home: 'KEMBALI KE TOKO', login: 'MASUK' },
   profile: { title: 'AKUN', guest: 'Belum masuk', guestHint: 'Masuk untuk lacak pesanan dan lihat kredensial', language: 'BAHASA', quickLinks: 'PINTASAN' },
   info: {
@@ -230,6 +232,7 @@ const en: Copy = {
   dashboard: { title: 'MY ACTIVE PURCHASES', subtitle: 'View and manage your credential orders', tabs: ['All', 'Pending', 'Paid', 'Delivered', 'Rejected', 'Refunded'], noOrders: 'No orders found', selectOrder: 'Select a delivered order to view credentials', payNow: 'PAY', cancelOrder: 'CANCEL', viewCredentials: 'CREDENTIALS', receipt: 'RECEIPT', reportIssue: 'REPORT', cancelConfirm: 'Cancel this order? Unpaid PENDING orders will be deleted.', paymentVerified: 'Payment verified', accountDelivered: 'Account delivered, check credentials', paymentFailed: 'Payment failed', orderCancelled: 'Order cancelled', loadMore: 'LOAD MORE' },
   payment: { waiting: 'Waiting for Payment', paid: 'Payment Successful', failed: 'Payment Failed', cancelled: 'Payment Cancelled', waitingHint: 'Finish the QRIS in the payment tab, status updates automatically…', paidHint: 'Paid, account is being prepared, check dashboard.', deliveredHint: 'Account delivered, check credentials in dashboard.', failedHint: 'Order still PENDING, retry payment from dashboard.', toDashboard: 'To Dashboard' },
   common: { noProducts: 'No products available', copiedToClipboard: 'Copied to clipboard!' },
+  pagination: { showing: 'Showing', of: 'of' },
   notFound: { title: 'PAGE NOT FOUND', subtitle: 'The address you are looking for does not exist in this store.', home: 'BACK TO STORE', login: 'SIGN IN' },
   info: {
     howToOrder: {
