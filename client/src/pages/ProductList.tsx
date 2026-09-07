@@ -209,11 +209,19 @@ export default function ProductList() {
 
       {/* ═══ PRODUCT GRID ═══ */}
       {loading ? (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <SkeletonCard key={i} />
-          ))}
-        </div>
+        view === 'list' ? (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2 items-start">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <SkeletonCard key={i} view="list" />
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <SkeletonCard key={i} view="grid" />
+            ))}
+          </div>
+        )
       ) : !result?.products.length ? (
         <div className="text-center py-12 bg-white border-comic shadow-comic p-8">
           <p className="font-black text-sm uppercase text-neutral" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
