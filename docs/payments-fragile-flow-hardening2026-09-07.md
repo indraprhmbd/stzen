@@ -48,7 +48,7 @@ Non-issues confirmed (no change): IDR hardcoded (no currency confusion), fixed q
 
 ### Verification
 
-Adversarial cases: forged price field rejected (400 plus DB amount wins), webhook amount mismatch 409, missing amount 409, duplicate event id single fulfill, concurrent double checkout one row per key, delete versus fulfill race keeps exactly one outcome, wrong secret 401 or 403, unknown event 400. Snyk CI gate (`.github/workflows/security.yml`): `snyk code test` fails PRs on high-plus SAST, `snyk test` runs report-only until upstream carries undici 7.29.1 or later (current findings are dev-only transitive, gating on them would red every PR with zero app-code signal).
+Adversarial cases: forged price field rejected (400 plus DB amount wins), webhook amount mismatch 409, missing amount 409, duplicate event id single fulfill, concurrent double checkout one row per key, delete versus fulfill race keeps exactly one outcome, wrong secret 401 or 403, unknown event 400. Snyk stays on demand through the agent session, no CI integration (decision: avoid freemium seat and org call limits). Re-run SAST on touched payment modules plus SCA at medium threshold before each payments-related merge.
 
 ## Open Questions
 
