@@ -1,15 +1,16 @@
 import { NavLink } from 'react-router-dom'
-import { Dashboard, Cube, ShoppingBag, ClockRotateRight, Settings } from 'iconoir-react'
+import { Dashboard, Cube, ShoppingBag, ClockRotateRight, Settings, Book } from 'iconoir-react'
 
 // ─── Admin Bottom Nav (mobile) ──────────────────────────────────────────────
-// 5 sections pinned to 1/4 width each with horizontal scroll, same pattern as
-// before. Solid white bar, active tab ink plus dot.
+// 6 sections pinned with horizontal scroll. Solid white bar, active tab ink
+// plus dot.
 const tabs = [
   { to: '/admin', label: 'Ringkasan', Icon: Dashboard, end: true },
   { to: '/admin/products', label: 'Produk', Icon: Cube, end: false },
   { to: '/admin/orders', label: 'Pesanan', Icon: ShoppingBag, end: false },
   { to: '/admin/history', label: 'Riwayat', Icon: ClockRotateRight, end: false },
   { to: '/admin/settings', label: 'Pengaturan', Icon: Settings, end: false },
+  { to: '/admin/panduan', label: 'Panduan', Icon: Book, end: false },
 ]
 
 export default function AdminBottomNav() {
@@ -27,7 +28,7 @@ export default function AdminBottomNav() {
               to={tab.to}
               end={tab.end}
               className={({ isActive }) =>
-                `flex-none basis-1/4 shrink-0 flex flex-col items-center justify-center gap-1 h-14 transition-colors ${
+                `flex-none basis-1/5 shrink-0 flex flex-col items-center justify-center gap-1 h-14 transition-colors ${
                   isActive ? 'text-[#1d1d1f]' : 'text-[#aeaeb2]'
                 }`
               }

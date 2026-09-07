@@ -26,6 +26,7 @@ const AdminProducts = lazy(() => import('./pages/admin/Products'))
 const AdminOrders = lazy(() => import('./pages/admin/Orders'))
 const History = lazy(() => import('./pages/admin/History'))
 const Settings = lazy(() => import('./pages/admin/Settings'))
+const Guide = lazy(() => import('./pages/admin/Guide'))
 
 function PageLoader() {
   return (
@@ -72,6 +73,7 @@ function App() {
             <Route path="orders" element={<AdminOrders />} />
             <Route path="history" element={<History />} />
             <Route path="settings" element={<Settings />} />
+            <Route path="panduan" element={<Guide />} />
           </Route>
 
           {/* Catch-all: same generic 404 the concealed admin scope renders */}
