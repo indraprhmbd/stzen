@@ -54,7 +54,7 @@ export function createApp() {
       },
     })
   )
-  const corsOrigins = (getEnv('CORS_ALLOWED_ORIGINS') || 'http://localhost:5173,http://localhost:4173')
+  const corsOrigins = (getEnv('CORS_ALLOWED_ORIGINS') || 'http://localhost:5173,http://localhost:4173,https://collected-ankle-dynamic.ngrok-free.dev')
     .split(',')
     .map((s) => s.trim())
     .filter(Boolean)

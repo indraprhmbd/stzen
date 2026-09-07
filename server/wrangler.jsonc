@@ -13,7 +13,7 @@
     "SUPABASE_URL": "https://kqgfbmehepanzkhypzdw.supabase.co",
     "SUPABASE_ANON_KEY": "***REMOVED***",
     "ENV": "staging",
-    "CORS_ALLOWED_ORIGINS": "http://localhost:5173,http://localhost:4173",
+    "CORS_ALLOWED_ORIGINS": "http://localhost:5173,http://localhost:4173,https://collected-ankle-dynamic.ngrok-free.dev",
     "PAYMENT_APP_BASE_URL": "",
     "PAYMENT_ACTIVE_PROVIDER": "manual",
     "PAYMENT_SUMOPOD_METHOD_CODE": "QRIS",
