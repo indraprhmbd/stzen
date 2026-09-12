@@ -28,8 +28,9 @@ BEGIN
     RAISE NOTICE '[rls-verify] RLS enabled on %.', t;
   END LOOP;
 
-  -- 2. vault_items + audit_logs expose zero policies to anon/authenticated
-  FOR t IN SELECT unnest(ARRAY['vault_items', 'audit_logs']) LOOP
+  -- 2. Server-only tables expose zero policies to anon/authenticated.
+  -- idempotency_claims joined this list via advisor fix (RLS on, no policies).
+  FOR t IN SELECT unnest(ARRAY['vault_items', 'audit_logs', 'settings', 'idempotency_claims']) LOOP
     SELECT count(*) INTO n FROM pg_policies
     WHERE schemaname = 'public' AND tablename = t;
     IF n > 0 THEN
@@ -44,7 +45,7 @@ BEGIN
   FOR t IN SELECT unnest(ARRAY['products', 'product_variants']) LOOP
     SELECT count(*) INTO n FROM pg_policies
     WHERE schemaname = 'public' AND tablename = t
-      AND cmd = 'SELECT' AND definition ILIKE '%is_active%';
+      AND cmd = 'SELECT' AND qual ILIKE '%is_active%';
     IF n = 0 THEN
       RAISE EXCEPTION '[rls-verify] % missing SELECT policy scoped to is_active.', t;
     END IF;
@@ -55,7 +56,7 @@ BEGIN
   FOR t IN SELECT unnest(ARRAY['profiles', 'orders']) LOOP
     SELECT count(*) INTO n FROM pg_policies
     WHERE schemaname = 'public' AND tablename = t
-      AND definition ILIKE '%auth.uid()%';
+      AND qual ILIKE '%auth.uid()%';
     IF n = 0 THEN
       RAISE EXCEPTION '[rls-verify] % missing auth.uid() owner policy.', t;
     END IF;
