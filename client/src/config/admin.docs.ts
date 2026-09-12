@@ -132,7 +132,7 @@ export const adminDocSections: AdminDocSection[] = [
       'Pembayaran: nama bank, nomor, dan nama rekening untuk pembayaran manual. Periksa dua kali sebelum simpan.',
       'Operasional: ambang stok menipis, lama vault terbuka, dan batas ekspor CSV.',
       'Ganti kata sandi: wajib isi kata sandi saat ini dulu sebagai konfirmasi, lalu sandi baru dua kali.',
-      'Danger Zone: tiga tier penghapusan permanen di bawah kartu Akun. Tier 1 menolak massal pesanan basi, Tier 2 menghapus produk atau varian yang sudah bebas pesanan aktif, Tier 3 purge arsip lama dan wajib ekspor CSV dulu. Setiap eksekusi minta frasa ketik plus kata sandi saat ini.',
+      'Danger Zone: tiga tier permanen di bawah kartu Akun. Tier 1 menolak massal pesanan basi, Tier 2 menghapus produk atau varian TANPA riwayat (nol pesanan, nol stok), Tier 3 purge stok basi dan wajib ekspor CSV dulu. Pesanan tidak pernah dihapus (arsip pajak 10 tahun). Setiap eksekusi minta frasa ketik plus kata sandi saat ini.',
     ],
     links: [{ label: 'Buka Pengaturan', to: '/admin/settings' }],
   },
@@ -140,12 +140,12 @@ export const adminDocSections: AdminDocSection[] = [
     id: 'danger',
     title: 'Danger Zone',
     intro:
-      'Tiga tier penghapusan permanen. Semua tindakan tercatat di Riwayat dan tidak bisa dibatalkan. Audit sendiri tidak pernah bisa dihapus.',
+      'Tiga tier tindakan permanen. Menonaktifkan dari tab Produk selalu cukup untuk barang yang tidak dijual lagi; penghapusan hanya untuk baris yang benar-benar tanpa jejak. Semua tindakan tercatat di Riwayat.',
     points: [
       'Tier 1 tolak basi: pratinjau hitung pesanan PENDING tanpa payment_ref lebih tua dari N hari, ketik TOLAK, eksekusi maksimal 200 per tindakan. Ulangi sampai pratinjau nol.',
-      'Tier 2 hapus katalog: pratinjau tunjukkan varian, stok, dan pesanan terkait. Diblokir bila masih ada PENDING atau PAID. Frasa konfirmasi adalah public_id persis. Riwayat pesanan pembeli tetap utuh lewat snapshot.',
-      'Tier 3 purge: hanya REJECTED atau REFUNDED di atas 90 hari, dan stok AVAILABLE di atas 180 hari. Alur wajib dua langkah: Ekspor CSV dulu (token sekali pakai 15 menit), lalu ketik HAPUS PERMANEN.',
-      'Token ekspor hangus sekali pakai. Bila kedaluwarsa atau error, ekspor ulang dan purge lagi.',
+      'Tier 2 hapus katalog: pratinjau tunjukkan varian, stok, dan pesanan terkait. Ditolak bila ada pesanan aktif, riwayat pesanan, atau sisa stok maupun kredensial terjual. Frasa konfirmasi adalah public_id persis.',
+      'Tier 3 purge: hanya stok AVAILABLE di atas 180 hari. Alur wajib dua langkah: Ekspor CSV dulu (token sekali pakai 15 menit), lalu ketik HAPUS PERMANEN.',
+      'Pesanan PAID, TERKIRIM, dan REFUND tidak bisa dihapus atau di purge oleh siapa pun. Ini arsip pajak 10 tahun.',
     ],
     links: [{ label: 'Buka Danger Zone', to: '/admin/settings' }],
   },
@@ -187,7 +187,12 @@ export const adminDocFaq: AdminDocFaq[] = [
   },
   {
     q: 'Kapan boleh pakai Danger Zone Tier 3 purge?',
-    a: 'Hanya untuk arsip lama: pesanan DITOLAK atau REFUND di atas 90 hari, stok AVAILABLE di atas 180 hari. Wajib ekspor CSV dulu sebagai cadangan, token sekali pakai 15 menit. Pesanan TERKIRIM dan DIBAYAR tidak pernah bisa di purge.',
+    a: 'Hanya untuk stok AVAILABLE basi di atas 180 hari yang tidak pernah terjual. Wajib ekspor CSV dulu sebagai cadangan, token sekali pakai 15 menit. Pesanan tidak pernah bisa di purge: arsip pajak wajib 10 tahun.',
+    links: [{ label: 'Buka Danger Zone', to: '/admin/settings' }],
+  },
+  {
+    q: 'Kenapa hapus produk ditolak padahal sudah tidak dijual?',
+    a: 'Selama masih ada pesanan, stok, atau kredensial terjual yang merujuk produk itu, penghapusan ditolak agar kredensial pembeli tetap bisa dibuka. Nonaktifkan saja dari tab Produk: hilang dari katalog, riwayat utuh.',
     links: [{ label: 'Buka Danger Zone', to: '/admin/settings' }],
   },
 ]
