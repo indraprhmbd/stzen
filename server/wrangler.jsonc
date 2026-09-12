@@ -4,6 +4,13 @@
   "main": "./workers-entry.ts",
   "compatibility_date": "2026-09-07",
   "compatibility_flags": ["nodejs_compat"],
+  // Edge-cache public reads (Cloudflare checks cache before running the
+  // Worker; hits cost zero CPU). Responses opt in via Cache-Control +
+  // Cache-Tag; admin writes purge by tag (see app.ts).
+  "cache": { "enabled": true },
+  // Placement hint: run next to Supabase ap-southeast-1 (AWS Singapore) so
+  // authed endpoints stop paying 20-30ms per origin round-trip.
+  "placement": { "region": "aws:ap-southeast-1" },
   "minify": true,
   // Secrets live in the secret store (wrangler secret put --env ...), never here:
   // SUPABASE_SERVICE_ROLE_KEY, AES_SECRET_KEY, PAYMENT_SUMOPOD_API_KEY,

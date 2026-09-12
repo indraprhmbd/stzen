@@ -49,7 +49,9 @@ export const adminHistoryRoutes = new Hono<HistoryEnv>()
 
     if (error) throw new Error(error.message)
 
-    let countQuery = supabaseAdmin.from(AUDIT_LOGS).select('*', { count: 'exact', head: true })
+    // estimated: audit_logs grows forever by design; exact COUNT would scan
+    // the whole table on every page view. Exact under db-max-rows anyway.
+    let countQuery = supabaseAdmin.from(AUDIT_LOGS).select('*', { count: 'estimated', head: true })
     if (type && type !== 'all') {
       countQuery = countQuery.eq('resource_type', type)
     }

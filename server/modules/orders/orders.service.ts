@@ -376,7 +376,9 @@ export const ordersService = {
     const [{ data: rows, error }, { count: total }] = await Promise.all([
       query.range(offset, offset + limit - 1),
       (async () => {
-        let countQuery = supabaseAdmin.from(ORDERS).select('*', { count: 'exact', head: true })
+        // estimated: exact up to Supabase db-max-rows, then planner stats.
+        // Pager total must not become a growing full-table COUNT scan.
+        let countQuery = supabaseAdmin.from(ORDERS).select('*', { count: 'estimated', head: true })
         if (status) {
           const list = status.split(',').map((s) => s.trim()).filter(Boolean)
           if (list.length === 1) {

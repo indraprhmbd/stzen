@@ -57,6 +57,7 @@ export const publicSettingsRoutes = new Hono()
     ])
 
     c.header('Cache-Control', 'public, max-age=60, stale-while-revalidate=60')
+    c.header('Cache-Tag', 'settings')
     return c.json({ storeName, announcement, whatsapp, telegram, email })
   })
 

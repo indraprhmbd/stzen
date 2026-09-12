@@ -19,16 +19,24 @@ export const productRoutes = new Hono()
 
   const params: ProductQueryParams = { category, sort, page, limit, search }
   const result = await productsService.listPaginated(params)
+  // Public catalog: edge-cached (Workers Cache) + browser. Purged by tag on
+  // admin writes; 60s TTL is the safety net for order-driven stock changes.
+  c.header('Cache-Control', 'public, max-age=60')
+  c.header('Cache-Tag', 'catalog')
   return c.json(result)
 })
 
 // GET /categories - Unique category list with counts (aggregate only, no rows)
   .get('/categories', async (c) => {
+  c.header('Cache-Control', 'public, max-age=60')
+  c.header('Cache-Tag', 'catalog')
   return c.json(await productsService.getCategoryCounts())
 })
 
 // GET /:id - Single product detail
   .get('/:id', async (c) => {
   const product = await productsService.getById(c.req.param('id'))
+  c.header('Cache-Control', 'public, max-age=60')
+  c.header('Cache-Tag', 'catalog')
   return c.json(product)
 })

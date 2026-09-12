@@ -135,6 +135,23 @@ export function createApp() {
   base.use('/api/health', rateLimit(120, 60_000))
   base.use('/api/v1/security/*', rateLimit(60, 60_000))
 
+  // Edge-cache purge: any successful non-GET under /api/v1/* (admin covers
+  // products, variants, stock, vault, settings, orders, danger) may have
+  // mutated catalog/settings data. Fire-and-forget tag purge via waitUntil so
+  // the edge never serves stale data longer than the 60s response TTL.
+  // Order/webhook-driven stock changes are NOT purged per-event: the 60s TTL
+  // bounds that staleness by design (see docs/perf-optimization-plan2026-09-12.md).
+  const purgeTags = { tags: ['catalog', 'settings'] }
+  base.use('/api/v1/admin/*', async (c, next) => {
+    await next()
+    if (c.req.method === 'GET' || c.res.status >= 400) return
+    try {
+      c.executionCtx.waitUntil((c.executionCtx as any).cache.purge(purgeTags))
+    } catch {
+      // Purge API unavailable in this runtime; TTL is the safety net.
+    }
+  })
+
   // ─── API routes ─────────────────────────────────────────────────────────
   // Chained (not sequential statements): Hono accumulates the route schema
   // into the RETURNED app's type. Discarded app.route(...) calls register at

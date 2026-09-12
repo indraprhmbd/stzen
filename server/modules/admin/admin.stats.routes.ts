@@ -17,7 +17,8 @@ export const adminStatsRoutes = new Hono<AdminStatsEnv>()
     try {
       const [{ count: totalProducts }, { count: totalStock }, { count: pendingOrders }, { data: paidOrders }] = await Promise.all([
         supabaseAdmin.from('products').select('*', { count: 'exact', head: true }),
-        supabaseAdmin.from('vault_items').select('*', { count: 'exact', head: true }).eq('status', 'AVAILABLE'),
+        // vault_items grows fastest of all tables; estimated keeps the tile cheap.
+        supabaseAdmin.from('vault_items').select('*', { count: 'estimated', head: true }).eq('status', 'AVAILABLE'),
         supabaseAdmin.from('orders').select('*', { count: 'exact', head: true }).eq('status', 'PENDING'),
         supabaseAdmin.from('orders').select('amount').in('status', ['PAID', 'DELIVERED']).gte('created_at', cutoff),
       ])
@@ -62,9 +63,11 @@ export const adminStatsRoutes = new Hono<AdminStatsEnv>()
 
       const stockPromises = (variants || []).map(async (variant: any) => {
         const product = Array.isArray(variant.products) ? variant.products[0] : (variant.products || {})
+        // estimated: exact result under db-max-rows (per-variant stock is
+        // orders of magnitude below the threshold), cheap if a variant explodes.
         const { count } = await supabaseAdmin
           .from('vault_items')
-          .select('*', { count: 'exact', head: true })
+          .select('*', { count: 'estimated', head: true })
           .eq('variant_id', variant.id)
           .eq('status', 'AVAILABLE')
 

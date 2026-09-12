@@ -21,7 +21,7 @@ export const adminAnalyticsRoutes = new Hono<AnalyticsEnv>()
           .gte('created_at', cutoff),
         supabaseAdmin
           .from('orders')
-          .select('status', { count: 'exact', head: false })
+          .select('status', { count: 'estimated', head: false })
           .gte('created_at', cutoff),
         supabaseAdmin
           .from('products')
