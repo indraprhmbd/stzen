@@ -93,12 +93,11 @@ export const productsService = {
       return cat === category
     })
 
-    const stockPromises = filtered.map(async (variant: any) => {
-      const stockCount = await getStockCount(variant.id)
-      return mapVariantToProduct(variant, stockCount)
-    })
+    const stockByVariant = await getStockCounts(filtered.map((v: any) => v.id))
+    const withStock = filtered.map((variant: any) =>
+      mapVariantToProduct(variant, stockByVariant.get(variant.id) ?? 0)
+    )
 
-    const withStock = await Promise.all(stockPromises)
     withStock.sort((a, b) => {
       const catA = a.category
       const catB = b.category
@@ -181,12 +180,10 @@ export const productsService = {
       return true
     })
 
-    const stockPromises = filtered.map(async (variant: any) => {
-      const stockCount = await getStockCount(variant.id)
-      return mapVariantToProduct(variant, stockCount)
-    })
-
-    let withStock = await Promise.all(stockPromises)
+    const stockByVariant = await getStockCounts(filtered.map((v: any) => v.id))
+    let withStock = filtered.map((variant: any) =>
+      mapVariantToProduct(variant, stockByVariant.get(variant.id) ?? 0)
+    )
 
     if (sort === 'out_of_stock') {
       withStock = withStock.filter(v => v.fulfillmentType !== 'on_demand' && v.stockCount === 0)
@@ -351,13 +348,11 @@ export const productsService = {
 
     if (error) throw new Error(error.message)
 
-    const withStock = await Promise.all(
-      (rows || []).map(async (r: any) => ({
-        ...r,
-        stockCount: await getStockCount(r.id),
-      }))
-    )
+    const stockByVariant = await getStockCounts((rows || []).map((r: any) => r.id))
 
-    return withStock
+    return (rows || []).map((r: any) => ({
+      ...r,
+      stockCount: stockByVariant.get(r.id) ?? 0,
+    }))
   },
 }

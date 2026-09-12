@@ -2,31 +2,10 @@ import { supabaseAdmin } from '../db'
 import { vaultItems, productVariants } from '../db/schema'
 
 export async function getStockCount(variantOrProductId: string): Promise<number> {
-  const { data: variant } = await supabaseAdmin
-    .from('product_variants')
-    .select('fulfillment_type')
-    .eq('id', variantOrProductId)
-    .limit(1)
-
-  if (variant && variant.length > 0 && variant[0].fulfillment_type === 'on_demand') {
-    return 9999
-  }
-
-  const { count: variantCount } = await supabaseAdmin
-    .from('vault_items')
-    .select('*', { count: 'exact', head: true })
-    .eq('variant_id', variantOrProductId)
-    .eq('status', 'AVAILABLE')
-
-  if ((variantCount || 0) > 0) return variantCount || 0
-
-  const { count } = await supabaseAdmin
-    .from('vault_items')
-    .select('*', { count: 'exact', head: true })
-    .eq('product_id', variantOrProductId)
-    .eq('status', 'AVAILABLE')
-
-  return count || 0
+  // Single-item wrapper over the batched query. One variant fetch + one
+  // aggregated count instead of up to three sequential round-trips.
+  const counts = await getStockCounts([variantOrProductId])
+  return counts.get(variantOrProductId) ?? 0
 }
 
 export async function allocateCredential(variantId: string, orderId: string): Promise<{ id: string; variantId: string | null; productId: string | null } | null> {
