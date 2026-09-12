@@ -248,6 +248,16 @@
   box-shadow: 0 12px 48px rgb(0 0 0 / 0.18);
 }
 
+/* Instant dialogs: DaisyUI modal open animation (scale/fade on .modal-box
+   and backdrop) makes admin forms feel laggy on phones. Admin dialogs
+   appear immediately, no motion. */
+.admin-soft dialog.modal,
+.admin-soft dialog.modal .modal-box,
+.admin-soft dialog.modal::backdrop {
+  animation: none !important;
+  transition: none !important;
+}
+
 /* Horizontal-scroll cell content. Wrap long cell text in
    <div className="ad-scrollx"> so the cell scrolls internally while the
    column header stays fixed - no truncation, desktop + mobile. */
