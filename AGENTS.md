@@ -11,8 +11,9 @@
 1. **Never Store Plaintext Credentials:** All raw account strings (`email:pass | Profile PIN | Instructions`) MUST be encrypted at rest using AES-256-GCM before database insertion (`vault_items`). Decrypt ONLY inside authenticated Hono handlers for the verified order owner.
 2. **Atomic Inventory Allocation:** NEVER query available stock and allocate in JavaScript memory. Always execute the database-level RPC function `allocate_credential(product_id, order_id)` utilizing `FOR UPDATE SKIP LOCKED` to prevent double-selling race conditions.
 3. **Database Connection Pooling:** Connect Drizzle through Supabase's Transaction Pooler (Port 6543 / PgBouncer) for serverless compatibility and connection safety.
-4. **Row Level Security (RLS):** Enforce strict database policies. Server connects as `postgres` superuser (bypasses RLS); RLS protects direct client access via anon/authenticated keys.
-   - **profiles:** `authenticated` can SELECT/UPDATE own row (`auth.uid() = id`). anon blocked.
+4. **Row Level Security (RLS):** Enforce strict database policies. Server connects as `postgres` superuser (bypasses RLS); RLS protects direct client access via anon/authenticated keys. Default-deny: no UPDATE/DELETE policy exists without a shipped feature using it.
+   - **profiles:** `authenticated` can SELECT own row (`auth.uid() = id`). NO update policy (client never self-edits; admin writes go through dashboard/service_role). anon blocked.
+   - **Role source of truth:** `app_metadata.role` in the JWT (set via dashboard, unreadable by users). NEVER authorize on `profiles.role`; it is display-only and must stay unwritable by its owner.
    - **products / product_variants:** `anon` + `authenticated` can SELECT `is_active = true` (public catalog).
    - **orders:** `authenticated` can SELECT/INSERT own orders (`user_id = auth.uid()`). anon blocked.
    - **vault_items / audit_logs:** NO policies - completely blocked for anon/authenticated. Server superuser only.
