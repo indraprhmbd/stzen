@@ -4,6 +4,7 @@ import { authedApiRequest } from '../../lib/api'
 import { supabase } from '../../lib/supabase'
 import { useAdminQuery } from '../../hooks/useAdminQuery'
 import { useAuth } from '../../hooks/useAuth'
+import DangerZone from './DangerZone'
 
 const LABELS: Record<string, { group: string; label: string; hint?: string; type?: 'text' | 'number'; min?: number; max?: number }> = {
   'store.name': { group: 'Toko', label: 'Nama toko' },
@@ -189,6 +190,8 @@ export default function Settings() {
           </div>
         </div>
       </div>
+
+      <DangerZone reAuth={confirmCurrentPassword} />
       </div>
     </div>
   )
