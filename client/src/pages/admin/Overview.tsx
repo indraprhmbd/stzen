@@ -46,7 +46,7 @@ const statDefs = [
   { key: 'totalProducts' as const, label: 'Produk Aktif', sub: 'katalog', icon: Cube, to: '/admin/products' },
   { key: 'totalStock' as const, label: 'Stok Tersedia', sub: 'vault', icon: Archive, to: '/admin/products?tab=stok' },
   { key: 'pendingOrders' as const, label: 'Perlu Tindakan', sub: 'pending', icon: ShoppingBag, to: '/admin/orders' },
-  { key: 'revenue' as const, label: 'Pendapatan', sub: 'paid + delivered', icon: GraphUp, to: '/admin/orders?status=semua' },
+  { key: 'totalOrders' as const, label: 'Pesanan', sub: 'rentang', icon: GraphUp, to: '/admin/orders?status=semua' },
 ]
 
 const pieColors: Record<string, string> = { PENDING: '#d97706', PAID: '#3b82f6', DELIVERED: '#16a34a', REJECTED: '#dc2626', REFUNDED: '#7c3aed' }
@@ -124,8 +124,9 @@ export default function Overview() {
     totalProducts: String(stats?.totalProducts ?? 0),
     totalStock: String(stats?.totalStock ?? 0),
     pendingOrders: String(stats?.pendingOrders ?? 0),
-    revenue: showRevenue && stats?.revenue ? `Rp ${Number(stats.revenue).toLocaleString('id-ID')}` : '*****',
+    totalOrders: String(byStatus.reduce((s, e) => s + (e.count ?? 0), 0)),
   }
+  const revenueText = showRevenue && stats?.revenue ? `Rp ${Number(stats.revenue).toLocaleString('id-ID')}` : '*****'
 
   return (
     <div className="flex flex-col gap-4">
@@ -147,32 +148,55 @@ export default function Overview() {
         </div>
       </div>
 
-      {loading ? <SkeletonCards count={4} /> : (
+      {loading ? (
+        <>
+          <div className="ad-card-flat p-4"><div className="h-9 w-2/3 animate-pulse rounded-[8px] bg-[#f1f1f4]" /></div>
+          <SkeletonCards count={4} />
+        </>
+      ) : (
+      <>
+      <button
+        onClick={() => navigate('/admin/orders?status=semua')}
+        className="ad-card-flat w-full p-4 sm:p-5 flex items-center gap-3 text-left transition-colors hover:border-[#d1d1d6]"
+      >
+        <span className="ad-squircle">
+          <GraphUp width={24} height={24} strokeWidth={1.5} />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-[26px] sm:text-[34px] font-semibold leading-none tracking-tight ad-num break-words">{revenueText}</span>
+          <span className="block text-[10px] sm:text-[11px] font-semibold tracking-wider uppercase text-[#6e6e73] mt-1.5">
+            Pendapatan
+            <span className="text-[#aeaeb2] normal-case font-normal ml-1">paid + delivered · {rangeLabel}</span>
+          </span>
+        </span>
+        <span
+          role="button"
+          tabIndex={0}
+          onClick={(e) => { e.stopPropagation(); setShowRevenue((s) => !s) }}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); setShowRevenue((s) => !s) } }}
+          title={showRevenue ? 'Sembunyikan pendapatan' : 'Tampilkan pendapatan'}
+          aria-label={showRevenue ? 'Sembunyikan pendapatan' : 'Tampilkan pendapatan'}
+          aria-pressed={showRevenue}
+          className="grid h-7 w-7 shrink-0 place-items-center rounded-[7px] text-[#1d1d1f] transition-colors hover:bg-[#f5f5f7]"
+        >
+          {showRevenue
+            ? <Eye width={16} height={16} strokeWidth={1.5} />
+            : <EyeClosed width={16} height={16} strokeWidth={1.5} />}
+        </span>
+      </button>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {statDefs.map((c) => (
           <StatCard
             key={c.key}
             value={values[c.key]}
             label={c.label}
-            sub={c.sub}
+            sub={c.key === 'totalOrders' ? rangeLabel : c.sub}
             icon={c.icon}
             onNavigate={() => navigate(c.to)}
-            action={c.key === 'revenue' ? (
-              <button
-                onClick={(e) => { e.stopPropagation(); setShowRevenue((s) => !s) }}
-                title={showRevenue ? 'Sembunyikan pendapatan' : 'Tampilkan pendapatan'}
-                aria-label={showRevenue ? 'Sembunyikan pendapatan' : 'Tampilkan pendapatan'}
-                aria-pressed={showRevenue}
-                className="grid h-6 w-6 place-items-center rounded-[7px] text-[#1d1d1f] transition-colors hover:bg-[#f5f5f7]"
-              >
-                {showRevenue
-                  ? <Eye width={15} height={15} strokeWidth={1.5} />
-                  : <EyeClosed width={15} height={15} strokeWidth={1.5} />}
-              </button>
-            ) : undefined}
           />
         ))}
       </div>
+      </>
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
