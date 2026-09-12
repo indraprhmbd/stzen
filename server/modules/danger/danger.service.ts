@@ -15,6 +15,15 @@ function cutoffIso(days: number): string {
   return new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString()
 }
 
+// Hard delete is allowed only for catalog rows with no history: zero orders
+// of any status and zero vault rows. Anything else must be deactivated
+// (is_active=false) so buyer credentials and records stay intact.
+function blockReason(active: number, terminal: number, vault: number): string {
+  if (active > 0) return 'Masih ada pesanan aktif (PENDING/PAID). Selesaikan dulu.'
+  if (terminal > 0) return 'Sudah ada riwayat pesanan. Nonaktifkan saja agar kredensial pembeli tetap bisa dibuka.'
+  return 'Masih ada stok atau kredensial terjual. Nonaktifkan saja.'
+}
+
 export interface StalePreview {
   olderThanDays: number
   cutoff: string
@@ -108,7 +117,7 @@ export const dangerService = {
       .eq('product_id', internalId)
       .in('status', ['DELIVERED', 'REFUNDED', 'REJECTED'])
 
-    const blocked = (active ?? 0) > 0
+    const blocked = (active ?? 0) > 0 || (terminal ?? 0) > 0 || vaultAvailable + vaultSold > 0
     return {
       publicId,
       name: base[0].name,
@@ -118,7 +127,7 @@ export const dangerService = {
       ordersActive: active ?? 0,
       ordersTerminal: terminal ?? 0,
       blocked,
-      blockReason: blocked ? 'Masih ada pesanan aktif (PENDING/PAID). Selesaikan dulu.' : null,
+      blockReason: blocked ? blockReason(active ?? 0, terminal ?? 0, vaultAvailable + vaultSold) : null,
     }
   },
 
@@ -155,7 +164,7 @@ export const dangerService = {
       .eq('variant_id', internalId)
       .in('status', ['DELIVERED', 'REFUNDED', 'REJECTED'])
 
-    const blocked = (active ?? 0) > 0
+    const blocked = (active ?? 0) > 0 || (terminal ?? 0) > 0 || (avail ?? 0) + (sold ?? 0) > 0
     return {
       publicId,
       name: base[0].name,
@@ -165,22 +174,14 @@ export const dangerService = {
       ordersActive: active ?? 0,
       ordersTerminal: terminal ?? 0,
       blocked,
-      blockReason: blocked ? 'Masih ada pesanan aktif (PENDING/PAID). Selesaikan dulu.' : null,
+      blockReason: blocked ? blockReason(active ?? 0, terminal ?? 0, (avail ?? 0) + (sold ?? 0)) : null,
     }
   },
 
-  // ─── Tier 3 preview: purgeable terminal rows ───────────────────────────
-  async previewPurge(kind: 'orders' | 'vault'): Promise<PurgePreview> {
-    if (kind === 'orders') {
-      const cutoff = cutoffIso(DANGER.purgeRefundedDays)
-      const { count, error } = await supabaseAdmin
-        .from(ORDERS)
-        .select('*', { count: 'exact', head: true })
-        .in('status', ['REJECTED', 'REFUNDED'])
-        .lt('created_at', cutoff)
-      if (error) throw new Error(error.message)
-      return { kind, cutoff, count: count ?? 0 }
-    }
+  // ─── Tier 3 preview: purgeable stale AVAILABLE vault ───────────────────
+  // Orders are never purgeable: PAID/DELIVERED/REFUNDED are bookkeeping
+  // evidence (UU KUP 10-year retention), REJECTED stays for disputes.
+  async previewPurge(): Promise<PurgePreview> {
     const cutoff = cutoffIso(DANGER.purgeVaultDays)
     const { count, error } = await supabaseAdmin
       .from(VAULT_ITEMS)
@@ -188,7 +189,7 @@ export const dangerService = {
       .eq('status', 'AVAILABLE')
       .lt('created_at', cutoff)
     if (error) throw new Error(error.message)
-    return { kind, cutoff, count: count ?? 0 }
+    return { kind: 'vault', cutoff, count: count ?? 0 }
   },
 }
 
@@ -252,12 +253,6 @@ function toCsv(columns: string[], rows: Record<string, any>[]): string {
   const body = rows.map((r) => columns.map((c) => csvCell(r[c])).join(','))
   return [head, ...body].join('\n')
 }
-
-const ORDER_EXPORT_COLUMNS = [
-  'public_id', 'status', 'amount', 'user_id', 'product_id', 'variant_id',
-  'vault_item_id', 'payment_ref', 'payment_provider', 'variant_name_snapshot',
-  'price_at_purchase', 'created_at', 'paid_at',
-]
 
 // Vault export deliberately excludes credential_payload: ciphertext has no
 // audit value on an operator's disk and must not leave the vault table.
@@ -392,19 +387,18 @@ export const dangerExecute = {
     return { publicId, name: preview.name }
   },
 
-  // ─── Tier 3: export gate ───────────────────────────────────────────────
-  async buildExport(kind: PurgeKind, actor: Actor): Promise<{ csv: string; exportToken: string; count: number; truncated: boolean }> {
-    const preview = await dangerService.previewPurge(kind)
-    const filter: ExportFilter = { kind, cutoff: preview.cutoff }
+  // ─── Tier 3: export gate (vault AVAILABLE only) ─────────────────────────
+  async buildExport(actor: Actor): Promise<{ csv: string; exportToken: string; count: number; truncated: boolean }> {
+    const preview = await dangerService.previewPurge()
+    const filter: ExportFilter = { kind: 'vault', cutoff: preview.cutoff }
 
-    const columns = kind === 'orders' ? ORDER_EXPORT_COLUMNS : VAULT_EXPORT_COLUMNS
-    const table = kind === 'orders' ? ORDERS : VAULT_ITEMS
-    let query = supabaseAdmin.from(table).select(columns.join(',')).order('created_at', { ascending: true }).limit(5001)
-    query = kind === 'orders'
-      ? query.in('status', ['REJECTED', 'REFUNDED']).lt('created_at', preview.cutoff)
-      : query.eq('status', 'AVAILABLE').lt('created_at', preview.cutoff)
-
-    const { data, error } = await query
+    const { data, error } = await supabaseAdmin
+      .from(VAULT_ITEMS)
+      .select(VAULT_EXPORT_COLUMNS.join(','))
+      .eq('status', 'AVAILABLE')
+      .lt('created_at', preview.cutoff)
+      .order('created_at', { ascending: true })
+      .limit(5001)
     if (error) throw new Error(error.message)
     const rows = (data ?? []) as Record<string, any>[]
     const truncated = rows.length > 5000
@@ -418,14 +412,14 @@ export const dangerExecute = {
     await appendAudit({
       action: 'danger:export',
       resourceType: 'danger',
-      snapshotText: `Danger Zone: ekspor ${kind} (${exported.length} baris) oleh ${actorTag(actor)} ${nowId()}`,
+      snapshotText: `Danger Zone: ekspor stok basi (${exported.length} baris) oleh ${actorTag(actor)} ${nowId()}`,
       actorId: actor.sub,
       actorEmail: actor.email ?? null,
       actorType: 'admin',
-      diff: { kind, cutoff: preview.cutoff, count: exported.length },
+      diff: { kind: 'vault', cutoff: preview.cutoff, count: exported.length },
     }).catch((e) => console.error('[audit] danger export failed', e))
 
-    return { csv: toCsv(columns, exported), exportToken: `${payload}.${exp36}.${sig}`, count: exported.length, truncated }
+    return { csv: toCsv(VAULT_EXPORT_COLUMNS, exported), exportToken: `${payload}.${exp36}.${sig}`, count: exported.length, truncated }
   },
 
   // ─── Tier 3 execute: purge with burned export token ────────────────────
@@ -450,40 +444,30 @@ export const dangerExecute = {
 
     // Re-resolve rows from the token's own filter at purge time, so the
     // token authorizes exactly what was exported — never client input.
-    // A row created after export is older than cutoff only if backdated,
-    // and re-running export+purge handles growth honestly.
-    let ids: string[] = []
-    if (filter.kind === 'orders') {
-      const { data, error } = await supabaseAdmin
-        .from(ORDERS)
-        .select('id')
-        .in('status', ['REJECTED', 'REFUNDED'])
-        .lt('created_at', filter.cutoff)
-      if (error) throw new Error(error.message)
-      ids = (data ?? []).map((r: any) => r.id as string)
-    } else {
-      const { data, error } = await supabaseAdmin
-        .from(VAULT_ITEMS)
-        .select('id')
-        .eq('status', 'AVAILABLE')
-        .lt('created_at', filter.cutoff)
-      if (error) throw new Error(error.message)
-      ids = (data ?? []).map((r: any) => r.id as string)
-    }
+    // Only vault AVAILABLE is purgeable; order filters are rejected even
+    // if signed (a token minted before this policy stays invalid).
+    if (filter.kind !== 'vault') throw new BadRequestError('Token ekspor tidak valid')
 
-    const table = filter.kind === 'orders' ? ORDERS : VAULT_ITEMS
-    const deleted = await deleteInBatches(table, ids)
+    const { data, error } = await supabaseAdmin
+      .from(VAULT_ITEMS)
+      .select('id')
+      .eq('status', 'AVAILABLE')
+      .lt('created_at', filter.cutoff)
+    if (error) throw new Error(error.message)
+    const ids = (data ?? []).map((r: any) => r.id as string)
+
+    const deleted = await deleteInBatches(VAULT_ITEMS, ids)
 
     await appendAudit({
       action: 'danger:purge',
       resourceType: 'danger',
-      snapshotText: `Danger Zone: purge ${filter.kind} ${deleted} baris oleh ${actorTag(actor)} ${nowId()}`,
+      snapshotText: `Danger Zone: purge stok basi ${deleted} baris oleh ${actorTag(actor)} ${nowId()}`,
       actorId: actor.sub,
       actorEmail: actor.email ?? null,
       actorType: 'admin',
-      diff: { kind: filter.kind, cutoff: filter.cutoff, deleted },
+      diff: { kind: 'vault', cutoff: filter.cutoff, deleted },
     }).catch((e) => console.error('[audit] danger purge failed', e))
 
-    return { kind: filter.kind, deleted }
+    return { kind: 'vault' as const, deleted }
   },
 }

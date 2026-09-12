@@ -46,9 +46,9 @@ const credentialsRoutes = new Hono<CredentialsEnv>()
       throw new ConflictError('No credentials allocated for this order')
     }
 
-    if (!order.product_id) {
-      throw new NotFoundError('Order not found')
-    }
+    // No product_id gate: catalog rows may be deactivated or removed long
+    // after delivery. The order's own snapshots + vault row are sufficient
+    // to serve a buyer who already paid. Product join is best-effort.
 
     const { data: vaultItems, error: vaultError } = await supabaseAdmin
       .from(VAULT_ITEMS)

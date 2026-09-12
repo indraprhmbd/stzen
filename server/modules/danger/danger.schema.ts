@@ -18,7 +18,9 @@ export const CatalogDeleteSchema = z.object({
 })
 
 export const ExportSchema = z.object({
-  kind: z.enum(['orders', 'vault']),
+  // Vault-only purge. The literal keeps the body shape stable while making
+  // any order-purge attempt a 400.
+  kind: z.literal('vault'),
 })
 
 export const PurgeSchema = z.object({

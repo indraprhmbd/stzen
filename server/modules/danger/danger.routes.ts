@@ -26,13 +26,10 @@ export const dangerRoutes = new Hono<AuthEnv>()
     return c.json(await dangerService.previewVariant(c.req.param('id')))
   })
 
-  // Tier 3 preview: purgeable terminal rows per kind.
-  .get('/purge/:kind/preview', async (c) => {
-    const kind = c.req.param('kind')
-    if (kind !== 'orders' && kind !== 'vault') {
-      return c.json({ error: 'Jenis purge tidak dikenal' }, 400)
-    }
-    return c.json(await dangerService.previewPurge(kind))
+  // Tier 3 preview: purgeable stale AVAILABLE vault. Orders are never
+  // purgeable (UU KUP retention), so there is no kind param.
+  .get('/purge/preview', async (c) => {
+    return c.json(await dangerService.previewPurge())
   })
 
   // Tier 1 execute: bulk-reject abandoned PENDING. Capped per call; repeat
@@ -61,8 +58,7 @@ export const dangerRoutes = new Hono<AuthEnv>()
   // exactly the exported filter. Client downloads the CSV, then purge unlocks.
   .post('/export', zValidator('json', ExportSchema), async (c) => {
     const user = c.get('user')
-    const { kind } = c.req.valid('json')
-    return c.json(await dangerExecute.buildExport(kind, { sub: user.sub, email: user.email }))
+    return c.json(await dangerExecute.buildExport({ sub: user.sub, email: user.email }))
   })
 
   // Tier 3 execute: purge terminal rows. Token burned on first use; replays 409.

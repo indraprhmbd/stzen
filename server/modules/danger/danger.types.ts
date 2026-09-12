@@ -8,8 +8,8 @@ export const DANGER = {
   staleOrderDaysMin: 1,
   staleOrderDaysMax: 90,
   staleConfirmPhrase: 'TOLAK',
-  // Tier 3: only terminal states past these ages are purgeable.
-  purgeRefundedDays: 90,
+  // Orders are never purgeable (UU KUP 10-year retention), so only the
+  // vault threshold remains.
   purgeVaultDays: 180,
   // Export token TTL: operator must complete export->purge in one sitting.
   exportTtlMs: 15 * 60 * 1000,
