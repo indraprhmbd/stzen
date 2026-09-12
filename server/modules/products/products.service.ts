@@ -194,22 +194,34 @@ export const productsService = {
       withStock = withStock.filter(v => v.fulfillmentType === 'on_demand' || v.stockCount > 0)
     }
 
+    // Sort vocabulary matches the storefront FilterBar exactly:
+    // newest (default), price (cheapest first), stock (most stock first),
+    // out_of_stock (handled by the filter above, order newest first).
+    // price-asc/price-desc/name stay as aliases for API consumers.
     withStock.sort((a, b) => {
       switch (sort) {
+        case 'price':
         case 'price-asc':
           return Number(a.price) - Number(b.price)
         case 'price-desc':
           return Number(b.price) - Number(a.price)
         case 'name':
           return a.name.localeCompare(b.name)
-        case 'stock':
+        case 'stock': {
+          const diff = b.stockCount - a.stockCount
+          if (diff !== 0) return diff
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        }
+        case 'out_of_stock':
         case 'newest':
         default:
           return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       }
     })
 
-    const total = filtered.length
+    // Total counts what the operator actually sees (post stock filter), so
+    // the pager never points at pages emptied by the sellability filter.
+    const total = withStock.length
     const paginated = withStock.slice(offset, offset + limit)
 
     return {
