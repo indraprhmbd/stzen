@@ -55,10 +55,15 @@ export function createApp() {
       },
     })
   )
-  const corsOrigins = (getEnv('CORS_ALLOWED_ORIGINS') || 'http://localhost:5173,http://localhost:4173,https://collected-ankle-dynamic.ngrok-free.dev')
+  // Empty default fails closed: production deploys must set
+  // CORS_ALLOWED_ORIGINS explicitly (wrangler --env production does).
+  // Localhost stays for `wrangler dev` / tsx without extra config.
+  const corsOrigins = (getEnv('CORS_ALLOWED_ORIGINS') || 'http://localhost:5173,http://localhost:4173')
     .split(',')
     .map((s) => s.trim())
     .filter(Boolean)
+  // LAN preview convenience (phone testing on same Wi-Fi). Dev-only: never
+  // bypass the allowlist in production, where the edge already pins origins.
   const lanOriginPattern = /^http:\/\/(192\.168|10)\.\d{1,3}\.\d{1,3}\.\d{1,3}:(5173|4173)$/
 
   base.use(
@@ -67,7 +72,7 @@ export function createApp() {
       origin: (origin) => {
         if (!origin) return undefined
         if (corsOrigins.includes(origin)) return origin
-        if (lanOriginPattern.test(origin)) return origin
+        if (!isProd() && lanOriginPattern.test(origin)) return origin
         return undefined
       },
       allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
@@ -91,7 +96,7 @@ export function createApp() {
   // 404 with the standard not-found body, identical to a nonexistent route.
   // Reason is logged internally for incident response. All other prefixes
   // keep 401 so the SPA re-login flow keeps working.
-  const PUBLIC_API_PREFIXES = ['/api/v1/products', '/api/v1/webhooks', '/api/v1/auth']
+  const PUBLIC_API_PREFIXES = ['/api/v1/products', '/api/v1/webhooks', '/api/v1/auth', '/api/v1/security']
   const isConcealedScope = (path: string) =>
     path === '/api/v1/admin' || path.startsWith('/api/v1/admin/')
   base.use('/api/v1/*', async (c, next) => {
@@ -120,6 +125,11 @@ export function createApp() {
   base.use('/api/v1/webhooks/*', rateLimit(120, 60_000))
   base.use('/api/v1/auth/*', rateLimit(20, 60_000))
   base.use('/api/v1/orders/*', rateLimit(60, 60_000))
+  // Public reads: scraping/enumeration surface. Lenient, but bounded.
+  base.use('/api/v1/products/*', rateLimit(120, 60_000))
+  base.use('/api/settings/public', rateLimit(120, 60_000))
+  base.use('/api/health', rateLimit(120, 60_000))
+  base.use('/api/v1/security/*', rateLimit(60, 60_000))
 
   // ─── API routes ─────────────────────────────────────────────────────────
   // Chained (not sequential statements): Hono accumulates the route schema
@@ -143,6 +153,10 @@ export function createApp() {
     // PUBLIC — no authMiddleware. Gateways call this directly; each provider
     // verifies its own signature inside parseWebhook.
     .route('/api/v1/webhooks', webhooksRoutes)
+    // CSP violation sink required by the contentSecurityPolicy reportUri
+    // above. Browsers POST JSON reports here; acknowledge and drop (204)
+    // so the endpoint never becomes log-spam with a body parser or 404s.
+    .post('/api/v1/security/csp-report', (c) => c.body(null, 204))
 
   // 404 catch-all
   app.notFound((c) => c.json({ error: 'Not found' }, 404))

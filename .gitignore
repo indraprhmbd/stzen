@@ -1,6 +1,8 @@
 # Dependencies
 node_modules/
-package-lock.json
+
+# npm lockfile is committed: reproducible installs locally (`npm ci`) and in CI.
+# (bun is not used; CI installs with npm ci.)
 
 # Environment
 .env

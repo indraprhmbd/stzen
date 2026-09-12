@@ -13,9 +13,12 @@ const buckets = new Map<string, Bucket>()
 
 export function rateLimit(max: number, windowMs: number): MiddlewareHandler {
   return async (c, next) => {
+    // Cloudflare authoritative IP first: x-forwarded-for is client-spoofable,
+    // cf-connecting-ip is set by the edge. Shared hosting or local dev falls
+    // back to x-forwarded-for, then to a single shared bucket.
     const ip =
-      c.req.header('x-forwarded-for')?.split(',')[0]?.trim() ||
       c.req.header('cf-connecting-ip') ||
+      c.req.header('x-forwarded-for')?.split(',')[0]?.trim() ||
       'unknown'
     const key = `${ip}:${c.req.routePath}`
     const now = Date.now()
