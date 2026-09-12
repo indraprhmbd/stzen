@@ -202,9 +202,21 @@ const { t } = useCopy()
     showToast(t.common.copiedToClipboard, 'success')
   }
 
-  function getWhatsAppUrl(orderId: string) {
+  function getWhatsAppUrl(order: Order) {
     const number = support.whatsapp || brand.support.whatsappNumber
-    const text = encodeURIComponent(`Issue with Order #${orderId}`)
+    const text = encodeURIComponent(
+      [
+        'Halo, saya lapor kendala pesanan:',
+        `Order ID: ${order.id}`,
+        `Email: ${user?.email ?? '-'}`,
+        `Produk: ${order.productName}`,
+        `Nominal: Rp ${Number(order.amount).toLocaleString('id-ID')}`,
+        `Status: ${order.status}`,
+        `Ref: ${order.paymentRef ?? '-'}`,
+        `Tanggal: ${new Date(order.createdAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}`,
+        'Keluhan: ',
+      ].join('\n')
+    )
     return `https://wa.me/${number}?text=${text}`
   }
 
@@ -297,7 +309,7 @@ const { t } = useCopy()
                     onPay={order.status === 'PENDING' ? () => handlePay(order.id) : undefined}
                     paying={payingId === order.id}
                     onCancel={order.status === 'PENDING' ? () => handleCancel(order.id) : undefined}
-                    onReport={() => window.open(getWhatsAppUrl(order.id), '_blank')}
+                    onReport={() => window.open(getWhatsAppUrl(order), '_blank')}
                     onReceipt={() => printReceipt(order)}
                   />
                 ))}
@@ -350,7 +362,7 @@ const { t } = useCopy()
                   <button onClick={() => handleCopy(credentials.credentials)} className="flex-1 btn btn-primary border-2 border-black font-black text-xs uppercase py-2.5 btn-comic-interactive">
                     Salin
                   </button>
-                  <button onClick={() => selectedOrder && window.open(getWhatsAppUrl(selectedOrder.id), '_blank')} className="flex-1 bg-white text-black font-black text-xs uppercase border-2 border-black py-2.5 hover:bg-black hover:text-white transition-colors">
+                  <button onClick={() => selectedOrder && window.open(getWhatsAppUrl(selectedOrder), '_blank')} className="flex-1 bg-white text-black font-black text-xs uppercase border-2 border-black py-2.5 hover:bg-black hover:text-white transition-colors">
                     Lapor
                   </button>
                 </div>
