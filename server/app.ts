@@ -86,11 +86,11 @@ export function createApp() {
   // Global error handler
   base.onError(errorHandler)
 
-  // Auth gate — default-deny. Every /api/v1/* route requires a valid JWT
+  // Auth gate - default-deny. Every /api/v1/* route requires a valid JWT
   // unless explicitly allowlisted here. This replaces per-route-file
   // `.use('*', authMiddleware)` calls: a new route that forgets to wire auth
   // now fails closed (401) instead of silently serving data. Role checks
-  // live in each scope composer (e.g. admin.routes.ts central guard) — this
+  // live in each scope composer (e.g. admin.routes.ts central guard) - this
   // gate only proves identity, not authorization.
   //
   // Concealed scope: /api/v1/admin/* never confirms its own existence.
@@ -125,7 +125,7 @@ export function createApp() {
   base.use('/api/v1/admin/danger/*', rateLimit(10, 60_000))
   base.use('/api/v1/checkout/*', rateLimit(30, 60_000))
   base.use('/api/v1/payments/*', rateLimit(30, 60_000))
-  // Webhooks get their own lenient limit — gateway retries shouldn't 429 into a dropped payment.
+  // Webhooks get their own lenient limit - gateway retries shouldn't 429 into a dropped payment.
   base.use('/api/v1/webhooks/*', rateLimit(120, 60_000))
   base.use('/api/v1/auth/*', rateLimit(20, 60_000))
   base.use('/api/v1/orders/*', rateLimit(60, 60_000))
@@ -138,7 +138,7 @@ export function createApp() {
   // ─── API routes ─────────────────────────────────────────────────────────
   // Chained (not sequential statements): Hono accumulates the route schema
   // into the RETURNED app's type. Discarded app.route(...) calls register at
-  // runtime but leave AppType as the blank base Hono — silently voiding all
+  // runtime but leave AppType as the blank base Hono - silently voiding all
   // hono/client type safety. ReturnType<typeof createApp> must be the chain.
   const app = base
     // Public settings (no auth)
@@ -154,7 +154,7 @@ export function createApp() {
     .route('/api/v1/orders', orderRoutes)
     .route('/api/v1/admin', adminRoutes)
     .route('/api/v1/payments', paymentsRoutes)
-    // PUBLIC — no authMiddleware. Gateways call this directly; each provider
+    // PUBLIC - no authMiddleware. Gateways call this directly; each provider
     // verifies its own signature inside parseWebhook.
     .route('/api/v1/webhooks', webhooksRoutes)
     // CSP violation sink required by the contentSecurityPolicy reportUri

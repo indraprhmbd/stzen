@@ -35,7 +35,7 @@ export const durationUnitEnum = pgEnum('duration_unit', [
 ])
 
 // ─── Profiles ───────────────────────────────────────────────────────────────
-// Extends Supabase auth.users — one row per authenticated user
+// Extends Supabase auth.users - one row per authenticated user
 
 export const profiles = pgTable(
   'profiles',
@@ -121,7 +121,7 @@ export const productVariants = pgTable(
 )
 
 // ─── Vault Items ────────────────────────────────────────────────────────────
-// Encrypted credential payloads — AES-256-GCM at rest
+// Encrypted credential payloads - AES-256-GCM at rest
 
 export const vaultItems = pgTable(
   'vault_items',

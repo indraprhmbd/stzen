@@ -72,7 +72,7 @@ export default function BasisPanel({ products, variants, onCreate, onEdit, onDel
   }, [variants])
 
   // Enriched rows: AVG/MEDIAN/MODUS/STOK/DURASI are computed, so sort
-  // must run on enriched rows — raw Product has no avg/median/mode keys.
+  // must run on enriched rows - raw Product has no avg/median/mode keys.
   const rows = useMemo(() => products.map((p) => {
     const stats = priceMap.get(p.id)
     const vs = variantStats.get(p.id)

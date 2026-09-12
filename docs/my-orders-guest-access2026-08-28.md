@@ -1,4 +1,4 @@
-# My Orders — Guest Access Rework
+# My Orders - Guest Access Rework
 
 **Date:** 2026-08-28
 **Scope:** 2 files modified
@@ -15,22 +15,22 @@
 | Route guard | `RequireAuth` in App.tsx | Blocks page access |
 | Server JWT | `authMiddleware` | Returns 401 if no token |
 | Service ownership | `WHERE user_id = userId` | Enforced |
-| DB RLS | Not implemented | Gap — out of scope |
+| DB RLS | Not implemented | Gap - out of scope |
 
 ## Changes
 
-### 1. `App.tsx` — Remove route guard
+### 1. `App.tsx` - Remove route guard
 - Remove `<RequireAuth>` wrapper from `/dashboard` route
 - Page now accessible to all visitors
 
-### 2. `Dashboard.tsx` — Auth-conditional rendering
+### 2. `Dashboard.tsx` - Auth-conditional rendering
 - Check `session` from `useAuth()`
 - If `!session`: show login prompt card with CTA link to `/login`. No API call attempted.
 - If `session`: fetch and render orders as before (existing behavior)
 
 ## Security Notes
 
-- Server API still returns 401 for unauthenticated requests — no data leakage
-- `authedApiRequest` throws cleanly when no session — no crash
+- Server API still returns 401 for unauthenticated requests - no data leakage
+- `authedApiRequest` throws cleanly when no session - no crash
 - RLS gap exists but is separate concern (see future security hardening task)
 - Order ownership enforced at service layer (`orders.service.ts:33,60`)

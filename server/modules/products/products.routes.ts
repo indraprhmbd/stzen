@@ -7,7 +7,7 @@ import type { ProductQueryParams } from './products.types'
 // ─── Product Routes (Public) ────────────────────────────────────────────────
 
 export const productRoutes = new Hono()
-  // GET / — Paginated active products with sort/search/filter.
+  // GET / - Paginated active products with sort/search/filter.
   // Always the paginated shape (defaults page 1, limit 24): one contract
   // for every consumer. listActive stays for /categories counts.
   .get('/', zValidator('query', ProductQuerySchema), async (c) => {
@@ -22,12 +22,12 @@ export const productRoutes = new Hono()
   return c.json(result)
 })
 
-// GET /categories — Unique category list with counts (aggregate only, no rows)
+// GET /categories - Unique category list with counts (aggregate only, no rows)
   .get('/categories', async (c) => {
   return c.json(await productsService.getCategoryCounts())
 })
 
-// GET /:id — Single product detail
+// GET /:id - Single product detail
   .get('/:id', async (c) => {
   const product = await productsService.getById(c.req.param('id'))
   return c.json(product)

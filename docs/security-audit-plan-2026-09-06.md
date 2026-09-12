@@ -1,4 +1,4 @@
-# Security Audit Report — Store Subs App
+# Security Audit Report - Store Subs App
 **Date:** 2026-09-06  
 **Auditor:** Kilo  
 **Scope:** Full auth flow, server hardening, header security, dependency versions  
@@ -131,10 +131,10 @@ Add rate limiters for auth and orders.
 - `X-Content-Type-Options: nosniff` ✅
 
 **Missing / not explicitly configured:**
-- `Content-Security-Policy` — not set
-- `Strict-Transport-Security` — not set
-- `Referrer-Policy` — not set
-- `Permissions-Policy` — not set
+- `Content-Security-Policy` - not set
+- `Strict-Transport-Security` - not set
+- `Referrer-Policy` - not set
+- `Permissions-Policy` - not set
 
 ### Recommendations
 

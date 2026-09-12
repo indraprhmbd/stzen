@@ -282,7 +282,7 @@ export default function DangerZone({ reAuth }: Props) {
           {prodPrev && (
             <p className="text-xs font-semibold">
               {prodPrev.name}: {prodPrev.variants} varian, stok {prodPrev.vaultAvailable}, terjual {prodPrev.vaultSold}, aktif {prodPrev.ordersActive}, terminal {prodPrev.ordersTerminal}
-              {prodPrev.blocked && <span className="text-red-600"> — {prodPrev.blockReason}</span>}
+              {prodPrev.blocked && <span className="text-red-600"> - {prodPrev.blockReason}</span>}
             </p>
           )}
           {!prodPrev?.blocked && prodPrev && (
@@ -307,7 +307,7 @@ export default function DangerZone({ reAuth }: Props) {
           {varPrev && (
             <p className="text-xs font-semibold">
               {varPrev.name}: stok {varPrev.vaultAvailable}, terjual {varPrev.vaultSold}, aktif {varPrev.ordersActive}, terminal {varPrev.ordersTerminal}
-              {varPrev.blocked && <span className="text-red-600"> — {varPrev.blockReason}</span>}
+              {varPrev.blocked && <span className="text-red-600"> - {varPrev.blockReason}</span>}
             </p>
           )}
           {!varPrev?.blocked && varPrev && (

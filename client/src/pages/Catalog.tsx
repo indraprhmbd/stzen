@@ -24,7 +24,7 @@ function Catalog() {
       if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return
       if (el.scrollWidth <= el.clientWidth) return
       e.preventDefault()
-      // Snap (even proximity) grabs between ticks and reads as stuck —
+      // Snap (even proximity) grabs between ticks and reads as stuck -
       // suspend it while wheeling, restore 200ms after the last tick.
       el.style.scrollSnapType = 'none'
       el.scrollLeft += e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY
@@ -45,7 +45,7 @@ function Catalog() {
 
       {/* ═══ HERO 2/3 + FEATURED CARD 1/3 ═══ */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
-        {/* Hero — 2/3 */}
+        {/* Hero - 2/3 */}
         <section className="md:col-span-2 relative overflow-hidden bg-secondary border-comic shadow-comic p-4 md:p-6 bg-halftone">
           <div className="absolute inset-0 bg-white/10 pointer-events-none" />
           <div className="relative z-10 flex flex-col md:flex-row items-center justify-center gap-4 md:gap-6 text-center md:text-left">
@@ -65,7 +65,7 @@ function Catalog() {
           </div>
         </section>
 
-        {/* Shop CTA card — 1/3 */}
+        {/* Shop CTA card - 1/3 */}
         <ShopCtaCardSlim />
         <Link
           to="/products"
@@ -108,7 +108,7 @@ function Catalog() {
       {/* Announcement marquee above hero: admin text wins, falls back to default copy */}
       <Marquee items={announcement ? [announcement] : t.marquee} className="mb-3" />
 
-      {/* ═══ HOW IT WORKS — comic strip ═══ */}
+      {/* ═══ HOW IT WORKS - comic strip ═══ */}
       <section className="mb-3">
         <div className="flex items-center gap-2 mb-2">
           <h2 className="font-black text-xs uppercase tracking-widest text-neutral bg-primary border-2 border-black px-2 py-0.5 -rotate-1" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
@@ -138,7 +138,7 @@ function Catalog() {
         </div>
       </section>
 
-      {/* ═══ WHY ST.ZEN — comic panels ═══ */}
+      {/* ═══ WHY ST.ZEN - comic panels ═══ */}
       <section className="mb-3">
         <div className="flex items-center gap-2 mb-2">
           <h2 className="font-black text-xs uppercase tracking-widest bg-accent text-neutral border-2 border-black px-2 py-0.5 -rotate-1" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
@@ -170,7 +170,7 @@ function Catalog() {
         </div>
       </section>
 
-      {/* ═══ TESTIMONIALS — comic ═══ */}
+      {/* ═══ TESTIMONIALS - comic ═══ */}
       <section className="mb-4">
         <div className="flex items-center gap-2 mb-2">
           <h2 className="font-black text-xs uppercase tracking-widest bg-neutral text-primary border-2 border-black px-2 py-0.5 rotate-1" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
@@ -203,7 +203,7 @@ function Catalog() {
         </div>
       </section>
 
-      {/* ═══ BOTTOM CTA — full-width comic panel ═══ */}
+      {/* ═══ BOTTOM CTA - full-width comic panel ═══ */}
       <section className="mb-4">
         <Link
           to="/products"

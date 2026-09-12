@@ -1,4 +1,4 @@
-# Session Summary — 2026-09-06
+# Session Summary - 2026-09-06
 
 ## Context
 - Supabase client rewrite completed earlier; this session fixed regressions and completed auth/security/vault/admin UX work.

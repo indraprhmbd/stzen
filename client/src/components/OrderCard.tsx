@@ -34,7 +34,7 @@ function formatIdDate(iso: string) {
 
 function getStatusConfig(status: Order['status']) {
   // Solid high-contrast fills, black text on brights (white-on-warning was
-  // unreadable). Brutal chip, not a daisy pill — see the badge markup below.
+  // unreadable). Brutal chip, not a daisy pill - see the badge markup below.
   switch (status) {
     case 'PENDING':
       return { label: 'PENDING', className: 'bg-warning text-black' }

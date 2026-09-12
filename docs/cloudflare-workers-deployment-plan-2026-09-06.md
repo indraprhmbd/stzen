@@ -11,19 +11,19 @@ Credential storefront selling digital accounts/subscriptions. Admin imports encr
 - **Payments:** Scaffold (manual/duitku/sumopod), webhook-driven
 
 ## Data Model
-- `profiles` — extends auth.users, role enum (customer/admin)
-- `products` — base catalog (name, category, price, badge, instructions)
-- `product_variants` — purchasable SKU (30+ rows, 5-6 parents), duration, accountType, fulfillmentType
-- `vault_items` — encrypted credentials (AES-256-GCM), status enum (AVAILABLE/SOLD/RESERVED/REVOKED)
-- `orders` — PENDING/PAID/DELIVERED/REFUNDED/REJECTED, snapshots variant data, paymentRef, vaultItemId pointer
+- `profiles` - extends auth.users, role enum (customer/admin)
+- `products` - base catalog (name, category, price, badge, instructions)
+- `product_variants` - purchasable SKU (30+ rows, 5-6 parents), duration, accountType, fulfillmentType
+- `vault_items` - encrypted credentials (AES-256-GCM), status enum (AVAILABLE/SOLD/RESERVED/REVOKED)
+- `orders` - PENDING/PAID/DELIVERED/REFUNDED/REJECTED, snapshots variant data, paymentRef, vaultItemId pointer
 
 ## Server Modules
-- `products` — public catalog, stock counts
-- `checkout` — create order with atomic allocation via `allocate_credential` RPC
-- `orders` — buyer history, state machine
-- `vault` — import/decrypt/revoke/rotate/replace, HMAC unlock gate
-- `admin` — order management, product CRUD, stock import
-- `payments` — provider scaffold + webhooks
+- `products` - public catalog, stock counts
+- `checkout` - create order with atomic allocation via `allocate_credential` RPC
+- `orders` - buyer history, state machine
+- `vault` - import/decrypt/revoke/rotate/replace, HMAC unlock gate
+- `admin` - order management, product CRUD, stock import
+- `payments` - provider scaffold + webhooks
 
 ## Current State
 - Modular monolith refactor completed (Aug 27)
@@ -33,8 +33,8 @@ Credential storefront selling digital accounts/subscriptions. Admin imports encr
 
 ## Open Questions / Risks
 - Next epic not defined in docs
-- `product_variants.deletedAt` is timestamp but not used in enum — soft delete by timestamp?
-- `orders.vaultItemId` is nullable — what happens if allocation fails mid-transaction?
+- `product_variants.deletedAt` is timestamp but not used in enum - soft delete by timestamp?
+- `orders.vaultItemId` is nullable - what happens if allocation fails mid-transaction?
 - Payment webhook retry logic not documented
 
 ## Deployment Target: Full Cloudflare (0-cost)
@@ -117,7 +117,7 @@ Run entire stack on Cloudflare free tiers:
    - Check session storage: confirm no plaintext tokens in localStorage beyond what Supabase SDK requires
    - Verify redirect URIs are validated server-side in `/api/v1/auth/callback`
    - Ensure `exchangeCodeForSession` validates `state`/`code` and does not accept reused codes
-   - Confirm cookie flags: `HttpOnly; Secure; SameSite=Lax` — review if `Secure` breaks localhost during dev
+   - Confirm cookie flags: `HttpOnly; Secure; SameSite=Lax` - review if `Secure` breaks localhost during dev
    - Validate `next` param in callback is same-origin relative path only
 
 4. **Server hardening**

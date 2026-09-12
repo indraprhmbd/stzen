@@ -1,7 +1,7 @@
 // ─── HMAC-SHA256 Utilities ───────────────────────────────────────────────────
 // Uses Web Crypto API only (crypto.subtle). No node:crypto imports.
 // Used to verify payment gateway webhook signatures (SumoPod Svix-style HMAC,
-// Duitku callback signature). Keep this Web-Crypto-only per repo convention —
+// Duitku callback signature). Keep this Web-Crypto-only per repo convention -
 // see docs/payments-scaffold-2026-09-04.md for why Duitku's *invoice* signing
 // (MD5) needs a separate vendored helper instead of living here.
 
@@ -42,7 +42,7 @@ export async function hmacSha256Base64(secret: string, payload: string): Promise
   return toBase64(sig)
 }
 
-// Constant-time string comparison — avoids leaking match length via timing.
+// Constant-time string comparison - avoids leaking match length via timing.
 export function timingSafeEqual(a: string, b: string): boolean {
   if (a.length !== b.length) return false
   let diff = 0
@@ -111,7 +111,7 @@ export async function verifySvixSignature(opts: {
     .some((parts) => timingSafeEqual(expected, parts.slice(1).join(',')))
 }
 
-// Static bearer-token mode — compare the `x-webhook-token` header.
+// Static bearer-token mode - compare the `x-webhook-token` header.
 export function verifyWebhookToken(received: string | null | undefined, expected: string): boolean {
   if (!received || !expected) return false
   return timingSafeEqual(received, expected)

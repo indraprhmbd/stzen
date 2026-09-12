@@ -8,20 +8,20 @@
 
 Homepage feels generic and boring despite having the right color palette (green/lime/pink brutalism). Root causes:
 
-- Uniform visual weight: every element uses `border-[3px] shadow-brutal` — nothing stands out
+- Uniform visual weight: every element uses `border-[3px] shadow-brutal` - nothing stands out
 - Too much blank space: hero is 300px tall with centered text, cards have generous padding
 - Featured bento layout (8col + 4col asymmetric) adds visual complexity without value
-- Newsletter section is filler — adds height without purpose
+- Newsletter section is filler - adds height without purpose
 - Cards: 2 variants (featured/regular) with large padding, "Price" label, accent bars
 
 ## Decisions
 
-1. **Hero → compact horizontal banner** (left-aligned, ~100px tall) — straight to the point
-2. **Remove featured/asymmetric bento** — uniform 4-col grid, simpler
-3. **Remove newsletter** — filler removed
-4. **Cards → single compact variant** — tighter padding, no accent bar, no "Price" label, `rounded-md` (6px)
-5. **FilterBar always visible** — not conditional on product count
-6. **Section header simplified** — "ALL PRODUCTS", no "VIEW ALL" link
+1. **Hero → compact horizontal banner** (left-aligned, ~100px tall) - straight to the point
+2. **Remove featured/asymmetric bento** - uniform 4-col grid, simpler
+3. **Remove newsletter** - filler removed
+4. **Cards → single compact variant** - tighter padding, no accent bar, no "Price" label, `rounded-md` (6px)
+5. **FilterBar always visible** - not conditional on product count
+6. **Section header simplified** - "ALL PRODUCTS", no "VIEW ALL" link
 
 ## Changes
 

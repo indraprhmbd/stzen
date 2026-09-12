@@ -1,4 +1,4 @@
-# STZEN — Credential Storefront
+# STZEN - Credential Storefront
 
 Digital storefront for subscription credentials (streaming accounts, top-ups, and
 similar goods). Buyers browse a public catalog, check out with manual payment
@@ -123,5 +123,5 @@ AGENTS.md holds the full coding contract.
 
 ## License
 
-GNU Affero General Public License v3.0 — see [LICENSE](LICENSE). Hosted or
+GNU Affero General Public License v3.0 - see [LICENSE](LICENSE). Hosted or
 distributed modifications must share source under the same terms.

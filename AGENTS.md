@@ -15,7 +15,7 @@
    - **profiles:** `authenticated` can SELECT/UPDATE own row (`auth.uid() = id`). anon blocked.
    - **products / product_variants:** `anon` + `authenticated` can SELECT `is_active = true` (public catalog).
    - **orders:** `authenticated` can SELECT/INSERT own orders (`user_id = auth.uid()`). anon blocked.
-   - **vault_items / audit_logs:** NO policies — completely blocked for anon/authenticated. Server superuser only.
+   - **vault_items / audit_logs:** NO policies - completely blocked for anon/authenticated. Server superuser only.
 5. **UI Styling:** Use native DaisyUI utility components (`btn`, `btn-primary`, `badge`, `card`, `table`, `modal`). Do NOT write custom CSS overrides or unneeded Tailwind abstractions.
 6. **End-to-End Type Safety:** Export Hono API router types (`AppType`) and consume them on the React client via `hono/client` (`hc<AppType>`).
 
@@ -86,11 +86,11 @@ server/
 
 ### Module Convention
 Each module has up to 5 files:
-- `*.routes.ts` — Hono sub-app with HTTP handlers (thin, delegate to service)
-- `*.service.ts` — Business logic + DB queries (testable without HTTP)
-- `*.schema.ts` — Zod validation schemas
-- `*.types.ts` — TypeScript types (exported for cross-module use)
-- `index.ts` — Public API: re-exports routes + service
+- `*.routes.ts` - Hono sub-app with HTTP handlers (thin, delegate to service)
+- `*.service.ts` - Business logic + DB queries (testable without HTTP)
+- `*.schema.ts` - Zod validation schemas
+- `*.types.ts` - TypeScript types (exported for cross-module use)
+- `index.ts` - Public API: re-exports routes + service
 
 ### Import Rules
 1. **Modules import from `shared/` only.** Never import from another module's internal files.
@@ -119,7 +119,7 @@ export const myService = {
 ### Error Handling
 - Throw `NotFoundError`, `ConflictError`, `ForbiddenError`, etc. from `shared/errors/http.ts`
 - Global `app.onError(errorHandler)` catches all and returns consistent JSON
-- Never return `c.json({ error: ... }, status)` from services — throw instead
+- Never return `c.json({ error: ... }, status)` from services - throw instead
 
 ### Order State Machine
 Centralized in `orders.service.ts`:

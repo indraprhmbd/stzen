@@ -30,7 +30,7 @@ interface DataTableProps {
 
 // Recursively walks table rows (through Fragments, e.g. Products' grouped
 // variant rows) and stamps each <td> with data-label="<column label>". Pure
-// data attribute — zero extra DOM nodes, zero JS on the row-render call
+// data attribute - zero extra DOM nodes, zero JS on the row-render call
 // sites. app.css turns this into a labeled-card layout below the sm
 // breakpoint, no per-page markup duplication needed.
 function withMobileLabels(children: ReactNode, labels: string[]): ReactNode {

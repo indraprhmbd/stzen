@@ -13,7 +13,7 @@ import IndukDialog from './components/IndukDialog'
 import VariantDialog from './components/VariantDialog'
 import type { Variant, Product } from './types'
 
-// Composition only — all logic lives in hooks, all markup in components.
+// Composition only - all logic lives in hooks, all markup in components.
 export default function ProductsPage() {
   const { products, variants, loading, error, fetchedAt, toast, fetchAll, showToast, categories } = useProducts()
   const productForm = useProductForm(fetchAll, showToast)

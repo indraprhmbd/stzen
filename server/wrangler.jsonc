@@ -10,7 +10,7 @@
   // PAYMENT_SUMOPOD_WEBHOOK_SECRET, PAYMENT_SUMOPOD_WEBHOOK_TOKEN,
   // PAYMENT_DUITKU_MERCHANT_CODE, PAYMENT_DUITKU_API_KEY
   // Top-level vars serve `wrangler dev` only. NEVER bare `wrangler deploy`
-  // (it would ship dev CORS + empty return URL under the prod name) — always
+  // (it would ship dev CORS + empty return URL under the prod name) - always
   // `npm run deploy` (pins --env production) or `--env staging`.
   "vars": {
     "SUPABASE_URL": "https://kqgfbmehepanzkhypzdw.supabase.co",

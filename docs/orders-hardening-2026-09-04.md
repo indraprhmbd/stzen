@@ -16,7 +16,7 @@ revoke execute on function public.allocate_credential(uuid, uuid) from public, a
 revoke execute on function public.handle_new_user() from public, anon, authenticated;
 create index if not exists orders_status_created_idx on public.orders (status, created_at desc);
 ```
-Trigger firing does not require EXECUTE grants — signup flow unaffected.
+Trigger firing does not require EXECUTE grants - signup flow unaffected.
 (Index is P1 item 5, rides the same migration.)
 
 ### 2. Checkout idempotency (`server/modules/checkout/checkout.routes.ts`)
@@ -24,13 +24,13 @@ Trigger firing does not require EXECUTE grants — signup flow unaffected.
 orders. Same mechanism as admin routes: lookup `findAuditByIdempotencyKey`,
 return prior on hit, store result with `diff: order` on miss. Client
 (`ProductDetail.handleBuy`): generate ONE key per buy-intent, reuse across
-retries (never per-attempt — that defeats the purpose).
+retries (never per-attempt - that defeats the purpose).
 
 ### 3. Atomic webhook claim (`server/modules/orders/orders.service.ts`,
    `server/modules/payments/payments.service.ts`)
 `handleWebhook` read-check-allocate spans statements: concurrent retries can
 double-allocate (two SOLD credentials, `vault_item_id` last-wins, one burned).
-Fix without tx-threading refactor: new `claimPaid(publicId)` — single
+Fix without tx-threading refactor: new `claimPaid(publicId)` - single
 `UPDATE ... WHERE status='PENDING' RETURNING`; zero rows = lost race → return
 `{ skipped: true }` after re-read. `fulfillPaidOrder` uses it instead of
 `transitionStatus(approve)`.
@@ -42,7 +42,7 @@ After lookup, before fulfill: `if (parsed.amount != null &&
 Number(parsed.amount) !== Number(order.amount)) throw ConflictError`. Providers
 already return `amount`; enforcement was missing.
 
-### 5. Queue index — included in migration above.
+### 5. Queue index - included in migration above.
 
 ### 6. Audible audit failures (checkout.routes, admin.orders.routes, payments.service)
 `.catch(() => {})` → `.catch((e) => console.error('[audit]', ...))`. Audit is

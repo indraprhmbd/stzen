@@ -31,7 +31,7 @@ export default function ProductDetail() {
   const { t } = useCopy()
   const [product, setProduct] = useState<Product | null>(() => (id ? getCachedDetail<Product>(id) : null))
   const [related, setRelated] = useState<Product[]>([])
-  // Prefetched hit paints instantly — skip the skeleton, revalidate silently.
+  // Prefetched hit paints instantly - skip the skeleton, revalidate silently.
   const [loading, setLoading] = useState(() => !(id && getCachedDetail<Product>(id)))
   const [purchasing, setPurchasing] = useState(false)
   const [msg, setMsg] = useState('')
@@ -125,7 +125,7 @@ export default function ProductDetail() {
     } catch (e: any) {
       if (e?.message && e.message !== 'Not authenticated') {
         // Initiate failed after checkout: remove the dead PENDING row so the
-        // dashboard stays clean (server refuses when already invoiced — then
+        // dashboard stays clean (server refuses when already invoiced - then
         // the order is real and dashboard BAYAR retries it).
         if (oid) await deleteOrder(oid).catch(() => null)
         setMsg('')

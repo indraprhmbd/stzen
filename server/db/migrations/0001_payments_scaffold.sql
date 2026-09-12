@@ -1,19 +1,19 @@
--- Payment Gateway Scaffold — schema + RPC updates
+-- Payment Gateway Scaffold - schema + RPC updates
 -- Applied to production via Supabase migration `payments_scaffold`
 -- (2026-09-03) plus a follow-up `allocate_credential_set_search_path` fix
 -- for the function-search-path-mutable advisory. This file is kept as the
--- readable reference copy — this project syncs schema via `npm run db:push`
+-- readable reference copy - this project syncs schema via `npm run db:push`
 -- (Drizzle) day-to-day, not `drizzle-kit migrate`.
 --
--- 1. orders.payment_provider — records which gateway (manual/duitku/sumopod)
+-- 1. orders.payment_provider - records which gateway (manual/duitku/sumopod)
 --    was used to initiate payment. Nullable: existing rows predate gateways.
--- 2. allocate_credential — rewritten to be variant-aware. The original
+-- 2. allocate_credential - rewritten to be variant-aware. The original
 --    (see 0000_allocate_credential.sql) allocated by product_id and jumped
 --    the order straight to PAID. Stock is now tracked per variant
 --    (vault_items.variant_id), and order status transitions must go through
 --    the app's state machine (server/modules/orders/orders.types.ts), so this
 --    version ONLY locks + allocates a credential and links it to the order.
---    It does not touch orders.status — callers (payments.service.ts) drive
+--    It does not touch orders.status - callers (payments.service.ts) drive
 --    PENDING -> PAID -> DELIVERED explicitly.
 
 -- ─── 1. orders.payment_provider ─────────────────────────────────────────────

@@ -3,7 +3,7 @@ import { authedApiRequest } from './api'
 // ─── Payment Helpers (SumoPod sandbox) ──────────────────────────────────────
 // initiatePayment mints a gateway invoice for a PENDING order and returns the
 // redirect URL (null for providers with no redirect, e.g. manual).
-// Throws with the server's error message on failure — callers show it.
+// Throws with the server's error message on failure - callers show it.
 
 export async function initiatePayment(orderId: string): Promise<string | null> {
   const res = await authedApiRequest((c) =>

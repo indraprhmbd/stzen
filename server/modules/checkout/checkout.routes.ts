@@ -13,7 +13,7 @@ type CheckoutEnv = AuthEnv
 export const checkoutRoutes = new Hono<CheckoutEnv>()
   // Auth is enforced globally in app.ts.
 
-  // POST / — Create order
+  // POST / - Create order
   .post(
   '/',
   zValidator('json', CheckoutSchema),

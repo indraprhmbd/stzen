@@ -36,7 +36,7 @@ function mapOrderRow(r: any): OrderWithProduct {
   }
 }
 
-// 30s cache for statusCounts — runs full GROUP BY on orders table.
+// 30s cache for statusCounts - runs full GROUP BY on orders table.
 let statusCountsCache: { data: any[]; ts: number } | null = null
 async function getStatusCounts(): Promise<any[]> {
   if (statusCountsCache && Date.now() - statusCountsCache.ts < 30_000) return statusCountsCache.data
@@ -137,7 +137,7 @@ export const ordersService = {
   async deleteOwnOrder(publicId: string, userId: string) {
     // Conditional delete: a webhook claimPaid landing between the checks and
     // the delete must not orphan a paid order. No row returned means the
-    // order moved out from under us — report conflict, never silently drop.
+    // order moved out from under us - report conflict, never silently drop.
     const { data: deleted, error } = await supabaseAdmin
       .from(ORDERS)
       .delete()

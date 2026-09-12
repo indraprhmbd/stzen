@@ -14,7 +14,7 @@ export const manualProvider: PaymentProvider = {
   amountRequired: false,
 
   async createInvoice(input) {
-    // Nothing to redirect to — the order stays PENDING until an admin
+    // Nothing to redirect to - the order stays PENDING until an admin
     // approves it in the dashboard. providerRef mirrors the order's own
     // public id so the (unused) webhook lookup path stays well-defined.
     return { checkoutUrl: null, providerRef: input.orderPublicId }

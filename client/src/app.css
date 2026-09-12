@@ -184,7 +184,7 @@
   animation: skeleton-pulse 1.5s ease-in-out infinite;
 }
 
-/* Hero grid dot background — legacy */
+/* Hero grid dot background - legacy */
 .bg-grid-dots {
   background-image: radial-gradient(circle, rgba(255,255,255,0.08) 1px, transparent 1px);
   background-size: 16px 16px;
@@ -243,7 +243,7 @@
 }
 
 /* Hides scrollbar on horizontally-scrollable strips (admin bottom nav) while
-   keeping the element scrollable — cross-browser, no JS. */
+   keeping the element scrollable - cross-browser, no JS. */
 .no-scrollbar {
   scrollbar-width: none;
   -ms-overflow-style: none;
@@ -252,7 +252,7 @@
   display: none;
 }
 
-/* ─── Admin DataTable — responsive card view below sm ──────────────────
+/* ─── Admin DataTable - responsive card view below sm ──────────────────
    Zero JS, zero per-page markup: DataTable.tsx stamps data-label on each
    <td> at render time, this pure-CSS block turns rows into labeled cards
    on narrow viewports. Colspan cells (group/section headers) are left as

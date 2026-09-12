@@ -5,14 +5,14 @@ import { getEnv } from '../../../shared/lib/runtime-env'
 // Flavor: Pop redirect (paymentUrl). No duitku.js popup.
 // Docs: docs.duitku.com/pop/en/. Grounding notes: docs/payments-scaffold-2026-09-04.md.
 //
-// Not wired yet — no sandbox merchant code / API key available. Fill in the
+// Not wired yet - no sandbox merchant code / API key available. Fill in the
 // TODOs below once PAYMENT_DUITKU_MERCHANT_CODE / PAYMENT_DUITKU_API_KEY are
 // set in server/.env.
 //
 // ⚠️ Open blocker: Duitku's createInvoice REQUEST signature is
 // MD5(merchantCode + merchantOrderId + amount + apiKey). crypto.subtle has no
 // MD5. Vendor a tiny MD5 helper (keep Web Crypto purity, zero deps) before
-// wiring createInvoice — do not reach for node:crypto, it breaks edge runtime
+// wiring createInvoice - do not reach for node:crypto, it breaks edge runtime
 // portability. The CALLBACK signature (webhook) is HMAC-SHA256, which IS
 // supported by shared/lib/hmac.ts already.
 
@@ -36,7 +36,7 @@ export const duitkuProvider: PaymentProvider = {
 
   async createInvoice(_input) {
     requireConfig()
-    // TODO (needs sandbox keys + a vendored MD5 helper — see blocker above):
+    // TODO (needs sandbox keys + a vendored MD5 helper - see blocker above):
     // 1. merchantOrderId = input.orderPublicId
     // 2. signature = MD5(merchantCode + merchantOrderId + amount + apiKey)
     // 3. POST `${baseUrl}/api/merchant/createInvoice` with:
@@ -48,7 +48,7 @@ export const duitkuProvider: PaymentProvider = {
     //        signature }
     // 4. Amount must be >= 10.000 IDR (Duitku sandbox minimum).
     // 5. return { checkoutUrl: json.paymentUrl, providerRef: json.reference }
-    throw new Error('Duitku provider not implemented yet — see TODOs in providers/duitku.ts')
+    throw new Error('Duitku provider not implemented yet - see TODOs in providers/duitku.ts')
   },
 
   async parseWebhook(_c) {
@@ -62,6 +62,6 @@ export const duitkuProvider: PaymentProvider = {
     // 4. outcome: body.resultCode === '00' ? 'paid' : 'failed'
     // 5. return { providerRef: String(body.merchantOrderId), outcome,
     //             amount: Number(body.amount), eventId: String(body.reference) }
-    throw new Error('Duitku webhook parsing not implemented yet — see TODOs in providers/duitku.ts')
+    throw new Error('Duitku webhook parsing not implemented yet - see TODOs in providers/duitku.ts')
   },
 }

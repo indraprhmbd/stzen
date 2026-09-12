@@ -29,7 +29,7 @@ export default function Footer() {
             </div>
           </Link>
 
-          {/* Social — comic pill icons */}
+          {/* Social - comic pill icons */}
           <div className="flex gap-2">
             <a
               href={`https://wa.me/${waNumber}`}

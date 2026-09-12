@@ -1,4 +1,4 @@
-# Post-Supabase Rewrite Regression Fixes — 2026-09-06
+# Post-Supabase Rewrite Regression Fixes - 2026-09-06
 
 ## Summary
 The Supabase client rewrite introduced multiple regressions: relation data came back as arrays instead of single objects, server queries used the anon client (triggering RLS blocks), form sends included empty strings for UUID columns, and the delivery flow shared a broken allocation path for both on-demand and vault orders.
@@ -10,7 +10,7 @@ Supabase JS returns joined relations as **arrays**, not single objects. Drizzle 
 
 ### Server DB Client
 - **All server modules**: replaced `supabase` (anon) with `supabaseAdmin` (service role)
-  - `server/shared/db/index.ts` — exports both clients
+  - `server/shared/db/index.ts` - exports both clients
   - `server/modules/orders/orders.service.ts`
   - `server/modules/orders/credentials.routes.ts`
   - `server/modules/products/products.service.ts`
@@ -80,5 +80,5 @@ All mappers normalized Supabase relation arrays:
 - If using `npx wrangler dev`, restart after code changes and clear `.wrangler/tmp/*` if stale
 
 ## Verification
-- Server: `npx tsc --noEmit -p server/tsconfig.json` — passes
-- Client: `npx tsc --noEmit` — passes
+- Server: `npx tsc --noEmit -p server/tsconfig.json` - passes
+- Client: `npx tsc --noEmit` - passes

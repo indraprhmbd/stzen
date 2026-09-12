@@ -5,7 +5,7 @@ export default defineConfig({
   out: './server/db/migrations',
   dialect: 'postgresql',
   dbCredentials: {
-    // Use DIRECT_URL (port 5432) for migrations — transaction pooler doesn't support DDL well
+    // Use DIRECT_URL (port 5432) for migrations - transaction pooler doesn't support DDL well
     url: process.env.DATABASE_DIRECT_URL!,
   },
 })

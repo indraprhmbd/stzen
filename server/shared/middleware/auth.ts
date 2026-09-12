@@ -17,7 +17,7 @@ export interface AuthEnv {
 }
 
 // ─── JWKS Client ────────────────────────────────────────────────────────────
-// Lazy-initialized — one JWKS fetch per cold start, cached in memory
+// Lazy-initialized - one JWKS fetch per cold start, cached in memory
 
 let jwks: ReturnType<typeof createRemoteJWKSet> | null = null
 let jwksUrl = ''
@@ -55,7 +55,7 @@ export const authMiddleware = createMiddleware<AuthEnv>(async (c, next) => {
       issuer: `${supabaseUrl}/auth/v1`,
     })
 
-    // Set verified user on context — downstream handlers use c.get('user')
+    // Set verified user on context - downstream handlers use c.get('user')
     c.set('user', payload as JWTPayload & { sub: string; email?: string; role?: string })
 
     await next()

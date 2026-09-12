@@ -1,4 +1,4 @@
-# Payment Gateway Scaffold (Provider-Agnostic) — 2026-09-04
+# Payment Gateway Scaffold (Provider-Agnostic) - 2026-09-04
 
 ## Decisions (locked)
 
@@ -12,9 +12,9 @@
 
 ## Research grounding (Sep 2026)
 
-- Hono (Context7 `/honojs/hono`): webhook signature checks must use raw body via `c.req.text()` — never `c.req.json()` (re-serialization breaks signatures). Body reads once; clone `c.req.raw` if parsed twice. Duitku callbacks are form-encoded → `c.req.parseBody()`.
+- Hono (Context7 `/honojs/hono`): webhook signature checks must use raw body via `c.req.text()` - never `c.req.json()` (re-serialization breaks signatures). Body reads once; clone `c.req.raw` if parsed twice. Duitku callbacks are form-encoded → `c.req.parseBody()`.
 - Duitku Pop docs (`docs.duitku.com/pop/en/`): sandbox `https://api-sandbox.duitku.com/api/merchant/createInvoice` → `{ reference, paymentUrl }`. Callback POST fields include `merchantCode, amount, merchantOrderId, resultCode (00/01), reference, signature` where `signature = HMAC_SHA256(merchantCode+amount+merchantOrderId, apiKey)`. Min 10.000 IDR. Local callback testing needs ngrok tunnel + dashboard URL update.
-- SumoPod (`api-pay-sandbox.sumopod.com/api/v1`, sandbox pre-KYC): `createPayment(order_id, amount IDR, expires_in_hours, success_return_url, cancel_return_url)` → `payment_link_url` (`pay.sumopod.com/link/…`). Webhooks Svix-style (`svix-id/timestamp/signature` + raw body, `whsec_` secret) or static token (`whtok_`). Events `payment.completed/failed/expired`. Only unofficial SDKs exist — integrate direct.
+- SumoPod (`api-pay-sandbox.sumopod.com/api/v1`, sandbox pre-KYC): `createPayment(order_id, amount IDR, expires_in_hours, success_return_url, cancel_return_url)` → `payment_link_url` (`pay.sumopod.com/link/…`). Webhooks Svix-style (`svix-id/timestamp/signature` + raw body, `whsec_` secret) or static token (`whtok_`). Events `payment.completed/failed/expired`. Only unofficial SDKs exist - integrate direct.
 - ⚠️ Open: Duitku createInvoice request signature is MD5, absent from `crypto.subtle`. Options: tiny vendored MD5 helper (recommended, keeps Web Crypto purity) or `node:crypto` (breaks edge runtime). Decide at provider build time.
 
 ## Env (`server/.env`, documented in `.env.example`)
@@ -46,9 +46,9 @@ server/modules/payments/
   payments.routes.ts     # POST /api/v1/payments/:orderId/initiate (authed, returns checkoutUrl)
   webhooks.routes.ts     # POST /api/v1/webhooks/:provider (PUBLIC, no auth middleware,
                          # own lenient rate limit, raw-body read)
-  providers/manual.ts    # current flow as a provider (PENDING, no redirect) — proves interface
-  providers/duitku.ts    # STUB shaped by Pop docs, TODOs marked — fill on sandbox access
-  providers/sumopod.ts   # STUB shaped by SDK research, TODOs marked — fill on sandbox access
+  providers/manual.ts    # current flow as a provider (PENDING, no redirect) - proves interface
+  providers/duitku.ts    # STUB shaped by Pop docs, TODOs marked - fill on sandbox access
+  providers/sumopod.ts   # STUB shaped by SDK research, TODOs marked - fill on sandbox access
 server/shared/lib/hmac.ts  # HMAC-SHA256 sign/verify via crypto.subtle (no new deps)
 migration: orders.payment_provider text null (+ index); paymentRef reused for gateway invoice ID
 app.ts: mount both routes; webhook route outside auth

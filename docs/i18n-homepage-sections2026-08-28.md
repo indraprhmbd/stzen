@@ -6,16 +6,16 @@
 
 ## Problem
 
-1. All UI text hardcoded in English — main customer base is Indonesian
+1. All UI text hardcoded in English - main customer base is Indonesian
 2. Homepage missing key sections: How It Works, Why st.zen, Testimonials
-3. No centralized copy — strings scattered across components
+3. No centralized copy - strings scattered across components
 
 ## Decisions
 
-1. **Option C: Centralized copy with language toggle** — no i18n library, pure TypeScript
-2. **Indonesian as default language** — English available via toggle
-3. **Language toggle in header** — simple ID/EN button, persists to localStorage
-4. **All UI strings extracted** to `config/copy.ts` — components never hardcode text
+1. **Option C: Centralized copy with language toggle** - no i18n library, pure TypeScript
+2. **Indonesian as default language** - English available via toggle
+3. **Language toggle in header** - simple ID/EN button, persists to localStorage
+4. **All UI strings extracted** to `config/copy.ts` - components never hardcode text
 5. **Homepage additions:** How It Works (4 steps), Why st.zen (3 benefits), Testimonials (2-3 quotes)
 
 ## Architecture
@@ -23,9 +23,9 @@
 ### i18n System
 
 ```
-config/copy.ts     — all strings in id + en
-hooks/useCopy.ts   — hook: { t, lang, toggle }
-Header.tsx         — language toggle button
+config/copy.ts     - all strings in id + en
+hooks/useCopy.ts   - hook: { t, lang, toggle }
+Header.tsx         - language toggle button
 ```
 
 - `copy.ts`: single source of truth, ~30-40 strings per language
@@ -36,10 +36,10 @@ Header.tsx         — language toggle button
 
 ```
 Hero Banner (existing)
-How It Works (NEW — 4 steps)
+How It Works (NEW - 4 steps)
 Section Header + FilterBar + Product Grid (existing)
-Why st.zen (NEW — 3 benefits)
-Testimonials (NEW — 2-3 quotes)
+Why st.zen (NEW - 3 benefits)
+Testimonials (NEW - 2-3 quotes)
 Footer (existing)
 ```
 

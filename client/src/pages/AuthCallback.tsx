@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase-browser'
 
 // Module scope: survives StrictMode remounts. One PKCE code exchanges exactly
-// once — the second dev-effect run with the same code would burn the consumed
+// once - the second dev-effect run with the same code would burn the consumed
 // verifier and bounce a logged-in user back to /login?error=.
 const exchangedCodes = new Set<string>()
 
@@ -51,7 +51,7 @@ export default function AuthCallback() {
           return
         }
 
-        // Success — redirect to dashboard
+        // Success - redirect to dashboard
         navigate('/dashboard', { replace: true })
       } catch (err) {
         if (cancelled) return

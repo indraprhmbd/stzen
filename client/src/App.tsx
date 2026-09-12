@@ -17,7 +17,7 @@ const ForgotPassword = lazy(() => import('./pages/ForgotPassword'))
   const Dashboard = lazy(() => import('./pages/Dashboard'))
   const AuthCallback = lazy(() => import('./pages/AuthCallback'))
 const Profile = lazy(() => import('./pages/Profile'))
-// Admin shell stays out of the main bundle — loads only on /admin visits.
+// Admin shell stays out of the main bundle - loads only on /admin visits.
 const AdminLayout = lazy(() => import('./layouts/AdminLayout'))
 const PaymentReturn = lazy(() => import('./pages/PaymentReturn'))
 const NotFound = lazy(() => import('./pages/NotFound'))
@@ -57,7 +57,7 @@ function App() {
           <Route path="/profile" element={<Profile />} />
           <Route path="/payment/return" element={<PaymentReturn />} />
 
-          {/* Admin — concealed scope. RequireAdmin alone: no session or
+          {/* Admin - concealed scope. RequireAdmin alone: no session or
               wrong role renders the generic 404, never redirects. No
               RequireAuth wrapper here, it would leak /admin via /login. */}
           <Route

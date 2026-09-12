@@ -13,7 +13,7 @@ import { getEnv } from '../../../shared/lib/runtime-env'
 // Auth: `X-Api-Key` header (NOT Bearer).
 // Webhook: Svix-style (`svix-id/timestamp/signature` + `whsec_…`) OR static
 // token (`x-webhook-token` header + `whtok_…`). Sandbox test deliveries carry
-// BOTH — signature wins when the secret is configured, token is the fallback.
+// BOTH - signature wins when the secret is configured, token is the fallback.
 // Events arrive as `{ event_type, data }`, e.g.:
 //   {"data":{"message":"This is a test webhook from SumoPod", ...},
 //    "event_type":"payment.test"}
@@ -52,14 +52,14 @@ async function postJson(url: string, apiKey: string, body: unknown): Promise<any
         (parsed && typeof parsed === 'object' && (parsed.message || parsed.error)) ||
         `SumoPod request failed with status ${res.status}`
       // Re-initiate on an already-invoiced order: SumoPod keeps the first
-      // invoice alive under our order_id. Don't mint duplicates — tell the
+      // invoice alive under our order_id. Don't mint duplicates - tell the
       // buyer to finish the existing payment (dashboard BAYAR reuses it once
       // we persist checkoutUrl; until then this 409 is the guardrail).
       if (res.status === 409 || /already exists/i.test(String(msg))) {
         throw new ConflictError('Invoice sudah dibuat untuk order ini, selesaikan pembayaran sebelumnya.')
       }
       // Gateway client errors (bad amount, bad method code, …) are the
-      // caller's problem — surface as 400 with the gateway message, not a 500.
+      // caller's problem - surface as 400 with the gateway message, not a 500.
       if (res.status >= 400 && res.status < 500) {
         throw new BadRequestError(`SumoPod: ${msg}`)
       }
@@ -86,7 +86,7 @@ export const sumopodProvider: PaymentProvider = {
   async createInvoice(input) {
     const { apiKey, baseUrl } = requireConfig()
     // Gateway constraint: order_id must match ^[A-Za-z0-9-_]+$ (max 64).
-    // Our publicIds are 12-char base64url — always compliant, guard anyway.
+    // Our publicIds are 12-char base64url - always compliant, guard anyway.
     if (!/^[A-Za-z0-9-_]{1,64}$/.test(input.orderPublicId)) {
       throw new BadRequestError('Order id is not SumoPod-compatible')
     }
@@ -97,7 +97,7 @@ export const sumopodProvider: PaymentProvider = {
       amount: input.amount,
       currency: 'IDR',
       // Sandbox rejects ambiguous invoices when the merchant has several
-      // methods active — pin one (QRIS). Overridable per deploy if needed.
+      // methods active - pin one (QRIS). Overridable per deploy if needed.
       payment_method_type_code: getEnv('PAYMENT_SUMOPOD_METHOD_CODE') || 'QRIS',
       expires_in_hours: Math.max(1, Math.ceil(expiryMinutes / 60)),
       ...(appBase.startsWith('https://')
@@ -118,7 +118,7 @@ export const sumopodProvider: PaymentProvider = {
     const webhookToken = getEnv('PAYMENT_SUMOPOD_WEBHOOK_TOKEN') || ''
     const raw = await c.req.text()
 
-    // Sandbox onboarding: explicit flag, or no credentials at all — capture
+    // Sandbox onboarding: explicit flag, or no credentials at all - capture
     // the test delivery for shape inspection, answer 200, trust nothing.
     // Any configured value (even a placeholder) disables auto-capture.
     if (getEnv('PAYMENT_SUMOPOD_CAPTURE') === '1' || (!webhookSecret && !webhookToken)) {

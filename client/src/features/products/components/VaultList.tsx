@@ -39,7 +39,7 @@ export default function VaultList({ variants, fetchedAt, initialVariantId, onVar
     }
   }, [initialVariantId])
 
-  // Vault opens itself on mount — no manual gate. The 10-min token,
+  // Vault opens itself on mount - no manual gate. The 10-min token,
   // hide-tab relock, and manual lock button still bound the session.
   const autoUnlocked = useRef(false)
   useEffect(() => {
@@ -265,7 +265,7 @@ export default function VaultList({ variants, fetchedAt, initialVariantId, onVar
             <dialog open className="modal" style={{ zIndex: 60 }}>
               <div className="modal-box ad-dialog max-w-lg p-6">
                 <h3 className="font-semibold text-[17px] tracking-tight">
-                  {rotateFallback.message === 'ON_DEMAND_REQUIRES_CREDENTIAL' ? 'Ganti kredensial on-demand' : 'Stok habis — pilih cara penggantian'}
+                  {rotateFallback.message === 'ON_DEMAND_REQUIRES_CREDENTIAL' ? 'Ganti kredensial on-demand' : 'Stok habis - pilih cara penggantian'}
                 </h3>
                 <p className="text-xs text-[#6e6e73] mt-1">
                   {rotateFallback.message === 'ON_DEMAND_REQUIRES_CREDENTIAL'

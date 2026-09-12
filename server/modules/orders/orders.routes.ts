@@ -12,7 +12,7 @@ type OrderEnv = AuthEnv
 export const orderRoutes = new Hono<OrderEnv>()
   // Auth is enforced globally in app.ts.
 
-  // GET / — List current user's orders, newest first, paginated.
+  // GET / - List current user's orders, newest first, paginated.
   // Dashboard loads 8 at a time and appends via "load more".
   .get('/',
     zValidator(
@@ -31,19 +31,19 @@ export const orderRoutes = new Hono<OrderEnv>()
     }
   )
 
-// GET /:id — Order detail (must belong to current user)
+// GET /:id - Order detail (must belong to current user)
   .get('/:id', async (c) => {
   const user = c.get('user')
   const order = await ordersService.getById(c.req.param('id'), user.sub)
   return c.json(order)
 })
 
-// DELETE /:id — Buyer cancels own dead PENDING order (see deleteOwnOrder)
+// DELETE /:id - Buyer cancels own dead PENDING order (see deleteOwnOrder)
   .delete('/:id', async (c) => {
   const user = c.get('user')
   const result = await ordersService.deleteOwnOrder(c.req.param('id'), user.sub)
   return c.json(result)
 })
 
-// GET /:id/credentials — Decrypt vault item for this order
+// GET /:id/credentials - Decrypt vault item for this order
   .route('/:id/credentials', credentialsRoutes)

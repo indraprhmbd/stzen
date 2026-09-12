@@ -4,7 +4,7 @@ import { apiV1 } from './api'
 // Warms the product-detail route chunk + API data ahead of navigation so
 // card taps render instantly. No router migration needed: Vite dedupes the
 // dynamic import, and the data cache is a 60s TTL map (stale-while-revalidate
-// — detail pages always refetch in background).
+// - detail pages always refetch in background).
 
 let chunkPromise: Promise<unknown> | null = null
 

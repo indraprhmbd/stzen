@@ -1,4 +1,4 @@
-# Variant Model — Composite Name, Auto SKU
+# Variant Model - Composite Name, Auto SKU
 
 **Date:** 2026-09-02
 **Scope:** 30+ products, 5-6 parents, variants differ by duration, account type, conditions, price per variant, stock independent, variant behaves like product

@@ -5,7 +5,7 @@ import { NavArrowDown, Search } from 'iconoir-react'
 // Accessible single-select combobox (WAI-ARIA APG combobox pattern) with
 // live-filtered typeahead. Replaces native <select> for long option lists
 // (product/variant pickers, 40+ rows) where scrolling a native dropdown is
-// unusable. Zero new deps — matches DataTable/ConfirmDialog's zinc-bordered
+// unusable. Zero new deps - matches DataTable/ConfirmDialog's zinc-bordered
 // admin visual style.
 
 export interface SearchableSelectOption {
@@ -116,7 +116,7 @@ export default function SearchableSelect({
 
   return (
     <div ref={rootRef} className={`relative ${className}`}>
-      {/* Always rendered to reserve layout height — the search panel below is
+      {/* Always rendered to reserve layout height - the search panel below is
           absolutely positioned and would otherwise collapse the container. */}
       <button
         type="button"

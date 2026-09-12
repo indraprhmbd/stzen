@@ -250,7 +250,7 @@
 
 /* Horizontal-scroll cell content. Wrap long cell text in
    <div className="ad-scrollx"> so the cell scrolls internally while the
-   column header stays fixed — no truncation, desktop + mobile. */
+   column header stays fixed - no truncation, desktop + mobile. */
 .admin-soft .ad-scrollx {
   overflow-x: auto;
   white-space: nowrap;

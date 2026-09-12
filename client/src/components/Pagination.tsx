@@ -4,7 +4,7 @@ import { useSearchParams } from 'react-router-dom'
 interface PaginationProps {
   currentPage: number
   totalPages: number
-  // Called once when the pager scrolls into view — parent pre-warms page+1.
+  // Called once when the pager scrolls into view - parent pre-warms page+1.
   onPrefetchNext?: () => void
 }
 

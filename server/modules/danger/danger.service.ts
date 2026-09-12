@@ -443,7 +443,7 @@ export const dangerExecute = {
     if (!fresh) throw new ConflictError('Token ekspor sudah dipakai')
 
     // Re-resolve rows from the token's own filter at purge time, so the
-    // token authorizes exactly what was exported — never client input.
+    // token authorizes exactly what was exported - never client input.
     // Only vault AVAILABLE is purgeable; order filters are rejected even
     // if signed (a token minted before this policy stays invalid).
     if (filter.kind !== 'vault') throw new BadRequestError('Token ekspor tidak valid')

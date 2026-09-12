@@ -38,21 +38,21 @@ async function unlockGuard(c: { req: { header: (n: string) => string | undefined
 export const adminVaultRoutes = new Hono<AuthEnv>()
   // Auth is enforced globally in app.ts; role check lives in admin.routes.ts composer.
 
-  // POST /unlock — soft gate, one click, 10 minute token
+  // POST /unlock - soft gate, one click, 10 minute token
   .post('/unlock', async (c) => {
     const user = c.get('user')
     const { token, expiresAt } = await mintUnlockToken(user.sub)
     return c.json({ token, expiresAt })
   })
 
-  // GET / — paginated plaintext list for one variant (unlock required)
+  // GET / - paginated plaintext list for one variant (unlock required)
   .get('/', zValidator('query', ListQuerySchema), async (c) => {
     await unlockGuard(c)
     const q = c.req.valid('query')
     return c.json(await vaultService.listByVariant(q.variant, q.page, q.q, q.sort, q.sortDir))
   })
 
-  // PUT /:id — in place edit, re-encrypt overwrite (unlock required)
+  // PUT /:id - in place edit, re-encrypt overwrite (unlock required)
   .put('/:id', zValidator('json', CredentialSchema), async (c) => {
     await unlockGuard(c)
     const user = c.get('user')
@@ -60,21 +60,21 @@ export const adminVaultRoutes = new Hono<AuthEnv>()
     return c.json(await vaultService.updateCredential(c.req.param('id'), credential.trim(), { sub: user.sub, email: user.email }))
   })
 
-  // DELETE /:id — AVAILABLE only (unlock required)
+  // DELETE /:id - AVAILABLE only (unlock required)
   .delete('/:id', async (c) => {
     await unlockGuard(c)
     const user = c.get('user')
     return c.json(await vaultService.deleteAvailable(c.req.param('id'), { sub: user.sub, email: user.email }))
   })
 
-  // POST /:id/revoke — SOLD to REVOKED, no replacement (unlock required)
+  // POST /:id/revoke - SOLD to REVOKED, no replacement (unlock required)
   .post('/:id/revoke', async (c) => {
     await unlockGuard(c)
     const user = c.get('user')
     return c.json(await vaultService.revoke(c.req.param('id'), { sub: user.sub, email: user.email }))
   })
 
-  // POST /replace/:orderId — rotate: revoke delivered, allocate next
+  // POST /replace/:orderId - rotate: revoke delivered, allocate next
   // AVAILABLE, repoint order. Buyer sees new cred on the same card.
   // No unlock guard needed: endpoint only touches SOLD→REVOKED and
   // AVAILABLE→SOLD, never exposes plaintext.

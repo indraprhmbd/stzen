@@ -53,7 +53,7 @@ export function useAuth() {
     // A stalled tunnel (ngrok hiccup, captive portal) leaves the promise
     // pending forever and the login button spinning. Fail loudly instead.
     const timeout = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error('Login timed out — check connection and retry')), 20000)
+      setTimeout(() => reject(new Error('Login timed out - check connection and retry')), 20000)
     )
     const attempt = supabase.auth.signInWithPassword({ email, password }).then(({ error }) => {
       if (error) throw error

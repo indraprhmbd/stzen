@@ -32,7 +32,7 @@
 
 **Position:** Between Hero and How It Works
 
-**Content:** `INSTANT DELIVERY ⚡ AES-256 VAULT ENCRYPTION 🔒 AUTO-DISPATCH IN <5 SECONDS ⚡ 24/7 SUPPORT 💬` — repeating, CSS-only infinite scroll animation (translateX keyframe, no JS)
+**Content:** `INSTANT DELIVERY ⚡ AES-256 VAULT ENCRYPTION 🔒 AUTO-DISPATCH IN <5 SECONDS ⚡ 24/7 SUPPORT 💬` - repeating, CSS-only infinite scroll animation (translateX keyframe, no JS)
 
 ---
 
@@ -82,7 +82,7 @@
 - 8 skeleton cards in grid (matching 4-col layout)
 
 ### 5b. Copy Toast
-- New component: `CopyToast.tsx` — fixed bottom-center toast
+- New component: `CopyToast.tsx` - fixed bottom-center toast
 - Triggers on copy-to-clipboard (credentials, any future copy action)
 - Auto-dismiss after 2s
 - Brutalist style: `bg-on-surface text-primary-container border-[3px]`

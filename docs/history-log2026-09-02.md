@@ -1,4 +1,4 @@
-# History Log — Immutable Order and Stock Import
+# History Log - Immutable Order and Stock Import
 
 **Date:** 2026-09-02
 **Scope:** orders lifecycle + stock import, separate page, append only text snapshot

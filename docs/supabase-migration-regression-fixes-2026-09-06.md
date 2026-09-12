@@ -10,7 +10,7 @@ Restore behavior parity with the pre-migration code without reverting to Drizzle
 
 ---
 
-## Fix 1: orders.service.ts — listAll total count
+## Fix 1: orders.service.ts - listAll total count
 
 **Regression:** `total` now uses `rows?.length` (page length) instead of a separate COUNT query.
 
@@ -20,7 +20,7 @@ Restore behavior parity with the pre-migration code without reverting to Drizzle
 
 ---
 
-## Fix 2: orders.service.ts — listAll search coverage
+## Fix 2: orders.service.ts - listAll search coverage
 
 **Regression:** Search no longer covers `products.name` or `profiles.email`.
 
@@ -30,7 +30,7 @@ Restore behavior parity with the pre-migration code without reverting to Drizzle
 
 ---
 
-## Fix 3: products.service.ts — listPaginated total count
+## Fix 3: products.service.ts - listPaginated total count
 
 **Regression:** `total` uses `withStock.length` after stock filtering, not the DB count.
 
@@ -40,7 +40,7 @@ Restore behavior parity with the pre-migration code without reverting to Drizzle
 
 ---
 
-## Fix 4: products.service.ts — getCategoryCounts sellable filter
+## Fix 4: products.service.ts - getCategoryCounts sellable filter
 
 **Regression:** Dropped `hasStock`/`on_demand` filter; now counts all active variants.
 
@@ -50,7 +50,7 @@ Restore behavior parity with the pre-migration code without reverting to Drizzle
 
 ---
 
-## Fix 5: vault.service.ts — replace atomicity
+## Fix 5: vault.service.ts - replace atomicity
 
 **Regression:** Removed `db.transaction()` with `FOR UPDATE SKIP LOCKED`; now does sequential updates that can double-allocate under concurrency.
 
@@ -58,11 +58,11 @@ Restore behavior parity with the pre-migration code without reverting to Drizzle
 
 **Location:** `server/modules/vault/vault.service.ts:208-239`
 
-**DB migration required:** Yes — add `replace_order_credential(variant_id uuid, order_id uuid)` function.
+**DB migration required:** Yes - add `replace_order_credential(variant_id uuid, order_id uuid)` function.
 
 ---
 
-## Fix 6: products.service.ts — listActive ORDER BY
+## Fix 6: products.service.ts - listActive ORDER BY
 
 **Regression:** Lost explicit `ORDER BY products.category, productVariants.name`.
 
@@ -72,7 +72,7 @@ Restore behavior parity with the pre-migration code without reverting to Drizzle
 
 ---
 
-## Fix 7: vault.service.ts — listByVariant orderQuery
+## Fix 7: vault.service.ts - listByVariant orderQuery
 
 **Regression:** `orderQuery` ILIKE on `orders.publicId` is now unimplemented.
 
@@ -82,7 +82,7 @@ Restore behavior parity with the pre-migration code without reverting to Drizzle
 
 ---
 
-## Fix 8: orders.service.ts — listAll sort performance
+## Fix 8: orders.service.ts - listAll sort performance
 
 **Regression:** Sort by `amount`/`status` now happens in JS instead of SQL.
 
@@ -93,12 +93,12 @@ Restore behavior parity with the pre-migration code without reverting to Drizzle
 ---
 
 ## Order of Execution
-1. Fix 5 (vault.replace atomicity) — highest risk for data integrity
-2. Fix 1 + Fix 3 (pagination counts) — highest user impact
-3. Fix 2 + Fix 7 (search coverage) — medium impact
-4. Fix 4 (category counts sellable filter) — medium impact
-5. Fix 6 (listActive ORDER BY) — low impact
-6. Fix 8 (sort performance) — monitor, fix only if needed
+1. Fix 5 (vault.replace atomicity) - highest risk for data integrity
+2. Fix 1 + Fix 3 (pagination counts) - highest user impact
+3. Fix 2 + Fix 7 (search coverage) - medium impact
+4. Fix 4 (category counts sellable filter) - medium impact
+5. Fix 6 (listActive ORDER BY) - low impact
+6. Fix 8 (sort performance) - monitor, fix only if needed
 
 ---
 

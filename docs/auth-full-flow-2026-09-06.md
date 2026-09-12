@@ -1,4 +1,4 @@
-# Plan: Auth Feature — Best-Practice Login & Sign-In Flow
+# Plan: Auth Feature - Best-Practice Login & Sign-In Flow
 
 ## Current State Audit
 

@@ -34,7 +34,7 @@ function getActiveProviderName(): string {
 }
 
 export const paymentsService = {
-  // POST /api/v1/payments/:orderId/initiate — authed, owner-only
+  // POST /api/v1/payments/:orderId/initiate - authed, owner-only
   async initiatePayment(orderPublicId: string, userId: string) {
     const order = await ordersService.getPayableDetails(orderPublicId)
     if (order.userId !== userId) throw new NotFoundError('Order not found')
@@ -54,13 +54,13 @@ export const paymentsService = {
     return { provider: providerName, checkoutUrl: result.checkoutUrl }
   },
 
-  // GET /api/v1/payments/:orderId/status — authed, owner-only
+  // GET /api/v1/payments/:orderId/status - authed, owner-only
   async getStatus(orderPublicId: string, userId: string) {
     const order = await ordersService.getById(orderPublicId, userId)
     return { status: order.status, paidAt: order.paidAt }
   },
 
-  // POST /api/v1/webhooks/:provider — public, verified by provider.parseWebhook
+  // POST /api/v1/webhooks/:provider - public, verified by provider.parseWebhook
   async handleWebhook(providerName: string, c: Context) {
     const provider = getProvider(providerName)
     const parsed = await provider.parseWebhook(c)
@@ -81,7 +81,7 @@ export const paymentsService = {
     const order = await ordersService.findPayableByProviderRef(parsed.providerRef)
     if (!order) throw new NotFoundError('Order not found for provider reference')
 
-    // Callback amount must match what the invoice was issued for — never
+    // Callback amount must match what the invoice was issued for - never
     // fulfill an underpaying (or cross-wired) gateway notification. Providers
     // whose contract always carries the amount fail closed on omission.
     if (parsed.amount == null) {
@@ -125,7 +125,7 @@ export const paymentsService = {
   async fulfillPaidOrder(order: PayableOrder): Promise<Record<string, unknown>> {
     const claimed = await ordersService.claimPaid(order.publicId)
     if (!claimed) {
-      // Lost the race (duplicate delivery already processed) — re-read, never allocate.
+      // Lost the race (duplicate delivery already processed) - re-read, never allocate.
       const current = await ordersService.getById(order.publicId).catch(() => null)
       return { status: current?.status ?? order.status, skipped: true }
     }
@@ -136,14 +136,14 @@ export const paymentsService = {
     }
 
     if (!order.variantId) {
-      // Legacy product-only order with vault fulfillment and no variant link —
+      // Legacy product-only order with vault fulfillment and no variant link -
       // nothing safe to auto-allocate. Leave at PAID for manual admin deliver.
       return { status: paid.status, allocated: false }
     }
 
     const allocated = await allocateCredential(order.variantId, order.id)
     if (!allocated) {
-      // Out of stock at payment time — stays PAID, needs manual admin fulfillment.
+      // Out of stock at payment time - stays PAID, needs manual admin fulfillment.
       return { status: paid.status, allocated: false }
     }
 

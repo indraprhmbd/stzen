@@ -1,4 +1,4 @@
-# st.zen Admin — UI and Copy Rules
+# st.zen Admin - UI and Copy Rules
 As of Aug 2026. Root client folder. Applies to `client/src/layouts` and `client/src/pages/admin`.
 
 ## Scope
@@ -17,7 +17,7 @@ Calm, direct, task focused. Fixed voice, shifting tone by context.
 
 ## Hard Rules
 1. No emojis in UI copy, toasts, buttons, empty states.
-2. No em dashes or en dashes to join ideas. Use colon or separate line. Wrong: `Impor Stok — Vault`. Right: `Impor stok` plus hint `Format: email:password per baris`.
+2. No em dashes or en dashes to join ideas. Use colon or separate line. Wrong: `Impor Stok - Vault`. Right: `Impor stok` plus hint `Format: email:password per baris`.
 3. No gibberish paragraph under heading. Headings are navigation. `Ringkasan` alone is enough. No `Operasional harian st.zen stok, pesanan, dan pendapatan`.
 4. No AI tone. No `Seamlessly manage`, `Elevate your workflow`, `Unlock potential`, `Effortlessly`.
 5. No over technical copy in UI. No `payload`, `AES-256-GCM`, `PG Bouncer`, `allocation`, `transaction pooler`. Keep `vault` lowercased in hints only.
