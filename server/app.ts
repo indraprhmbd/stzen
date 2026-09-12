@@ -62,9 +62,11 @@ export function createApp() {
     .split(',')
     .map((s) => s.trim())
     .filter(Boolean)
-  // LAN preview convenience (phone testing on same Wi-Fi). Dev-only: never
-  // bypass the allowlist in production, where the edge already pins origins.
-  const lanOriginPattern = /^http:\/\/(192\.168|10)\.\d{1,3}\.\d{1,3}\.\d{1,3}:(5173|4173)$/
+  // LAN preview convenience (phone testing on same Wi-Fi / Tailscale).
+  // Dev-only: never bypass the allowlist in production, where the edge
+  // already pins origins. Covers RFC1918 (192.168/10/172.16-31) plus
+  // Tailscale CGNAT (100.64-127.x).
+  const lanOriginPattern = /^http:\/\/(192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}|100\.(6[4-9]|[78]\d|9\d|1[01]\d|12[0-7])\.\d{1,3}\.\d{1,3}):(5173|4173)$/
 
   base.use(
     '*',
