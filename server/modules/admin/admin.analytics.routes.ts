@@ -10,17 +10,19 @@ export const adminAnalyticsRoutes = new Hono<AnalyticsEnv>()
 
   .get('/', zValidator('query', z.object({ range: z.string().optional() })), async (c) => {
     const range = c.req.query('range') || '30d'
-    const days = range === '7d' ? 7 : range === '14d' ? 14 : 30
+    const days = range === '7d' ? 7 : range === '90d' ? 90 : 30
+    const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString()
 
     try {
       const [dailySalesRes, byStatusRes, byCategoryRes, topProductsRes] = await Promise.all([
         supabaseAdmin
           .from('orders')
           .select('created_at, amount')
-          .gte('created_at', new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString()),
+          .gte('created_at', cutoff),
         supabaseAdmin
           .from('orders')
-          .select('status', { count: 'exact', head: false }),
+          .select('status', { count: 'exact', head: false })
+          .gte('created_at', cutoff),
         supabaseAdmin
           .from('products')
           .select(`
@@ -35,7 +37,7 @@ export const adminAnalyticsRoutes = new Hono<AnalyticsEnv>()
               name
             )
           `)
-          .gte('created_at', new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString()),
+          .gte('created_at', cutoff),
       ])
 
       // Daily sales
