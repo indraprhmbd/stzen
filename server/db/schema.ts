@@ -43,7 +43,6 @@ export const profiles = pgTable(
     id: uuid('id').primaryKey(), // refs auth.uid()
     email: text('email').notNull(),
     fullName: text('full_name'),
-    avatarUrl: text('avatar_url'),
     role: userRoleEnum('role').notNull().default('customer'),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()

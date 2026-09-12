@@ -17,7 +17,7 @@ const RULES = [
     pattern: /DROP\s+TABLE/i,
     allow: ['0006_audit_actor_backfill.sql'],
   },
-  { pattern: /DROP\s+COLUMN/i, allow: [] },
+  { pattern: /DROP\s+COLUMN/i, allow: ['0009_drop_avatar_url.sql'] },
   { pattern: /TRUNCATE/i, allow: [] },
   { pattern: /DISABLE\s+ROW\s+LEVEL\s+SECURITY/i, allow: ['0006_audit_actor_backfill.sql'] },
 ]
