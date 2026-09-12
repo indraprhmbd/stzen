@@ -398,10 +398,10 @@ export default function ProductDetail() {
               <button
                 onClick={confirmBuy}
                 disabled={purchasing}
-                className="flex-1 btn btn-primary border-2 border-black font-black text-xs uppercase py-2.5 btn-comic-interactive disabled:opacity-50 flex items-center justify-center gap-2"
+                className="flex-1 btn btn-primary border-2 border-black font-black text-xs uppercase py-2 btn-comic-interactive disabled:opacity-50 flex flex-col items-center justify-center gap-1 leading-none"
               >
-                <img src="/QRIS_logo.svg" alt="QRIS" className="h-4 w-auto bg-white rounded-[2px] px-0.5" />
-                {purchasing ? t.products.processing : t.products.confirmGo}
+                <span>{purchasing ? t.products.processing : t.products.confirmGo}</span>
+                {!purchasing && <img src="/QRIS_logo.svg" alt="QRIS" className="h-3.5 w-auto" />}
               </button>
             </div>
           </div>
