@@ -1,5 +1,14 @@
 # STZEN - Credential Storefront
 
+[![Deploy to Cloudflare](https://github.com/indraprhmbd/stzen/actions/workflows/deploy.yml/badge.svg)](https://github.com/indraprhmbd/stzen/actions/workflows/deploy.yml)
+[![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](LICENSE)
+[![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Hono](https://img.shields.io/badge/API-Hono_4-E36002?logo=hono&logoColor=white)](https://hono.dev/)
+[![React](https://img.shields.io/badge/SPA-React_19-61DAFB?logo=react&logoColor=black)](https://react.dev/)
+[![Supabase](https://img.shields.io/badge/DB-Supabase_Postgres-3FCF8E?logo=supabase&logoColor=white)](https://supabase.com/)
+[![Cloudflare Workers](https://img.shields.io/badge/Edge-Cloudflare_Workers-F6821F?logo=cloudflare&logoColor=white)](https://workers.cloudflare.com/)
+[![Node 20](https://img.shields.io/badge/Node-20-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
+
 Digital storefront for subscription credentials (streaming accounts, top-ups, and
 similar goods). Buyers browse a public catalog, check out with manual payment
 verification, and receive AES-256-GCM encrypted credentials in their dashboard.
