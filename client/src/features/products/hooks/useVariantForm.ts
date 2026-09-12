@@ -34,26 +34,35 @@ export function useVariantForm(products: Product[], fetchAll: () => void, showTo
   }
   async function openEditVariant(v: Variant) {
     setEditingVariantId(v.id); setEditingVariantSku(v.sku); setVProductId(v.productId ?? ''); setVPrice(String(v.price)); setVCompareAt(v.compareAtPrice ? String(v.compareAtPrice) : ''); setVDuration(v.durationMonths ? String(v.durationMonths) : ''); setVDurationUnit((v.durationUnit as 'day' | 'week' | 'month') ?? 'month'); setVAccountType(v.accountType ?? ''); setVConditions(v.conditions ?? ''); setVBadge(v.badge ?? ''); setVFulfillmentType(v.fulfillmentType === 'on_demand' ? 'on_demand' : 'vault'); setVIsActive(v.isActive)
+    // Open instantly with induk fallback (overview/description are omitted
+    // from the list query for payload size). The detail fetch below upgrades
+    // the fields when it lands; a tap that feels dead on mobile is worse
+    // than a field filling in a beat later.
+    const base = products.find((p) => p.id === (v.productId ?? ''))
+    const fallbackOverview = base?.overview ?? ''
+    const fallbackDescription = base?.description ?? ''
+    setVOverview(fallbackOverview); setVDescription(fallbackDescription)
+    setVOverviewBlank(v.overview === ''); setVDescriptionBlank(v.description === '')
+    ;(document.getElementById('variant_modal') as HTMLDialogElement)?.showModal()
     // Fetch overview/description on demand (omitted from list query for payload size)
-    let overview = ''
-    let description = ''
     try {
       const res = await authedApiRequest((c) => c.api.v1.admin.variants[':id'].detail.$get({ param: { id: v.id } }))
       const detail = await res.json() as { overview: string | null; description: string | null }
-      overview = detail.overview ?? ''
-      description = detail.description ?? ''
-    } catch { /* fallback to product base */ }
-    if (!overview) {
-      const base = products.find((p) => p.id === (v.productId ?? ''))
-      overview = base?.overview ?? ''
-    }
-    if (!description) {
-      const base = products.find((p) => p.id === (v.productId ?? ''))
-      description = base?.description ?? ''
-    }
-    setVOverview(overview); setVDescription(description)
-    setVOverviewBlank(v.overview === ''); setVDescriptionBlank(v.description === '')
-    ;(document.getElementById('variant_modal') as HTMLDialogElement)?.showModal()
+      // Race guard: only upgrade fields the operator has not touched since
+      // the modal opened (still holding our fallback values).
+      setVOverview((prev) => {
+        if (prev !== fallbackOverview) return prev
+        const next = detail.overview ?? fallbackOverview
+        setVOverviewBlank(detail.overview === '' ? true : v.overview === '')
+        return next
+      })
+      setVDescription((prev) => {
+        if (prev !== fallbackDescription) return prev
+        const next = detail.description ?? fallbackDescription
+        setVDescriptionBlank(detail.description === '' ? true : v.description === '')
+        return next
+      })
+    } catch { /* fallback stands */ }
   }
   // Switching induk refills content fields only when the user hasn't typed
   // their own and hasn't explicitly blanked them.
