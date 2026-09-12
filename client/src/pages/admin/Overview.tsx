@@ -164,24 +164,24 @@ export default function Overview() {
         </span>
         <span className="min-w-0 flex-1">
           <span className="block text-[26px] sm:text-[34px] font-semibold leading-none tracking-tight ad-num break-words">{revenueText}</span>
-          <span className="block text-[10px] sm:text-[11px] font-semibold tracking-wider uppercase text-[#6e6e73] mt-1.5">
+          <span className="mt-1.5 flex items-center gap-1.5 text-[10px] sm:text-[11px] font-semibold tracking-wider uppercase text-[#6e6e73]">
             Pendapatan
-            <span className="text-[#aeaeb2] normal-case font-normal ml-1">paid + delivered · {rangeLabel}</span>
+            <span className="text-[#aeaeb2] normal-case font-normal">paid + delivered · {rangeLabel}</span>
+            <span
+              role="button"
+              tabIndex={0}
+              onClick={(e) => { e.stopPropagation(); setShowRevenue((s) => !s) }}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); setShowRevenue((s) => !s) } }}
+              title={showRevenue ? 'Sembunyikan pendapatan' : 'Tampilkan pendapatan'}
+              aria-label={showRevenue ? 'Sembunyikan pendapatan' : 'Tampilkan pendapatan'}
+              aria-pressed={showRevenue}
+              className="grid h-6 w-6 place-items-center rounded-[7px] text-[#1d1d1f] transition-colors hover:bg-[#f5f5f7]"
+            >
+              {showRevenue
+                ? <Eye width={14} height={14} strokeWidth={1.5} />
+                : <EyeClosed width={14} height={14} strokeWidth={1.5} />}
+            </span>
           </span>
-        </span>
-        <span
-          role="button"
-          tabIndex={0}
-          onClick={(e) => { e.stopPropagation(); setShowRevenue((s) => !s) }}
-          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); setShowRevenue((s) => !s) } }}
-          title={showRevenue ? 'Sembunyikan pendapatan' : 'Tampilkan pendapatan'}
-          aria-label={showRevenue ? 'Sembunyikan pendapatan' : 'Tampilkan pendapatan'}
-          aria-pressed={showRevenue}
-          className="grid h-7 w-7 shrink-0 place-items-center rounded-[7px] text-[#1d1d1f] transition-colors hover:bg-[#f5f5f7]"
-        >
-          {showRevenue
-            ? <Eye width={16} height={16} strokeWidth={1.5} />
-            : <EyeClosed width={16} height={16} strokeWidth={1.5} />}
         </span>
       </button>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
