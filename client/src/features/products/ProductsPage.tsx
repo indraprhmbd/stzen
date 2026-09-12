@@ -80,13 +80,18 @@ export default function ProductsPage() {
     return [...map.values()].sort((a, b) => (order.get(a.productId ?? '') ?? 999) - (order.get(b.productId ?? '') ?? 999))
   }, [filteredVariants, products])
 
-  function askDeleteVariant(v: Variant) {
-    setPendingDelete({ kind: 'variant', id: v.id, name: v.name })
+  // Soft-delete-first: the trash button deactivates (hides from catalog)
+  // instead of deleting. Permanent delete lives in Danger Zone settings
+  // and is blocked whenever orders or vault history exist.
+  function askDeactivate(kind: 'product' | 'variant', id: string, name: string) {
+    setPendingDelete({ kind, id, name })
     openConfirm('delete-confirm')
   }
+  function askDeleteVariant(v: Variant) {
+    askDeactivate('variant', v.id, v.name)
+  }
   function askDeleteProduct(p: Product) {
-    setPendingDelete({ kind: 'product', id: p.id, name: p.name })
-    openConfirm('delete-confirm')
+    askDeactivate('product', p.id, p.name)
   }
   function openVault(v: Variant) {
     setTab('stok')
@@ -104,16 +109,16 @@ export default function ProductsPage() {
     setPendingDelete(null)
     try {
       const res = kind === 'product'
-        ? await authedApiRequest((c) => c.api.v1.admin.products[':id'].$delete({ param: { id } }))
-        : await authedApiRequest((c) => c.api.v1.admin.variants[':id'].$delete({ param: { id } }))
+        ? await authedApiRequest((c) => c.api.v1.admin.products[':id'].$put({ param: { id }, json: { isActive: false } }))
+        : await authedApiRequest((c) => c.api.v1.admin.variants[':id'].$put({ param: { id }, json: { isActive: false } }))
       if (!res.ok) {
         const err = (await res.json().catch(() => ({}))) as { error?: string }
-        throw new Error(err.error || 'Gagal menghapus')
+        throw new Error(err.error || 'Gagal menonaktifkan')
       }
-      showToast(kind === 'product' ? 'Induk dihapus' : 'Varian dihapus', 'success')
+      showToast('Dinonaktifkan, disembunyikan dari katalog', 'success')
       fetchAll()
     } catch (e: unknown) {
-      showToast(e instanceof Error ? e.message : 'Gagal menghapus', 'error')
+      showToast(e instanceof Error ? e.message : 'Gagal menonaktifkan', 'error')
     }
   }
 
@@ -205,9 +210,9 @@ export default function ProductsPage() {
 
       <ConfirmDialog
         id="delete-confirm"
-        title={pendingDelete?.kind === 'product' ? 'Hapus induk?' : 'Hapus varian?'}
-        message={pendingDelete ? `"${pendingDelete.name}" akan dihapus permanen.` : ''}
-        confirmLabel="Ya, hapus"
+        title={pendingDelete?.kind === 'product' ? 'Nonaktifkan induk?' : 'Nonaktifkan varian?'}
+        message={pendingDelete ? `"${pendingDelete.name}" disembunyikan dari katalog. Hapus permanen hanya lewat Danger Zone di Pengaturan, dan ditolak bila masih ada riwayat.` : ''}
+        confirmLabel="Ya, nonaktifkan"
         onConfirm={confirmDelete}
       />
 

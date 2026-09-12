@@ -63,8 +63,7 @@ export default function DangerZone({ reAuth }: Props) {
   const [varMsg, setVarMsg] = useState<string | null>(null)
   const [varBusy, setVarBusy] = useState(false)
 
-  // Tier 3
-  const [purgeKind, setPurgeKind] = useState<'orders' | 'vault'>('orders')
+  // Tier 3 (vault only: orders are never purgeable, UU KUP retention)
   const [purgePrev, setPurgePrev] = useState<PurgePreview | null>(null)
   const [exportToken, setExportToken] = useState<string | null>(null)
   const [purgePhrase, setPurgePhrase] = useState('')
@@ -180,7 +179,7 @@ export default function DangerZone({ reAuth }: Props) {
     setPurgeBusy(true)
     try {
       const res = await authedApiRequest((c) =>
-        c.api.v1.admin.danger.purge[':kind'].preview.$get({ param: { kind: purgeKind } })
+        c.api.v1.admin.danger.purge.preview.$get()
       )
       setPurgePrev((await readJson(res)) as PurgePreview)
     } catch (e: unknown) {
@@ -197,14 +196,14 @@ export default function DangerZone({ reAuth }: Props) {
     setPurgeMsg(null)
     try {
       const res = await authedApiRequest((c) =>
-        c.api.v1.admin.danger.export.$post({ json: { kind: purgeKind } })
+        c.api.v1.admin.danger.export.$post({ json: { kind: 'vault' as const } })
       )
       const out = (await readJson(res)) as { csv: string; exportToken: string; count: number; truncated: boolean }
       const blob = new Blob([out.csv], { type: 'text/csv' })
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `danger-export-${purgeKind}-${new Date().toISOString().slice(0, 10)}.csv`
+      a.download = `danger-export-vault-${new Date().toISOString().slice(0, 10)}.csv`
       a.click()
       URL.revokeObjectURL(url)
       setExportToken(out.exportToken)
@@ -271,7 +270,7 @@ export default function DangerZone({ reAuth }: Props) {
       {/* Tier 2 */}
       <section className="flex flex-col gap-3 border-t border-[#e5e5ea] pt-4">
         <div className="text-[13px] font-bold">Tier 2: Hapus produk / varian</div>
-        <p className="text-[11px] text-[#6e6e73]">Diblokir bila masih ada pesanan aktif. Ketik public_id persis seperti pratinjau untuk konfirmasi.</p>
+        <p className="text-[11px] text-[#6e6e73]">Hapus permanen hanya bila tanpa riwayat apa pun (nol pesanan, nol stok). Selama masih ada jejak, nonaktifkan dari tab Produk. Ketik public_id persis seperti pratinjau untuk konfirmasi.</p>
         <div className="flex flex-col gap-2">
           <div className="flex flex-wrap items-end gap-2">
             <label className="ad-label">
@@ -326,19 +325,12 @@ export default function DangerZone({ reAuth }: Props) {
 
       {/* Tier 3 */}
       <section className="flex flex-col gap-2 border-t border-[#e5e5ea] pt-4">
-        <div className="text-[13px] font-bold">Tier 3: Purge terminal (wajib ekspor dulu)</div>
-        <p className="text-[11px] text-[#6e6e73]">Menghapus permanen pesanan REJECTED/REFUNDED {'>'}90 hari, atau stok AVAILABLE {'>'}180 hari. Tombol purge hanya terbuka setelah ekspor CSV (token sekali pakai, 15 menit).</p>
+        <div className="text-[13px] font-bold">Tier 3: Purge stok basi (wajib ekspor dulu)</div>
+        <p className="text-[11px] text-[#6e6e73]">Hanya stok AVAILABLE di atas 180 hari. Pesanan tidak pernah di purge (arsip pajak 10 tahun). Tombol purge hanya terbuka setelah ekspor CSV (token sekali pakai, 15 menit).</p>
         <div className="flex flex-wrap items-end gap-2">
-          <label className="ad-label">
-            Jenis
-            <select value={purgeKind} onChange={(e) => { setPurgeKind(e.target.value as 'orders' | 'vault'); setPurgePrev(null); setExportToken(null) }} className="ad-input mt-1.5">
-              <option value="orders">Pesanan terminal</option>
-              <option value="vault">Stok AVAILABLE basi</option>
-            </select>
-          </label>
           <button onClick={previewPurge} disabled={purgeBusy} className="ad-btn ad-btn-dark !py-1.5 !text-xs">Pratinjau</button>
         </div>
-        {purgePrev && <p className="text-xs font-semibold">Ditemukan: {purgePrev.count} baris {purgePrev.kind}</p>}
+        {purgePrev && <p className="text-xs font-semibold">Ditemukan: {purgePrev.count} baris stok basi</p>}
         <div className="flex flex-wrap gap-2">
           <button onClick={executeExport} disabled={purgeBusy || !purgePrev || purgePrev.count === 0} className="ad-btn ad-btn-dark !py-1.5 !text-xs">1. Ekspor CSV</button>
         </div>
