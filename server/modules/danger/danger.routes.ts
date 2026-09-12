@@ -1,8 +1,8 @@
 import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import { type AuthEnv } from '../../shared/middleware/auth'
-import { dangerService } from './danger.service'
-import { StalePreviewSchema } from './danger.schema'
+import { dangerService, dangerExecute } from './danger.service'
+import { StalePreviewSchema, StaleRejectSchema, CatalogDeleteSchema, ExportSchema, PurgeSchema } from './danger.schema'
 
 // ─── Danger Zone Routes ─────────────────────────────────────────────────────
 // Tiered destructive ops for admin/settings. Auth + admin role enforced
@@ -33,4 +33,41 @@ export const dangerRoutes = new Hono<AuthEnv>()
       return c.json({ error: 'Jenis purge tidak dikenal' }, 400)
     }
     return c.json(await dangerService.previewPurge(kind))
+  })
+
+  // Tier 1 execute: bulk-reject abandoned PENDING. Capped per call; repeat
+  // until preview hits zero. Webhook races land in `skipped`, never corrupt.
+  .post('/stale-orders/reject', zValidator('json', StaleRejectSchema), async (c) => {
+    const user = c.get('user')
+    const { olderThanDays } = c.req.valid('json')
+    return c.json(await dangerExecute.rejectStaleOrders(olderThanDays, { sub: user.sub, email: user.email }))
+  })
+
+  // Tier 2 execute: product cascade (phrase must equal the product public_id).
+  .delete('/products/:id', zValidator('json', CatalogDeleteSchema), async (c) => {
+    const user = c.get('user')
+    const { phrase } = c.req.valid('json')
+    return c.json(await dangerExecute.deleteProduct(c.req.param('id'), phrase, { sub: user.sub, email: user.email }))
+  })
+
+  // Tier 2 execute: variant delete (phrase must equal the variant public_id).
+  .delete('/variants/:id', zValidator('json', CatalogDeleteSchema), async (c) => {
+    const user = c.get('user')
+    const { phrase } = c.req.valid('json')
+    return c.json(await dangerExecute.deleteVariant(c.req.param('id'), phrase, { sub: user.sub, email: user.email }))
+  })
+
+  // Tier 3: export gate. Returns CSV payload + single-use token authorizing
+  // exactly the exported filter. Client downloads the CSV, then purge unlocks.
+  .post('/export', zValidator('json', ExportSchema), async (c) => {
+    const user = c.get('user')
+    const { kind } = c.req.valid('json')
+    return c.json(await dangerExecute.buildExport(kind, { sub: user.sub, email: user.email }))
+  })
+
+  // Tier 3 execute: purge terminal rows. Token burned on first use; replays 409.
+  .post('/purge', zValidator('json', PurgeSchema), async (c) => {
+    const user = c.get('user')
+    const { exportToken } = c.req.valid('json')
+    return c.json(await dangerExecute.purge(exportToken, { sub: user.sub, email: user.email }))
   })

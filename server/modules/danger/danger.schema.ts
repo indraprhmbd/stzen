@@ -6,3 +6,22 @@ export const StalePreviewSchema = z.object({
 })
 
 export type StalePreviewQuery = z.infer<typeof StalePreviewSchema>
+
+export const StaleRejectSchema = z.object({
+  olderThanDays: z.number().int().min(DANGER.staleOrderDaysMin).max(DANGER.staleOrderDaysMax).default(DANGER.staleOrderDaysDefault),
+  phrase: z.literal(DANGER.staleConfirmPhrase),
+})
+
+export const CatalogDeleteSchema = z.object({
+  // Tier 2: phrase must equal the target's public_id (proves preview read).
+  phrase: z.string().min(1),
+})
+
+export const ExportSchema = z.object({
+  kind: z.enum(['orders', 'vault']),
+})
+
+export const PurgeSchema = z.object({
+  exportToken: z.string().min(1),
+  phrase: z.literal(DANGER.purgeConfirmPhrase),
+})

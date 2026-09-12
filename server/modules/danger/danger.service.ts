@@ -1,6 +1,10 @@
 import { supabaseAdmin } from '../../shared/db'
-import { NotFoundError } from '../../shared/errors/http'
-import { DANGER } from './danger.types'
+import { NotFoundError, ConflictError, BadRequestError } from '../../shared/errors/http'
+import { appendAudit, claimIdempotencyKey } from '../../shared/lib/audit'
+import { hmacSha256Hex, verifyHmacSha256Hex } from '../../shared/lib/hmac'
+import { getEnv } from '../../shared/lib/runtime-env'
+import { ordersService } from '../orders/orders.service'
+import { DANGER, type ExportFilter, type PurgeKind } from './danger.types'
 
 const ORDERS = 'orders'
 const PRODUCTS = 'products'
@@ -185,5 +189,301 @@ export const dangerService = {
       .lt('created_at', cutoff)
     if (error) throw new Error(error.message)
     return { kind, cutoff, count: count ?? 0 }
+  },
+}
+
+export interface Actor {
+  sub: string
+  email?: string
+}
+
+function actorTag(a: Actor): string {
+  return a.email ?? a.sub
+}
+
+function nowId(): string {
+  return new Date().toLocaleString('id-ID')
+}
+
+// One call processes at most this many rows so a giant backlog cannot pin
+// the pooler. Operator repeats with the same phrase until preview hits zero.
+const EXEC_BATCH_LIMIT = 200
+
+// ─── Export token: stateless, single-use ────────────────────────────────────
+// Token embeds the exact filter it authorizes: b64(filter).exp.sig, HMAC over
+// the first two segments with the server secret. Single-use is enforced by
+// burning the signature in idempotency_claims on purge (23505 = replay).
+// No migration needed: no new table, no server-side session.
+
+function exportSecret(): string {
+  const s = getEnv('AES_SECRET_KEY')
+  if (!s) throw new Error('AES_SECRET_KEY not configured')
+  return s
+}
+
+function b64encode(obj: unknown): string {
+  const json = JSON.stringify(obj)
+  const bytes = new TextEncoder().encode(json)
+  let bin = ''
+  for (const b of bytes) bin += String.fromCharCode(b)
+  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+}
+
+function b64decode<T>(raw: string): T | null {
+  try {
+    const b64 = raw.replace(/-/g, '+').replace(/_/g, '/')
+    const bin = atob(b64)
+    const bytes = new Uint8Array(bin.length)
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i)
+    return JSON.parse(new TextDecoder().decode(bytes)) as T
+  } catch {
+    return null
+  }
+}
+
+function csvCell(v: unknown): string {
+  if (v === null || v === undefined) return ''
+  const s = String(v)
+  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
+}
+
+function toCsv(columns: string[], rows: Record<string, any>[]): string {
+  const head = columns.map(csvCell).join(',')
+  const body = rows.map((r) => columns.map((c) => csvCell(r[c])).join(','))
+  return [head, ...body].join('\n')
+}
+
+const ORDER_EXPORT_COLUMNS = [
+  'public_id', 'status', 'amount', 'user_id', 'product_id', 'variant_id',
+  'vault_item_id', 'payment_ref', 'payment_provider', 'variant_name_snapshot',
+  'price_at_purchase', 'created_at', 'paid_at',
+]
+
+// Vault export deliberately excludes credential_payload: ciphertext has no
+// audit value on an operator's disk and must not leave the vault table.
+const VAULT_EXPORT_COLUMNS = [
+  'id', 'status', 'product_id', 'variant_id', 'created_at', 'allocated_at',
+]
+
+async function deleteInBatches(table: string, ids: string[]): Promise<number> {
+  let deleted = 0
+  for (let i = 0; i < ids.length; i += DANGER.purgeBatchSize) {
+    const chunk = ids.slice(i, i + DANGER.purgeBatchSize)
+    const { data, error } = await supabaseAdmin.from(table).delete().in('id', chunk).select('id')
+    if (error) throw new Error(error.message)
+    deleted += data?.length ?? 0
+  }
+  return deleted
+}
+
+export const dangerExecute = {
+  // ─── Tier 1 execute: bulk-reject abandoned PENDING ─────────────────────
+  async rejectStaleOrders(olderThanDays: number, actor: Actor) {
+    const cutoff = cutoffIso(olderThanDays)
+    const { data, error } = await supabaseAdmin
+      .from(ORDERS)
+      .select('public_id')
+      .eq('status', 'PENDING')
+      .is('payment_ref', null)
+      .lt('created_at', cutoff)
+      .order('created_at', { ascending: true })
+      .limit(EXEC_BATCH_LIMIT + 1)
+
+    if (error) throw new Error(error.message)
+    const targets = (data ?? []).map((r: any) => r.public_id as string)
+    const hasMore = targets.length > EXEC_BATCH_LIMIT
+    const batch = targets.slice(0, EXEC_BATCH_LIMIT)
+
+    const rejected: string[] = []
+    const skipped: string[] = []
+    for (const id of batch) {
+      try {
+        // Conditional inside transitionStatus via getById + valid transition;
+        // a webhook claimPaid racing us lands in skipped, never half-applied.
+        await ordersService.transitionStatus(id, 'reject')
+        rejected.push(id)
+      } catch {
+        skipped.push(id)
+      }
+    }
+
+    await appendAudit({
+      action: 'danger:stale-reject',
+      resourceType: 'danger',
+      snapshotText: `Danger Zone: ${rejected.length} pesanan basi ditolak oleh ${actorTag(actor)} ${nowId()}`,
+      actorId: actor.sub,
+      actorEmail: actor.email ?? null,
+      actorType: 'admin',
+      diff: { olderThanDays, rejected, skipped, hasMore },
+    }).catch((e) => console.error('[audit] danger stale-reject failed', e))
+
+    return { rejected: rejected.length, skipped: skipped.length, hasMore, ids: rejected }
+  },
+
+  // ─── Tier 2 execute: product cascade ───────────────────────────────────
+  async deleteProduct(publicId: string, phrase: string, actor: Actor) {
+    if (phrase !== publicId) throw new BadRequestError('Frasa konfirmasi tidak cocok')
+    const preview = await dangerService.previewProduct(publicId)
+    if (preview.blocked) throw new ConflictError(preview.blockReason ?? 'Diblokir')
+
+    const { data: base } = await supabaseAdmin
+      .from(PRODUCTS)
+      .select('id, name')
+      .eq('public_id', publicId)
+      .limit(1)
+    if (!base || base.length === 0) throw new NotFoundError('Product not found')
+    const internalId = base[0].id as string
+
+    // Variants first (FK), then the product. Vault rows attached to the
+    // product cascade at the database level (ON DELETE CASCADE).
+    const { error: vErr, count: variantsDeleted } = await supabaseAdmin
+      .from(PRODUCT_VARIANTS)
+      .delete({ count: 'exact' })
+      .eq('product_id', internalId)
+    if (vErr) throw new Error(vErr.message)
+
+    const { error: pErr } = await supabaseAdmin
+      .from(PRODUCTS)
+      .delete()
+      .eq('public_id', publicId)
+    if (pErr) throw new Error(pErr.message)
+
+    await appendAudit({
+      action: 'danger:product-delete',
+      resourceType: 'danger',
+      resourcePublicId: publicId,
+      resourceName: preview.name,
+      snapshotText: `Danger Zone: produk ${preview.name} + ${variantsDeleted ?? 0} varian dihapus oleh ${actorTag(actor)} ${nowId()}`,
+      actorId: actor.sub,
+      actorEmail: actor.email ?? null,
+      actorType: 'admin',
+      diff: { ...preview, variantsDeleted: variantsDeleted ?? 0 },
+    }).catch((e) => console.error('[audit] danger product-delete failed', e))
+
+    return { publicId, name: preview.name, variantsDeleted: variantsDeleted ?? 0 }
+  },
+
+  // ─── Tier 2 execute: variant delete ────────────────────────────────────
+  async deleteVariant(publicId: string, phrase: string, actor: Actor) {
+    if (phrase !== publicId) throw new BadRequestError('Frasa konfirmasi tidak cocok')
+    const preview = await dangerService.previewVariant(publicId)
+    if (preview.blocked) throw new ConflictError(preview.blockReason ?? 'Diblokir')
+
+    // Referencing vault rows and orders keep their rows with FK nulled
+    // (ON DELETE SET NULL); snapshots on orders preserve buyer history.
+    const { error } = await supabaseAdmin
+      .from(PRODUCT_VARIANTS)
+      .delete()
+      .eq('public_id', publicId)
+    if (error) throw new Error(error.message)
+
+    await appendAudit({
+      action: 'danger:variant-delete',
+      resourceType: 'danger',
+      resourcePublicId: publicId,
+      resourceName: preview.name,
+      snapshotText: `Danger Zone: varian ${preview.name} dihapus oleh ${actorTag(actor)} ${nowId()}`,
+      actorId: actor.sub,
+      actorEmail: actor.email ?? null,
+      actorType: 'admin',
+      diff: preview,
+    }).catch((e) => console.error('[audit] danger variant-delete failed', e))
+
+    return { publicId, name: preview.name }
+  },
+
+  // ─── Tier 3: export gate ───────────────────────────────────────────────
+  async buildExport(kind: PurgeKind, actor: Actor): Promise<{ csv: string; exportToken: string; count: number; truncated: boolean }> {
+    const preview = await dangerService.previewPurge(kind)
+    const filter: ExportFilter = { kind, cutoff: preview.cutoff }
+
+    const columns = kind === 'orders' ? ORDER_EXPORT_COLUMNS : VAULT_EXPORT_COLUMNS
+    const table = kind === 'orders' ? ORDERS : VAULT_ITEMS
+    let query = supabaseAdmin.from(table).select(columns.join(',')).order('created_at', { ascending: true }).limit(5001)
+    query = kind === 'orders'
+      ? query.in('status', ['REJECTED', 'REFUNDED']).lt('created_at', preview.cutoff)
+      : query.eq('status', 'AVAILABLE').lt('created_at', preview.cutoff)
+
+    const { data, error } = await query
+    if (error) throw new Error(error.message)
+    const rows = (data ?? []) as Record<string, any>[]
+    const truncated = rows.length > 5000
+    const exported = rows.slice(0, 5000)
+
+    const exp = Date.now() + DANGER.exportTtlMs
+    const payload = b64encode({ ...filter, n: exported.length })
+    const exp36 = exp.toString(36)
+    const sig = await hmacSha256Hex(exportSecret(), `danger-export.${payload}.${exp36}`)
+
+    await appendAudit({
+      action: 'danger:export',
+      resourceType: 'danger',
+      snapshotText: `Danger Zone: ekspor ${kind} (${exported.length} baris) oleh ${actorTag(actor)} ${nowId()}`,
+      actorId: actor.sub,
+      actorEmail: actor.email ?? null,
+      actorType: 'admin',
+      diff: { kind, cutoff: preview.cutoff, count: exported.length },
+    }).catch((e) => console.error('[audit] danger export failed', e))
+
+    return { csv: toCsv(columns, exported), exportToken: `${payload}.${exp36}.${sig}`, count: exported.length, truncated }
+  },
+
+  // ─── Tier 3 execute: purge with burned export token ────────────────────
+  async purge(exportToken: string, actor: Actor) {
+    const parts = exportToken.split('.')
+    if (parts.length !== 3) throw new BadRequestError('Token ekspor tidak valid')
+    const [payload, exp36, sig] = parts
+    const exp = parseInt(exp36, 36)
+    if (!Number.isFinite(exp) || exp < Date.now()) throw new BadRequestError('Token ekspor kedaluwarsa')
+
+    const ok = await verifyHmacSha256Hex(exportSecret(), `danger-export.${payload}.${exp36}`, sig).catch(() => false)
+    if (!ok) throw new BadRequestError('Token ekspor tidak valid')
+
+    const filter = b64decode<ExportFilter & { n: number }>(payload)
+    if (!filter || (filter.kind !== 'orders' && filter.kind !== 'vault')) {
+      throw new BadRequestError('Token ekspor tidak valid')
+    }
+
+    // Single-use: first caller burns the signature, replays hit 23505.
+    const fresh = await claimIdempotencyKey(`danger-export:${sig}`)
+    if (!fresh) throw new ConflictError('Token ekspor sudah dipakai')
+
+    // Re-resolve rows from the token's own filter at purge time, so the
+    // token authorizes exactly what was exported — never client input.
+    // A row created after export is older than cutoff only if backdated,
+    // and re-running export+purge handles growth honestly.
+    let ids: string[] = []
+    if (filter.kind === 'orders') {
+      const { data, error } = await supabaseAdmin
+        .from(ORDERS)
+        .select('id')
+        .in('status', ['REJECTED', 'REFUNDED'])
+        .lt('created_at', filter.cutoff)
+      if (error) throw new Error(error.message)
+      ids = (data ?? []).map((r: any) => r.id as string)
+    } else {
+      const { data, error } = await supabaseAdmin
+        .from(VAULT_ITEMS)
+        .select('id')
+        .eq('status', 'AVAILABLE')
+        .lt('created_at', filter.cutoff)
+      if (error) throw new Error(error.message)
+      ids = (data ?? []).map((r: any) => r.id as string)
+    }
+
+    const table = filter.kind === 'orders' ? ORDERS : VAULT_ITEMS
+    const deleted = await deleteInBatches(table, ids)
+
+    await appendAudit({
+      action: 'danger:purge',
+      resourceType: 'danger',
+      snapshotText: `Danger Zone: purge ${filter.kind} ${deleted} baris oleh ${actorTag(actor)} ${nowId()}`,
+      actorId: actor.sub,
+      actorEmail: actor.email ?? null,
+      actorType: 'admin',
+      diff: { kind: filter.kind, cutoff: filter.cutoff, deleted },
+    }).catch((e) => console.error('[audit] danger purge failed', e))
+
+    return { kind: filter.kind, deleted }
   },
 }

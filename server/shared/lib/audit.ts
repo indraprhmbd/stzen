@@ -7,12 +7,14 @@ export type AuditAction =
   | 'product:create' | 'product:update' | 'product:delete'
   | 'variant:create' | 'variant:update' | 'variant:delete'
   | 'settings:update'
+  | 'danger:stale-reject' | 'danger:product-delete' | 'danger:variant-delete'
+  | 'danger:export' | 'danger:purge'
 
 export type ActorType = 'admin' | 'user' | 'system'
 
 export async function appendAudit(params: {
   action: AuditAction
-  resourceType: 'order' | 'stock' | 'product' | 'variant' | 'settings'
+  resourceType: 'order' | 'stock' | 'product' | 'variant' | 'settings' | 'danger'
   resourcePublicId?: string
   resourceName?: string
   snapshotText: string
