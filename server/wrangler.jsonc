@@ -14,7 +14,7 @@
   // `npm run deploy` (pins --env production) or `--env staging`.
   "vars": {
     "SUPABASE_URL": "https://kqgfbmehepanzkhypzdw.supabase.co",
-    "SUPABASE_ANON_KEY": "***REMOVED***",
+    "SUPABASE_ANON_KEY": "sb_publishable_cMvmKGQMAiqy2-xGpaU3xA_QJO-qUKi",
     "ENV": "staging",
     "CORS_ALLOWED_ORIGINS": "http://localhost:5173,http://localhost:4173,https://collected-ankle-dynamic.ngrok-free.dev",
     "PAYMENT_APP_BASE_URL": "",
@@ -26,7 +26,7 @@
     "production": {
       "vars": {
         "SUPABASE_URL": "https://kqgfbmehepanzkhypzdw.supabase.co",
-        "SUPABASE_ANON_KEY": "***REMOVED***",
+        "SUPABASE_ANON_KEY": "sb_publishable_cMvmKGQMAiqy2-xGpaU3xA_QJO-qUKi",
         "ENV": "production",
         "CORS_ALLOWED_ORIGINS": "https://stzen.web.id",
         "PAYMENT_APP_BASE_URL": "https://stzen.web.id",
@@ -39,7 +39,7 @@
     "staging": {
       "vars": {
         "SUPABASE_URL": "https://kqgfbmehepanzkhypzdw.supabase.co",
-        "SUPABASE_ANON_KEY": "***REMOVED***",
+        "SUPABASE_ANON_KEY": "sb_publishable_cMvmKGQMAiqy2-xGpaU3xA_QJO-qUKi",
         "ENV": "staging",
         "CORS_ALLOWED_ORIGINS": "http://localhost:5173,http://localhost:4173,https://dev.stzen.web.id",
         "PAYMENT_APP_BASE_URL": "https://dev.stzen.web.id",
