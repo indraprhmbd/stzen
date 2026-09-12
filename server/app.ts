@@ -119,6 +119,8 @@ export function createApp() {
 
   // Rate limits (in-memory, single instance)
   base.use('/api/v1/admin/*', rateLimit(60, 60_000))
+  // Danger Zone: destructive ops get their own strict bucket.
+  base.use('/api/v1/admin/danger/*', rateLimit(10, 60_000))
   base.use('/api/v1/checkout/*', rateLimit(30, 60_000))
   base.use('/api/v1/payments/*', rateLimit(30, 60_000))
   // Webhooks get their own lenient limit — gateway retries shouldn't 429 into a dropped payment.
