@@ -50,7 +50,7 @@
         "ENV": "staging",
         "CORS_ALLOWED_ORIGINS": "http://localhost:5173,http://localhost:4173,https://dev.stzen.web.id",
         "PAYMENT_APP_BASE_URL": "https://dev.stzen.web.id",
-        "PAYMENT_ACTIVE_PROVIDER": "manual",
+        "PAYMENT_ACTIVE_PROVIDER": "sumopod",
     "PAYMENT_SUMOPOD_METHOD_CODE": "QRIS",
     "PAYMENT_DUITKU_BASE_URL": ""
       }

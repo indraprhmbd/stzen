@@ -6,6 +6,7 @@
 // authenticated `wrangler login` session locally.
 
 import { execSync } from 'node:child_process'
+import { readFileSync } from 'node:fs'
 
 const env = process.argv[2]
 if (env !== 'production' && env !== 'staging') {
@@ -22,9 +23,35 @@ const SECRET_LIST_CMD = {
 
 // Secrets the Worker throws on at runtime if missing (see runtime-env.ts,
 // shared/db/index.ts, modules/vault/vault.service.ts, modules/orders).
-// Payment provider keys are intentionally excluded: with
-// PAYMENT_ACTIVE_PROVIDER=manual (current default) no provider key is needed.
+// Provider keys are added dynamically below when the target env actually
+// activates a gateway provider (fail-closed: manual needs nothing).
 const REQUIRED = ['SUPABASE_SERVICE_ROLE_KEY', 'AES_SECRET_KEY']
+
+// Read PAYMENT_ACTIVE_PROVIDER for the target env out of wrangler.jsonc so
+// the guard tracks the config instead of a second hardcoded list. Anchor on
+// the env KEY (`"staging": {`), not any `"staging"` value (e.g. ENV vars).
+function activeProvider(fileText, env) {
+  const keyRe = new RegExp(`"${env}"\\s*:\\s*\\{`)
+  const m = keyRe.exec(fileText)
+  if (!m) return null
+  const pm = /"PAYMENT_ACTIVE_PROVIDER"\s*:\s*"([a-z]+)"/.exec(fileText.slice(m.index))
+  return pm ? pm[1] : null
+}
+
+const PROVIDER_SECRETS = {
+  sumopod: ['PAYMENT_SUMOPOD_API_KEY'],
+  duitku: ['PAYMENT_DUITKU_MERCHANT_CODE', 'PAYMENT_DUITKU_API_KEY'],
+}
+
+let fileText = ''
+try {
+  fileText = readFileSync(new URL('../wrangler.jsonc', import.meta.url), 'utf8')
+} catch {}
+const provider = activeProvider(fileText, env)
+if (provider && PROVIDER_SECRETS[provider]) {
+  REQUIRED.push(...PROVIDER_SECRETS[provider])
+}
+console.log(`[check-secrets] --env ${env} active provider: ${provider ?? 'unknown (default manual)'}`)
 
 let raw
 try {
