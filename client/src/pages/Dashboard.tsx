@@ -318,49 +318,51 @@ const { t } = useCopy()
         </>
       )}
 
-      {/* Credentials Popup */}
+      {/* Credentials Popup (receipt style, matches buy-confirm) */}
       <dialog id="credentials_modal" className="modal">
-        <div className="modal-box max-w-xl bg-neutral border-[3px] border-black shadow-brutal rounded-sm p-0 overflow-hidden">
-          <div className="bg-zinc-900 text-white px-5 py-3 flex items-center justify-between border-b border-zinc-800">
-            <div>
-              <div className="text-xs font-bold tracking-widest uppercase text-zinc-400">Vault Payload</div>
-              <div className="text-sm font-bold">{selectedOrder?.productName ?? 'Kredensial'}</div>
-            </div>
-            <form method="dialog">
-              <button className="btn btn-sm btn-ghost text-white">Tutup</button>
-            </form>
+        <div className="modal-box bg-white border-comic shadow-comic rounded-sm p-0 max-w-md">
+          <div className="bg-neutral border-b-[3px] border-black px-5 py-3 text-center">
+            <h3 className="font-black text-sm uppercase text-primary tracking-widest" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+              Kredensial
+            </h3>
+            <p className="text-[11px] font-bold text-white/70 mt-0.5 truncate">{selectedOrder?.productName ?? ''}</p>
           </div>
 
-          <div className="p-5">
+          <div className="p-5 flex flex-col gap-3">
             {loadingCredentials ? (
               <div className="flex justify-center py-10">
                 <span className="loading loading-spinner loading-lg text-primary"></span>
               </div>
             ) : credentialsError ? (
-              <div className="bg-red-50 border border-red-200 p-4 text-sm text-red-700">{credentialsError}</div>
+              <div className="bg-red-50 border-2 border-black p-3 text-sm font-bold text-red-700">{credentialsError}</div>
             ) : credentials ? (
               <>
-                <div className="bg-black border border-zinc-800 p-3">
-                  <div className="text-[10px] font-bold tracking-widest uppercase text-zinc-500 mb-2">Decrypted Payload</div>
-                  <pre className="font-mono text-sm text-lime-300 whitespace-pre-wrap break-all select-all bg-black/0 p-0">{credentials.credentials}</pre>
+                <div className="border-2 border-dashed border-black/60 px-4 py-3">
+                  <div className="text-[10px] font-bold tracking-widest uppercase opacity-60 mb-1">Akun Anda</div>
+                  <pre className="font-mono text-sm font-bold text-neutral whitespace-pre-wrap break-all select-all">{credentials.credentials}</pre>
                 </div>
                 {credentials.instructions && (
-                  <div className="mt-3 bg-zinc-800 border border-zinc-700 p-3 text-sm text-zinc-200 whitespace-pre-wrap">
+                  <div className="bg-primary/20 border-2 border-black p-2.5 text-xs font-bold text-neutral leading-relaxed whitespace-pre-wrap">
                     {credentials.instructions}
                   </div>
                 )}
-                <div className="flex gap-2 mt-4">
-                  <button onClick={() => handleCopy(credentials.credentials)} className="flex-1 bg-primary-container text-black font-bold text-xs uppercase border-2 border-black py-2.5">
+                <div className="flex gap-2">
+                  <button onClick={() => handleCopy(credentials.credentials)} className="flex-1 btn btn-primary border-2 border-black font-black text-xs uppercase py-2.5 btn-comic-interactive">
                     Salin
                   </button>
-                  <button onClick={() => selectedOrder && window.open(getWhatsAppUrl(selectedOrder.id), '_blank')} className="flex-1 bg-white text-black font-bold text-xs uppercase border-2 border-black py-2.5">
+                  <button onClick={() => selectedOrder && window.open(getWhatsAppUrl(selectedOrder.id), '_blank')} className="flex-1 bg-white text-black font-black text-xs uppercase border-2 border-black py-2.5 hover:bg-black hover:text-white transition-colors">
                     Lapor
                   </button>
                 </div>
               </>
             ) : (
-              <div className="text-sm text-zinc-400 text-center py-6">Tidak ada data.</div>
+              <div className="text-sm font-bold text-neutral/50 text-center py-6">Tidak ada data.</div>
             )}
+            <form method="dialog">
+              <button className="w-full bg-white text-black font-black text-xs uppercase border-2 border-black py-2.5 hover:bg-black hover:text-white transition-colors">
+                Tutup
+              </button>
+            </form>
           </div>
         </div>
         <form method="dialog" className="modal-backdrop">
