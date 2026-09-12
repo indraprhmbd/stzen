@@ -10,7 +10,7 @@ export const adminAnalyticsRoutes = new Hono<AnalyticsEnv>()
 
   .get('/', zValidator('query', z.object({ range: z.string().optional() })), async (c) => {
     const range = c.req.query('range') || '30d'
-    const days = range === '7d' ? 7 : range === '90d' ? 90 : 30
+    const days = range === '1d' ? 1 : range === '7d' ? 7 : range === '90d' ? 90 : 30
     const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString()
 
     try {

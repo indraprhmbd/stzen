@@ -51,12 +51,12 @@ const statDefs = [
 
 const pieColors: Record<string, string> = { PENDING: '#d97706', PAID: '#3b82f6', DELIVERED: '#16a34a', REJECTED: '#dc2626', REFUNDED: '#7c3aed' }
 
-const ranges = [['7d', '7 hari'], ['30d', '30 hari'], ['90d', '90 hari']] as const
+const ranges = [['1d', '1 hari'], ['7d', '7 hari'], ['30d', '30 hari'], ['90d', '90 hari']] as const
 
 const tooltipStyle = { fontSize: 12, border: '1px solid #e8e8ed', borderRadius: 10, boxShadow: '0 8px 24px rgb(0 0 0 / 0.08)' }
 
 export default function Overview() {
-  const [range, setRange] = useState<'7d' | '30d' | '90d'>('30d')
+  const [range, setRange] = useState<'1d' | '7d' | '30d' | '90d'>('30d')
   const navigate = useNavigate()
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [showRevenue, setShowRevenue] = useState(() => {
@@ -67,10 +67,10 @@ export default function Overview() {
   useEffect(() => {
     localStorage.setItem('admin:showRevenue', String(showRevenue))
   }, [showRevenue])
-  const rangeLabel = range === '7d' ? '7 hari' : range === '90d' ? '90 hari' : '30 hari'
+  const rangeLabel = range === '1d' ? '1 hari' : range === '7d' ? '7 hari' : range === '90d' ? '90 hari' : '30 hari'
   const { data, loading, error, fetchedAt, refetch: fetchAll } = useAdminQuery(async () => {
     const [statsRes, analyticsRes, ordersRes, lowStockRes] = await Promise.all([
-      authedApiRequest((c) => c.api.v1.admin.stats.$get()),
+      authedApiRequest((c) => c.api.v1.admin.stats.$get({ query: { range } })),
       authedApiRequest((c) => c.api.v1.admin.analytics.$get({ query: { range } })),
       authedApiRequest((c) => c.api.v1.admin.orders.$get({ query: { limit: 5, status: 'PENDING,PAID', oldest: '1' } })),
       authedApiRequest((c) => c.api.v1.admin.stats['low-stock'].$get({ query: { threshold: '5', limit: '5' } })),

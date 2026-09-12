@@ -8,12 +8,18 @@ type AdminStatsEnv = AuthEnv
 export const adminStatsRoutes = new Hono<AdminStatsEnv>()
 
   .get('/', async (c) => {
+    // Revenue respects the range tabs (rolling window on order creation,
+    // same basis as the analytics charts). Stock/product/pending counts are
+    // point-in-time and stay global.
+    const range = c.req.query('range') || '30d'
+    const days = range === '1d' ? 1 : range === '7d' ? 7 : range === '90d' ? 90 : 30
+    const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString()
     try {
       const [{ count: totalProducts }, { count: totalStock }, { count: pendingOrders }, { data: paidOrders }] = await Promise.all([
         supabaseAdmin.from('products').select('*', { count: 'exact', head: true }),
         supabaseAdmin.from('vault_items').select('*', { count: 'exact', head: true }).eq('status', 'AVAILABLE'),
         supabaseAdmin.from('orders').select('*', { count: 'exact', head: true }).eq('status', 'PENDING'),
-        supabaseAdmin.from('orders').select('amount').in('status', ['PAID', 'DELIVERED']),
+        supabaseAdmin.from('orders').select('amount').in('status', ['PAID', 'DELIVERED']).gte('created_at', cutoff),
       ])
 
       const revenue = (paidOrders || []).reduce((sum, order) => sum + (parseInt((order as any).amount || '0', 10)), 0)
