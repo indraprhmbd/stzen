@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { Eye, EyeSlash } from '@phosphor-icons/react'
 import { useAuth } from '../hooks/useAuth'
@@ -13,10 +13,33 @@ export default function SignUp() {
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
   const [showPw, setShowPw] = useState(false)
-  const { signUp, signInWithGoogle } = useAuth()
+  const [resending, setResending] = useState(false)
+  const [resent, setResent] = useState(false)
+  const [cooldown, setCooldown] = useState(0)
+  const { signUp, signInWithGoogle, resendConfirmation } = useAuth()
   const brand = useBrand()
   const navigate = useNavigate()
   const { t } = useCopy()
+
+  useEffect(() => {
+    if (cooldown <= 0) return
+    const id = setTimeout(() => setCooldown((c) => c - 1), 1000)
+    return () => clearTimeout(id)
+  }, [cooldown])
+
+  async function handleResend() {
+    if (resending || cooldown > 0) return
+    setResending(true)
+    try {
+      await resendConfirmation(email)
+      setResent(true)
+      setCooldown(60)
+    } catch (err: any) {
+      setError(err.message || 'Failed to resend')
+    } finally {
+      setResending(false)
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -53,9 +76,31 @@ export default function SignUp() {
             <div className="p-6 text-center">
               <h2 className="auth-title">{t.auth.verifyEmailTitle}</h2>
               <p className="auth-subtitle">{t.auth.verifyEmailSubtitle}</p>
-              <p className="text-xs font-mono text-neutral/60 mb-6">
+              <p className="text-xs font-mono text-neutral/60 mb-2">
                 {email}
               </p>
+              <p className="text-xs text-neutral/50 mb-4" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+                {t.auth.spamHint}
+              </p>
+              <button
+                onClick={handleResend}
+                disabled={resending || cooldown > 0}
+                className="auth-btn auth-btn-secondary mb-3 disabled:opacity-50"
+              >
+                {resending ? (
+                  <span className="loading loading-spinner loading-sm"></span>
+                ) : cooldown > 0 ? (
+                  `${t.auth.resendEmail} (${cooldown})`
+                ) : (
+                  t.auth.resendEmail
+                )}
+              </button>
+              {resent && <p className="text-xs font-bold text-neutral mb-4">{t.auth.emailSent}</p>}
+              {error && (
+                <div className="auth-alert mb-4">
+                  <span>{error}</span>
+                </div>
+              )}
               <Link to="/login" className="auth-btn">
                 {t.auth.backToLogin}
               </Link>

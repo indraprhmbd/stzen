@@ -11,7 +11,10 @@ export default function Login() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [showPw, setShowPw] = useState(false)
-  const { signInWithGoogle, signInWithEmail } = useAuth()
+  const [unconfirmed, setUnconfirmed] = useState(false)
+  const [resending, setResending] = useState(false)
+  const [resent, setResent] = useState(false)
+  const { signInWithGoogle, signInWithEmail, resendConfirmation } = useAuth()
   const brand = useBrand()
   const navigate = useNavigate()
   const { t } = useCopy()
@@ -38,15 +41,34 @@ export default function Login() {
   async function handleEmailLogin(e: React.FormEvent) {
     e.preventDefault()
     setError('')
+    setUnconfirmed(false)
+    setResent(false)
     setLoading(true)
 
     try {
       await signInWithEmail(email, password)
       navigate('/dashboard')
     } catch (err: any) {
-      setError(err.message || 'Invalid email or password')
+      const msg = err.message || 'Invalid email or password'
+      setError(msg)
+      // Supabase rejects login until the signup link is clicked. Offer the
+      // resend inline instead of stranding the buyer on a dead error.
+      if (/not confirmed|not verified|confirmation/i.test(msg)) setUnconfirmed(true)
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function handleResend() {
+    if (resending) return
+    setResending(true)
+    try {
+      await resendConfirmation(email)
+      setResent(true)
+    } catch (err: any) {
+      setError(err.message || 'Failed to resend')
+    } finally {
+      setResending(false)
     }
   }
 
@@ -112,6 +134,23 @@ export default function Login() {
                 <div className="auth-alert">
                   <span>{error}</span>
                 </div>
+              )}
+
+              {unconfirmed && (
+                <button
+                  type="button"
+                  onClick={handleResend}
+                  disabled={resending}
+                  className="auth-btn auth-btn-secondary disabled:opacity-50"
+                >
+                  {resending ? (
+                    <span className="loading loading-spinner loading-sm"></span>
+                  ) : resent ? (
+                    t.auth.emailSent
+                  ) : (
+                    t.auth.resendEmail
+                  )}
+                </button>
               )}
 
               <button
