@@ -87,7 +87,7 @@ export default function VariantGroups({ groups, filteredCount, collapsedGroups, 
           wrap the row overflows left and the sort menu opens off-screen. */}
       <div className="ad-card-head flex-wrap" style={{ justifyContent: 'flex-end' }}>
         <TableSortMenu columns={variantColumns} sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
-        <button onClick={toggleAll} className="ad-btn" title={allCollapsed ? 'Buka semua' : 'Tutup semua'}>
+        <button onClick={toggleAll} className="ad-btn hidden sm:inline-flex" title={allCollapsed ? 'Buka semua' : 'Tutup semua'}>
           {allCollapsed
             ? <Expand width={15} height={15} strokeWidth={1.5} />
             : <Collapse width={15} height={15} strokeWidth={1.5} />}
