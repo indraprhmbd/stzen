@@ -53,7 +53,7 @@ export const adminStatsRoutes = new Hono<AdminStatsEnv>()
     try {
       // Single GROUP BY aggregate per call (migration 0011/0012): threshold,
       // sort and page apply in SQL, replacing the old 1+V per-variant loop.
-      const [{ data: rows, error: rowsError }, { data: summary, error: summaryError }] = await Promise.all([
+      const [{ data: rows, error: rowsError }, { data: summary, error: summaryError }, { data: byProduct, error: byProductError }] = await Promise.all([
         supabaseAdmin.rpc('low_stock_variants', {
           p_threshold: threshold,
           p_limit: limit,
@@ -61,10 +61,12 @@ export const adminStatsRoutes = new Hono<AdminStatsEnv>()
           p_desc: desc,
         }),
         supabaseAdmin.rpc('low_stock_summary', { p_threshold: threshold }),
+        supabaseAdmin.rpc('low_stock_by_product', { p_threshold: threshold }),
       ])
 
       if (rowsError) throw new Error(rowsError.message)
       if (summaryError) throw new Error(summaryError.message)
+      if (byProductError) throw new Error(byProductError.message)
 
       const s = Array.isArray(summary) ? summary[0] : summary
       const outOfStock = Number(s?.out_of_stock ?? 0)
@@ -84,9 +86,15 @@ export const adminStatsRoutes = new Hono<AdminStatsEnv>()
         page,
         limit,
         totalPages: Math.max(1, Math.ceil(total / limit)),
+        // Per-product habis breakdown for the Overview tile (full coverage,
+        // not page-bound). Variant-level rows stay in `rows` only.
+        byProduct: (byProduct || []).map((r: any) => ({
+          product_name: r.product_name,
+          count: Number(r.empty_count ?? 0),
+        })),
       })
     } catch (e) {
       console.error('low-stock query failed', e)
-      return c.json({ rows: [], outOfStock: 0, runningLow: 0, total: 0, page, limit, totalPages: 1 })
+      return c.json({ rows: [], outOfStock: 0, runningLow: 0, total: 0, page, limit, totalPages: 1, byProduct: [] })
     }
   })

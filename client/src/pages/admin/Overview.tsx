@@ -116,6 +116,7 @@ export default function Overview() {
       page: number
       limit: number
       totalPages: number
+      byProduct: { product_name: string; count: number }[]
     }
     return {
       rows: Array.isArray(j.rows) ? j.rows : [],
@@ -123,6 +124,7 @@ export default function Overview() {
       low: j.runningLow ?? 0,
       total: j.total ?? 0,
       totalPages: j.totalPages ?? 1,
+      byProduct: Array.isArray(j.byProduct) ? j.byProduct : [],
     }
   }, [lsPage, lsDir])
   const stats = data?.stats ?? null
@@ -355,17 +357,16 @@ export default function Overview() {
             <span className="ad-num text-4xl font-black leading-none">{lsLoading ? '…' : stockSummary.out}</span>
             <span className="text-xs text-[#6e6e73] pb-1">varian tak bisa dibeli</span>
           </div>
-          {!lsLoading && lowStock.some((p) => p.stock_count === 0) && (
+          {!lsLoading && (lsData?.byProduct ?? []).length > 0 && (
             <div className="px-4 pb-2 flex flex-col">
-              {lowStock.filter((p) => p.stock_count === 0).slice(0, 4).map((p) => (
-                <button
-                  key={p.id}
-                  onClick={() => navigate(`/admin/products?tab=stok&variant=${p.id}&import=1`)}
-                  className="flex items-center justify-between gap-2 text-left py-1.5 border-t border-[#f1f1f4]"
+              {(lsData?.byProduct ?? []).slice(0, 5).map((g) => (
+                <div
+                  key={g.product_name}
+                  className="flex items-center justify-between gap-2 py-1.5 border-t border-[#f1f1f4]"
                 >
-                  <span className="text-xs font-medium truncate">{p.name}</span>
-                  <span className="text-[11px] font-semibold text-[#6e6e73] shrink-0">+ Tambah</span>
-                </button>
+                  <span className="text-xs font-medium truncate">{g.product_name}</span>
+                  <span className="ad-num text-[11px] font-semibold text-[#6e6e73] shrink-0">{g.count} habis</span>
+                </div>
               ))}
             </div>
           )}
