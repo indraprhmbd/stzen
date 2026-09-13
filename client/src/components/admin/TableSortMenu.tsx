@@ -13,6 +13,11 @@ interface TableSortMenuProps {
 // their clickable sort toggles - are replaced by stacked cards, so sort
 // moves into this dropdown. Reuses the caller's toggleSort: identical
 // 3-state cycle, URL params, and refetch behavior as desktop header clicks.
+//
+// Deliberately zero DaisyUI dropdown/menu classes: plain relative+absolute
+// positioning and explicit ink colors render identically in every browser
+// (Daisy's anchor-positioned dropdown misplaces and bleaches this menu in
+// some Opera builds). Native details/summary owns open state - no JS.
 export default function TableSortMenu({ columns, sortKey, sortDir, onSort }: TableSortMenuProps) {
   const sortable = columns.filter((c) => c.sortKey)
   if (!onSort || sortable.length === 0) return null
@@ -24,7 +29,7 @@ export default function TableSortMenu({ columns, sortKey, sortDir, onSort }: Tab
   }
 
   return (
-    <details className="dropdown dropdown-end sm:hidden">
+    <details className="relative inline-block sm:hidden">
       <summary aria-label="Urutkan tabel" className="ad-btn list-none [&::-webkit-details-marker]:hidden">
         <Sort width={15} height={15} strokeWidth={1.5} />
         {active ? active.label : 'Urutkan'}
@@ -32,7 +37,7 @@ export default function TableSortMenu({ columns, sortKey, sortDir, onSort }: Tab
         {active && sortDir === 'desc' && <SortDown width={14} height={14} strokeWidth={1.5} />}
       </summary>
       <ul
-        className="menu menu-sm dropdown-content z-30 mt-1 w-56 rounded-[14px] border border-[#e8e8ed] bg-white p-2"
+        className="absolute right-0 top-full z-30 mt-1 w-56 max-w-[calc(100vw-2rem)] rounded-[14px] border border-[#e8e8ed] bg-white p-2 text-[#1d1d1f]"
         style={{ boxShadow: '0 12px 48px rgb(0 0 0 / 0.12)' }}
       >
         {sortable.map((c) => {
@@ -42,9 +47,9 @@ export default function TableSortMenu({ columns, sortKey, sortDir, onSort }: Tab
               <button
                 type="button"
                 onClick={(e) => { onSort(c.sortKey!); closeMenu(e) }}
-                className={isActive ? 'bg-[#f5f5f7] font-semibold' : ''}
+                className={`flex w-full items-center gap-2 rounded-[8px] px-2.5 py-2 text-left text-[13px] text-[#1d1d1f] hover:bg-[#f5f5f7] ${isActive ? 'bg-[#f5f5f7] font-semibold' : ''}`}
               >
-                <span className="flex-1 text-left">{c.label}</span>
+                <span className="flex-1">{c.label}</span>
                 {isActive && sortDir === 'asc' && <SortUp width={14} height={14} strokeWidth={1.5} />}
                 {isActive && sortDir === 'desc' && <SortDown width={14} height={14} strokeWidth={1.5} />}
               </button>
