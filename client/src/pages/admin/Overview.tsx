@@ -446,7 +446,7 @@ export default function Overview() {
                     </td>
                     <td><StatusChip tone={p.stock_count === 0 ? 'red' : 'amber'}>{p.stock_count}</StatusChip></td>
                     <td className="text-right">
-                      <button onClick={() => navigate(`/admin/products?tab=stok&variant=${p.id}&import=1`)} className="ad-btn ad-btn-dark"><Plus width={14} height={14} strokeWidth={1.5} />Tambah</button>
+                      <button onClick={() => navigate(`/admin/products?tab=stok&variant=${p.id}&import=1`)} className="ad-btn"><Plus width={14} height={14} strokeWidth={1.5} />Tambah</button>
                     </td>
                   </tr>
                 ))}
