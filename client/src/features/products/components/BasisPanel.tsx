@@ -110,17 +110,19 @@ export default function BasisPanel({ products, variants, onCreate, onEdit, onDel
 
   return (
     <>
-    <div className="ad-card-flat p-4 flex flex-wrap items-center gap-6">
+    <div className="ad-card-flat p-4 max-sm:px-3 flex flex-wrap items-center gap-4 max-sm:gap-3">
       <div>
-        <div className="text-2xl font-semibold leading-none ad-num">{loading ? '-' : products.length}</div>
+        <div className="text-2xl max-sm:text-lg font-semibold leading-none ad-num">{loading ? '-' : products.length}</div>
         <div className="text-[11px] font-semibold tracking-wider uppercase text-[#6e6e73] mt-1">Induk</div>
       </div>
       <div>
-        <div className="text-2xl font-semibold leading-none ad-num">{loading ? '-' : new Set(products.map((p) => p.category)).size}</div>
+        <div className="text-2xl max-sm:text-lg font-semibold leading-none ad-num">{loading ? '-' : new Set(products.map((p) => p.category)).size}</div>
         <div className="text-[11px] font-semibold tracking-wider uppercase text-[#6e6e73] mt-1">Kategori</div>
       </div>
-      <TableSortMenu columns={basisColumns} sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
-      <button onClick={onCreate} className="ad-btn ml-auto"><Plus width={15} height={15} strokeWidth={1.5} />Induk</button>
+      <div className="ml-auto flex items-center gap-2">
+        <TableSortMenu columns={basisColumns} sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+        <button onClick={onCreate} className="ad-btn shrink-0 max-sm:px-3"><Plus width={15} height={15} strokeWidth={1.5} />Induk</button>
+      </div>
     </div>
     <div className="ad-card">
       <DataTable
