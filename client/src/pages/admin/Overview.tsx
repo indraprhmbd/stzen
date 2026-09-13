@@ -77,27 +77,23 @@ export default function Overview() {
   }, [])
   const rangeLabel = range === '1d' ? '1 hari' : range === '7d' ? '7 hari' : range === '90d' ? '90 hari' : '30 hari'
   const { data, loading, error, fetchedAt, refetch: fetchAll } = useAdminQuery(async () => {
-    const [statsRes, analyticsRes, ordersRes, lowStockRes] = await Promise.all([
-      authedApiRequest((c) => c.api.v1.admin.stats.$get({ query: { range } })),
-      authedApiRequest((c) => c.api.v1.admin.analytics.$get({ query: { range } })),
-      authedApiRequest((c) => c.api.v1.admin.orders.$get({ query: { limit: 5, status: 'PENDING,PAID', oldest: '1' } })),
-      authedApiRequest((c) => c.api.v1.admin.stats['low-stock'].$get({ query: { threshold: '5', limit: '5' } })),
-    ])
-
-    const s = (await statsRes.json()) as Stats
-    const a = (await analyticsRes.json()) as unknown as { dailySales: unknown[]; byStatus: unknown[]; byCategory: unknown[]; topProducts: unknown[] }
-    const o = (await ordersRes.json()) as any as { orders: Order[] }
-    const ls = (await lowStockRes.json()) as LowStockVariant[] | { rows: LowStockVariant[]; outOfStock: number; runningLow: number }
-    const lsRows = Array.isArray(ls) ? ls : (ls.rows ?? [])
+    // Composite: one round trip (stats + analytics + recent orders +
+    // low-stock). Server guarantees the shape; normalize defensively.
+    const res = await authedApiRequest((c) => c.api.v1.admin.overview.$get({ query: { range } }))
+    const j = (await res.json()) as {
+      stats: Stats
+      analytics: { dailySales: unknown[]; byStatus: unknown[]; byCategory: unknown[]; topProducts: unknown[] }
+      orders: Order[]
+      lowStock: { rows: LowStockVariant[]; outOfStock: number; runningLow: number }
+    }
+    const lsRows = Array.isArray(j.lowStock?.rows) ? j.lowStock.rows : []
 
     return {
-      stats: s,
-      analytics: a,
-      orders: (Array.isArray(o.orders) ? o.orders : []).slice(0, 5),
+      stats: j.stats,
+      analytics: j.analytics,
+      orders: (Array.isArray(j.orders) ? j.orders : []).slice(0, 5),
       lowStock: lsRows.slice(0, 5),
-      stockSummary: Array.isArray(ls)
-        ? { out: lsRows.filter((r) => r.stock_count === 0).length, low: lsRows.filter((r) => r.stock_count > 0).length }
-        : { out: ls.outOfStock ?? 0, low: ls.runningLow ?? 0 },
+      stockSummary: { out: j.lowStock?.outOfStock ?? 0, low: j.lowStock?.runningLow ?? 0 },
     }
   }, [range])
   const stats = data?.stats ?? null

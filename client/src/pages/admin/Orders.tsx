@@ -228,7 +228,7 @@ export default function Orders() {
     setMError(null)
     if (manualVariants.length === 0) {
       try {
-        const res = await authedApiRequest((c) => c.api.v1.admin.variants.$get())
+        const res = await authedApiRequest((c) => c.api.v1.admin.variants.$get({ query: { compact: '1' } }))
         const list = (await res.json()) as { id: string; name: string; price: string | number; isActive: boolean }[]
         setManualVariants(list.filter((v) => v.isActive).map((v) => ({ id: v.id, name: v.name, price: v.price })))
       } catch { setMError('Gagal memuat varian') }

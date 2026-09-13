@@ -5,6 +5,7 @@ import { adminProductRoutes } from './admin.products.routes'
 import { adminStatsRoutes } from './admin.stats.routes'
 import { adminHistoryRoutes } from './admin.history.routes'
 import { adminAnalyticsRoutes } from './admin.analytics.routes'
+import { adminOverviewRoutes } from './admin.overview.routes'
 import { adminVariantRoutes } from './admin.variants.routes'
 import { adminSettingsRoutes } from './admin.settings.routes'
 import { adminVaultRoutes } from './admin.vault.routes'
@@ -25,6 +26,7 @@ export const adminRoutes = new Hono()
   .route('/stats', adminStatsRoutes)
   .route('/history', adminHistoryRoutes)
   .route('/analytics', adminAnalyticsRoutes)
+  .route('/overview', adminOverviewRoutes)
   .route('/settings', adminSettingsRoutes)
   .route('/vault', adminVaultRoutes)
   .route('/danger', dangerRoutes)

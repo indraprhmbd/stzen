@@ -28,6 +28,29 @@ export interface PaginatedProducts {
   totalPages: number
 }
 
+// Lean card projection for the public list: exactly what ProductCard renders.
+// Detail page keeps the full ProductWithStock via getById.
+export interface CatalogCard {
+  id: string
+  name: string
+  overview: string | null
+  category: string
+  price: string
+  compareAtPrice?: number | null
+  badge: string | null
+  isActive: boolean
+  stockCount: number
+  fulfillmentType?: string
+}
+
+export interface PaginatedCatalog {
+  products: CatalogCard[]
+  total: number
+  page: number
+  limit: number
+  totalPages: number
+}
+
 export interface ProductQueryParams {
   category?: string
   sort?: string

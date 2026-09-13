@@ -1,7 +1,7 @@
 import { supabaseAdmin } from '../../shared/db'
 import { NotFoundError } from '../../shared/errors/http'
 import { getStockCount, getStockCounts } from '../../shared/lib/db-helpers'
-import type { ProductWithStock, PaginatedProducts, ProductQueryParams } from './products.types'
+import type { ProductWithStock, PaginatedProducts, PaginatedCatalog, CatalogCard, ProductQueryParams } from './products.types'
 
 function pickProductFields(variant: any): { category: string; description: string | null; overview: string | null; instructions: string | null; name: string } {
   const product = Array.isArray(variant.products) ? variant.products[0] : (variant.products || variant.product || {})
@@ -31,6 +31,22 @@ function mapVariantToProduct(variant: any, stockCount: number): ProductWithStock
     instructions: product.instructions ?? null,
     createdAt: variant.created_at,
     updatedAt: variant.updated_at,
+  }
+}
+
+function mapVariantToCard(variant: any, stockCount: number): CatalogCard {
+  const product = pickProductFields(variant)
+  return {
+    id: variant.public_id,
+    name: variant.name,
+    overview: variant.overview ?? product.overview ?? null,
+    category: product.category,
+    price: String(variant.price),
+    compareAtPrice: variant.compare_at_price ?? null,
+    badge: variant.badge ?? null,
+    isActive: variant.is_active,
+    stockCount,
+    fulfillmentType: variant.fulfillment_type,
   }
 }
 
@@ -139,82 +155,85 @@ export const productsService = {
     }
   },
 
-  async listPaginated(params: ProductQueryParams): Promise<PaginatedProducts> {
+  async listPaginated(params: ProductQueryParams): Promise<PaginatedCatalog> {
     const { category, sort = 'newest', page = 1, limit = 24, search } = params
     const offset = (page - 1) * limit
 
-    const { data: variants, error } = await supabaseAdmin
-      .from('product_variants')
-      .select(`
+    // Lean card projection: only what ProductCard renders. description,
+    // instructions, timestamps never leave the server on list responses
+    // (detail keeps the full shape via getById).
+    const CARD_COLUMNS = `
+      id,
+      public_id,
+      name,
+      price,
+      compare_at_price,
+      badge,
+      overview,
+      fulfillment_type,
+      is_active,
+      products (
         id,
-        public_id,
-        sku,
         name,
-        price,
-        compare_at_price,
-        badge,
-        overview,
-        description,
-        duration_months,
-        account_type,
-        conditions,
-        fulfillment_type,
-        is_active,
-        created_at,
-        updated_at,
-        products (
-          id,
-          name,
-          description,
-          category,
-          overview
-        )
-      `)
+        category
+      )
+    `
+    // Inner join when filtering by category so PostgREST drops non-matching
+    // rows in SQL instead of shipping the table for a client-side filter.
+    const select = category ? CARD_COLUMNS.replace('products (', 'products!inner (') : CARD_COLUMNS
+    let query = supabaseAdmin
+      .from('product_variants')
+      .select(select)
       .eq('is_active', true)
+
+    if (category) {
+      query = query.eq('products.category', category)
+    }
+    if (search) {
+      const like = `%${search.replace(/[%_]/g, (c) => `\\${c}`)}%`
+      query = query.ilike('name', like)
+    }
+
+    // Sort vocabulary matches the storefront FilterBar exactly.
+    // newest/price/name order in SQL; stock sorts need live counts so they
+    // order in memory below (rows arrive newest-first, stable sort keeps
+    // that order for ties).
+    switch (sort) {
+      case 'price':
+      case 'price-asc':
+        query = query.order('price', { ascending: true })
+        break
+      case 'price-desc':
+        query = query.order('price', { ascending: false })
+        break
+      case 'name':
+        query = query.order('name', { ascending: true })
+        break
+      case 'stock':
+      case 'out_of_stock':
+      case 'newest':
+      default:
+        query = query.order('created_at', { ascending: false })
+        break
+    }
+
+    const { data: variants, error } = await query
 
     if (error) throw new Error(error.message)
 
-    let filtered = (variants || []).filter((variant: any) => {
-      if (category && pickProductFields(variant).category !== category) return false
-      if (search && !variant.name?.toLowerCase().includes(search.toLowerCase())) return false
-      return true
-    })
-
-    const stockByVariant = await getStockCounts(filtered.map((v: any) => v.id))
-    let withStock = filtered.map((variant: any) =>
-      mapVariantToProduct(variant, stockByVariant.get(variant.id) ?? 0)
+    const stockByVariant = await getStockCounts((variants || []).map((v: any) => v.id))
+    let withStock = (variants || []).map((variant: any) =>
+      mapVariantToCard(variant, stockByVariant.get(variant.id) ?? 0)
     )
 
     if (sort === 'out_of_stock') {
       withStock = withStock.filter(v => v.fulfillmentType !== 'on_demand' && v.stockCount === 0)
     } else {
       withStock = withStock.filter(v => v.fulfillmentType === 'on_demand' || v.stockCount > 0)
-    }
-
-    // Sort vocabulary matches the storefront FilterBar exactly:
-    // newest (default), price (cheapest first), stock (most stock first),
-    // out_of_stock (handled by the filter above, order newest first).
-    // price-asc/price-desc/name stay as aliases for API consumers.
-    withStock.sort((a, b) => {
-      switch (sort) {
-        case 'price':
-        case 'price-asc':
-          return Number(a.price) - Number(b.price)
-        case 'price-desc':
-          return Number(b.price) - Number(a.price)
-        case 'name':
-          return a.name.localeCompare(b.name)
-        case 'stock': {
-          const diff = b.stockCount - a.stockCount
-          if (diff !== 0) return diff
-          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-        }
-        case 'out_of_stock':
-        case 'newest':
-        default:
-          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      if (sort === 'stock') {
+        withStock.sort((a, b) => b.stockCount - a.stockCount)
       }
-    })
+    }
 
     // Total counts what the operator actually sees (post stock filter), so
     // the pager never points at pages emptied by the sellability filter.

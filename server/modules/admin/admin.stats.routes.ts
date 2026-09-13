@@ -45,55 +45,28 @@ export const adminStatsRoutes = new Hono<AdminStatsEnv>()
     const limit = Math.min(parseInt(c.req.query('limit') || '10', 10), 50)
 
     try {
-      const { data: variants, error } = await supabaseAdmin
-        .from('product_variants')
-        .select(`
-          public_id,
-          name,
-          sku,
-          product_id,
-          products (
-            name
-          )
-        `)
-        .eq('is_active', true)
-        .neq('fulfillment_type', 'on_demand')
+      // Single GROUP BY aggregate per call (migration 0011): threshold and
+      // limit apply in SQL, replacing the old 1+V per-variant count loop.
+      const [{ data: rows, error: rowsError }, { data: summary, error: summaryError }] = await Promise.all([
+        supabaseAdmin.rpc('low_stock_variants', { p_threshold: threshold, p_limit: limit }),
+        supabaseAdmin.rpc('low_stock_summary', { p_threshold: threshold }),
+      ])
 
-      if (error) throw new Error(error.message)
+      if (rowsError) throw new Error(rowsError.message)
+      if (summaryError) throw new Error(summaryError.message)
 
-      const stockPromises = (variants || []).map(async (variant: any) => {
-        const product = Array.isArray(variant.products) ? variant.products[0] : (variant.products || {})
-        // estimated: exact result under db-max-rows (per-variant stock is
-        // orders of magnitude below the threshold), cheap if a variant explodes.
-        const { count } = await supabaseAdmin
-          .from('vault_items')
-          .select('*', { count: 'estimated', head: true })
-          .eq('variant_id', variant.id)
-          .eq('status', 'AVAILABLE')
-
-        return {
-          id: variant.public_id,
-          name: variant.name,
-          sku: variant.sku,
-          product_name: product?.name,
-          stock_count: count || 0,
-        }
+      const s = Array.isArray(summary) ? summary[0] : summary
+      return c.json({
+        rows: (rows || []).map((r: any) => ({
+          id: r.id,
+          name: r.name,
+          sku: r.sku,
+          product_name: r.product_name,
+          stock_count: Number(r.stock_count ?? 0),
+        })),
+        outOfStock: Number(s?.out_of_stock ?? 0),
+        runningLow: Number(s?.running_low ?? 0),
       })
-
-      const rows = await Promise.all(stockPromises)
-      const lowStock = rows
-        .filter((r) => r.stock_count < threshold)
-        .sort((a, b) => {
-          if (a.stock_count === 0 && b.stock_count !== 0) return -1
-          if (a.stock_count !== 0 && b.stock_count === 0) return 1
-          return a.stock_count - b.stock_count
-        })
-        .slice(0, limit)
-
-      const outOfStock = rows.filter((r) => r.stock_count === 0).length
-      const runningLow = rows.filter((r) => r.stock_count > 0 && r.stock_count < threshold).length
-
-      return c.json({ rows: lowStock, outOfStock, runningLow })
     } catch (e) {
       console.error('low-stock query failed', e)
       return c.json({ rows: [], outOfStock: 0, runningLow: 0 })
