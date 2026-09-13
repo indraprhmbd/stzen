@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { Product } from '../types'
 import type { useVariantForm } from '../hooks/useVariantForm'
 import { Xmark } from 'iconoir-react'
+import RupiahInput from '../../../components/admin/RupiahInput'
 
 const unitLabel: Record<string, string> = { day: 'Hari', week: 'Minggu', month: 'Bulan' }
 
@@ -94,10 +95,10 @@ export default function VariantDialog({ products, form: v, onSubmit, onImportNow
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <label className="ad-label">Harga (Rp)<input type="text" required value={v.vPrice} onChange={(e) => v.setVPrice(e.target.value)} placeholder="45000" className="ad-input mt-1.5 ad-num" /></label>
+            <RupiahInput label="Harga (Rp)" required value={v.vPrice} onChange={v.setVPrice} placeholder="45000" />
             <label className="ad-label">Badge<input type="text" value={v.vBadge} onChange={(e) => v.setVBadge(e.target.value)} placeholder="TERLARIS;PROMO" className="ad-input mt-1.5 normal-case" /><p className="text-[11px] text-[#aeaeb2] mt-1 normal-case font-normal">Pisahkan beberapa badge dengan ;</p></label>
           </div>
-          <label className="ad-label">Harga Coret (opsional)<input type="text" value={v.vCompareAt} onChange={(e) => v.setVCompareAt(e.target.value)} placeholder="60000" className="ad-input mt-1.5 ad-num" /><p className="text-[11px] text-[#aeaeb2] mt-1 normal-case font-normal">Tampil dicoret bila lebih besar dari harga</p></label>
+          <RupiahInput label="Harga Coret (opsional)" value={v.vCompareAt} onChange={v.setVCompareAt} placeholder="60000" hint="Tampil dicoret bila lebih besar dari harga" />
           <label className="ad-label">Pemenuhan<select value={v.vFulfillmentType} onChange={(e) => v.setVFulfillmentType(e.target.value === 'on_demand' ? 'on_demand' : 'vault')} className="ad-input mt-1.5 normal-case"><option value="vault">Gudang</option><option value="on_demand">On Demand</option></select><p className="text-[11px] text-[#aeaeb2] mt-1">{v.vFulfillmentType === 'on_demand' ? 'Selalu tersedia, tanpa impor stok' : 'Perlu impor kredensial ke vault'}</p></label>
           <label className="ad-input flex items-center gap-3 cursor-pointer">
             <input type="checkbox" checked={v.vIsActive} onChange={(e) => v.setVIsActive(e.target.checked)} className="checkbox checkbox-sm rounded-full" />
