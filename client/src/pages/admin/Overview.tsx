@@ -67,6 +67,14 @@ export default function Overview() {
   useEffect(() => {
     localStorage.setItem('admin:showRevenue', String(showRevenue))
   }, [showRevenue])
+  // Mount charts after first paint: ResponsiveContainer measures its parent
+  // on mount, and a pre-paint zero-size measurement leaves Opera blank.
+  // Numeric heights match the fixed wrappers (164 = h-[180px] minus p-2).
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setMounted(true))
+    return () => cancelAnimationFrame(id)
+  }, [])
   const rangeLabel = range === '1d' ? '1 hari' : range === '7d' ? '7 hari' : range === '90d' ? '90 hari' : '30 hari'
   const { data, loading, error, fetchedAt, refetch: fetchAll } = useAdminQuery(async () => {
     const [statsRes, analyticsRes, ordersRes, lowStockRes] = await Promise.all([
@@ -208,7 +216,8 @@ export default function Overview() {
             <span className="ad-card-hint ad-num">pesanan</span>
           </div>
           <div className="h-[180px] p-2">
-            <ResponsiveContainer width="100%" height="100%">
+            {mounted && (
+            <ResponsiveContainer width="100%" height={164}>
               <AreaChart data={dailySales} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
                 <CartesianGrid stroke="#f1f1f4" vertical={false} />
                 <XAxis dataKey="label" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} interval={4} />
@@ -217,6 +226,7 @@ export default function Overview() {
                 <Area type="monotone" dataKey="count" stroke="#1d1d1f" fill="#1d1d1f" fillOpacity={0.06} strokeWidth={1.5} />
               </AreaChart>
             </ResponsiveContainer>
+            )}
           </div>
         </div>
 
@@ -226,7 +236,8 @@ export default function Overview() {
             <span className="ad-card-hint ad-num">Rp</span>
           </div>
           <div className="h-[180px] p-2">
-            <ResponsiveContainer width="100%" height="100%">
+            {mounted && (
+            <ResponsiveContainer width="100%" height={164}>
               <AreaChart data={dailySales} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
                 <CartesianGrid stroke="#f1f1f4" vertical={false} />
                 <XAxis dataKey="label" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} interval={4} />
@@ -235,6 +246,7 @@ export default function Overview() {
                 <Area type="monotone" dataKey="revenue" stroke="#1d1d1f" fill="#1d1d1f" fillOpacity={0.06} strokeWidth={1.5} />
               </AreaChart>
             </ResponsiveContainer>
+            )}
           </div>
         </div>
 
@@ -244,7 +256,8 @@ export default function Overview() {
             <span className="ad-card-hint">vault</span>
           </div>
           <div className="h-[180px] p-2">
-            <ResponsiveContainer width="100%" height="100%">
+            {mounted && (
+            <ResponsiveContainer width="100%" height={164}>
               <BarChart data={byCategory} layout="vertical" margin={{ left: 10, right: 10 }}>
                 <CartesianGrid stroke="#f1f1f4" horizontal={false} />
                 <XAxis type="number" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} allowDecimals={false} />
@@ -253,6 +266,7 @@ export default function Overview() {
                 <Bar dataKey="stock" fill="#1d1d1f" radius={[4, 4, 4, 4]} barSize={10} />
               </BarChart>
             </ResponsiveContainer>
+            )}
           </div>
         </div>
 
@@ -262,7 +276,8 @@ export default function Overview() {
             <span className="ad-card-hint">terlaris</span>
           </div>
           <div className="h-[180px] p-2">
-            <ResponsiveContainer width="100%" height="100%">
+            {mounted && (
+            <ResponsiveContainer width="100%" height={164}>
               <BarChart data={topProducts} layout="vertical" margin={{ left: 10, right: 10 }}>
                 <CartesianGrid stroke="#f1f1f4" horizontal={false} />
                 <XAxis type="number" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} allowDecimals={false} />
@@ -271,6 +286,7 @@ export default function Overview() {
                 <Bar dataKey="count" fill="#1d1d1f" radius={[4, 4, 4, 4]} barSize={10} />
               </BarChart>
             </ResponsiveContainer>
+            )}
           </div>
         </div>
       </div>
@@ -282,7 +298,8 @@ export default function Overview() {
           </div>
           <div className="h-[160px] flex items-center gap-4 px-4">
             <div className="h-[140px] w-[140px] shrink-0">
-              <ResponsiveContainer width="100%" height="100%">
+              {mounted && (
+              <ResponsiveContainer width={140} height={140}>
                 <PieChart>
                   <Pie data={byStatus} dataKey="count" nameKey="status" innerRadius={45} outerRadius={65} paddingAngle={2} strokeWidth={0}>
                     {byStatus.map((e, i) => (
@@ -292,6 +309,7 @@ export default function Overview() {
                   <Tooltip contentStyle={tooltipStyle} />
                 </PieChart>
               </ResponsiveContainer>
+              )}
             </div>
             <div className="flex flex-wrap gap-2">
               {byStatus.map((s) => (
