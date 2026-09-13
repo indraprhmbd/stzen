@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { authedApiRequest } from '../../lib/api'
+import { usePasswordConfirm } from '../../hooks/usePasswordConfirm'
 
 interface StalePreview {
   olderThanDays: number
@@ -36,14 +37,13 @@ async function readJson(res: { ok: boolean; status: number; json: () => Promise<
 
 // ─── Danger Zone ────────────────────────────────────────────────────────────
 // Tiered destructive ops. Every execute requires: preview count read first,
-// exact typed phrase, and current-password re-auth via the Akun card input
-// (shared `reAuth` prop). Results and errors stay inside each tier card.
+// exact typed phrase, and current-password re-auth via the input below
+// (own usePasswordConfirm instance - independent of the Akun page).
+// Results and errors stay inside each tier card.
 
-interface Props {
-  reAuth: () => Promise<boolean>
-}
-
-export default function DangerZone({ reAuth }: Props) {
+export default function DangerZone() {
+  const { pwCur, setPwCur, confirmCurrentPassword } = usePasswordConfirm()
+  const [reauthMsg, setReauthMsg] = useState<string | null>(null)
   // Tier 1
   const [days, setDays] = useState('7')
   const [stale, setStale] = useState<StalePreview | null>(null)
@@ -71,8 +71,8 @@ export default function DangerZone({ reAuth }: Props) {
   const [purgeBusy, setPurgeBusy] = useState(false)
 
   async function guard(): Promise<boolean> {
-    const ok = await reAuth()
-    return ok
+    setReauthMsg(null)
+    return confirmCurrentPassword(setReauthMsg)
   }
 
   async function previewStale() {
@@ -242,7 +242,12 @@ export default function DangerZone({ reAuth }: Props) {
     <div className="ad-card p-5 flex flex-col gap-5 md:col-span-2 border-2 border-red-600">
       <div>
         <div className="ad-card-title text-red-600">Danger Zone</div>
-        <p className="text-[11px] text-[#6e6e73] mt-1">Tindakan di bawah ini permanen dan tercatat di Riwayat. Isi kata sandi saat ini di kartu Akun sebelum eksekusi.</p>
+        <p className="text-[11px] text-[#6e6e73] mt-1">Tindakan di bawah ini permanen dan tercatat di Riwayat. Isi kata sandi saat ini di bawah sebelum eksekusi.</p>
+        <label className="ad-label mt-2 block max-w-xs">
+          Kata sandi saat ini
+          <input type="password" value={pwCur} onChange={(e) => setPwCur(e.target.value)} placeholder="Konfirmasi untuk setiap eksekusi" autoComplete="current-password" className="ad-input mt-1.5" />
+        </label>
+        {reauthMsg && <p className="text-xs font-semibold text-red-600 mt-1">{reauthMsg}</p>}
       </div>
 
       {/* Tier 1 */}

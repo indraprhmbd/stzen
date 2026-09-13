@@ -1,9 +1,10 @@
 import { NavLink, useLocation } from 'react-router-dom'
-import { Dashboard, Cube, ShoppingBag, ClockRotateRight, Settings, Book } from 'iconoir-react'
+import { Dashboard, Cube, ShoppingBag, ClockRotateRight, Settings, Book, User } from 'iconoir-react'
 
 // ─── Admin Bottom Nav (mobile) ──────────────────────────────────────────────
-// 6 sections pinned with horizontal scroll. Solid white bar, active tab ink
-// plus dot.
+// 7 sections pinned with horizontal scroll. Solid white bar, active tab ink
+// plus dot. Akun is the dedicated admin account menu (password, sessions,
+// back to store) - same page as the desktop sidebar entry.
 const tabs = [
   { to: '/admin', label: 'Ringkasan', Icon: Dashboard, end: true },
   { to: '/admin/products', label: 'Produk', Icon: Cube, end: false },
@@ -11,6 +12,7 @@ const tabs = [
   { to: '/admin/history', label: 'Riwayat', Icon: ClockRotateRight, end: false },
   { to: '/admin/settings', label: 'Pengaturan', Icon: Settings, end: false },
   { to: '/admin/guide', label: 'Panduan', Icon: Book, end: false },
+  { to: '/admin/account', label: 'Akun', Icon: User, end: false },
 ]
 
 export default function AdminBottomNav() {

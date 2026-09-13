@@ -1,9 +1,6 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { authedApiRequest } from '../../lib/api'
-import { supabase } from '../../lib/supabase'
 import { useAdminQuery } from '../../hooks/useAdminQuery'
-import { useAuth } from '../../hooks/useAuth'
 import DangerZone from './DangerZone'
 
 const LABELS: Record<string, { group: string; label: string; hint?: string; type?: 'text' | 'number'; min?: number; max?: number }> = {
@@ -27,14 +24,7 @@ export default function Settings() {
     const res = await authedApiRequest((c) => c.api.v1.admin.settings.$get())
     return (await res.json()) as { keys: readonly string[]; values: Record<string, string> }
   }, [])
-  const { user } = useAuth()
-  const navigate = useNavigate()
   const [draft, setDraft] = useState<Record<string, string> | null>(null)
-  const [pwCur, setPwCur] = useState('')
-  const [pw1, setPw1] = useState('')
-  const [pw2, setPw2] = useState('')
-  const [pwMsg, setPwMsg] = useState<string | null>(null)
-  const [pwSaving, setPwSaving] = useState(false)
   const [savingGroup, setSavingGroup] = useState<string | null>(null)
   const [msg, setMsg] = useState<{ group: string; text: string } | null>(null)
 
@@ -70,46 +60,6 @@ export default function Settings() {
     } finally {
       setSavingGroup(null)
     }
-  }
-
-  // Re-auth gate: every account action re-verifies the current password
-  // against Supabase before touching credentials or sessions.
-  async function confirmCurrentPassword(): Promise<boolean> {
-    if (!user?.email || !pwCur) {
-      setPwMsg('Masukkan kata sandi saat ini untuk konfirmasi')
-      return false
-    }
-    const { error } = await supabase.auth.signInWithPassword({ email: user.email, password: pwCur })
-    if (error) {
-      setPwMsg('Kata sandi saat ini salah')
-      return false
-    }
-    return true
-  }
-
-  async function handlePassword() {
-    setPwMsg(null)
-    if (pw1.length < 8) { setPwMsg('Kata sandi minimal 8 karakter'); return }
-    if (pw1 !== pw2) { setPwMsg('Konfirmasi tidak cocok'); return }
-    if (!(await confirmCurrentPassword())) return
-    setPwSaving(true)
-    try {
-      const { error: err } = await supabase.auth.updateUser({ password: pw1 })
-      if (err) throw err
-      setPwCur(''); setPw1(''); setPw2('')
-      setPwMsg('Kata sandi diperbarui')
-    } catch {
-      setPwMsg('Gagal memperbarui kata sandi')
-    } finally {
-      setPwSaving(false)
-    }
-  }
-
-  async function signOutEverywhere() {
-    setPwMsg(null)
-    if (!(await confirmCurrentPassword())) return
-    await supabase.auth.signOut({ scope: 'global' }).catch(() => {})
-    navigate('/login', { replace: true })
   }
 
   const grouped = GROUP_ORDER.map((g) => ({ group: g, items: keys.filter((k) => (LABELS[k]?.group ?? 'Lainnya') === g) }))
@@ -164,34 +114,7 @@ export default function Settings() {
         )
       })}
 
-      <div className="ad-card p-5 flex flex-col gap-4">
-        <div className="ad-card-title text-[#aeaeb2]">Akun</div>
-        <div className="text-[13px]">
-          <span className="text-[#6e6e73]">Masuk sebagai </span>
-          <span className="font-semibold ad-num">{user?.email ?? '-'}</span>
-        </div>
-        <div className="flex flex-col gap-3">
-          <label className="ad-label">
-            Kata sandi saat ini
-            <input type="password" value={pwCur} onChange={(e) => setPwCur(e.target.value)} placeholder="Konfirmasi untuk setiap tindakan akun" autoComplete="current-password" className="ad-input mt-1.5" />
-          </label>
-          <label className="ad-label">
-            Kata sandi baru
-            <input type="password" value={pw1} onChange={(e) => setPw1(e.target.value)} placeholder="Minimal 8 karakter" autoComplete="new-password" className="ad-input mt-1.5" />
-          </label>
-          <label className="ad-label">
-            Konfirmasi kata sandi
-            <input type="password" value={pw2} onChange={(e) => setPw2(e.target.value)} placeholder="Ulangi kata sandi" autoComplete="new-password" className="ad-input mt-1.5" />
-          </label>
-          {pwMsg && <p className="text-xs font-semibold text-[#1d1d1f]">{pwMsg}</p>}
-          <div className="flex flex-wrap gap-2">
-            <button onClick={handlePassword} disabled={pwSaving || !pw1 || !pw2} className="ad-btn ad-btn-dark">{pwSaving ? 'Menyimpan...' : 'Ubah kata sandi'}</button>
-            <button onClick={signOutEverywhere} className="ad-btn ad-btn-danger">Keluar dari semua perangkat</button>
-          </div>
-        </div>
-      </div>
-
-      <DangerZone reAuth={confirmCurrentPassword} />
+      <DangerZone />
       </div>
     </div>
   )

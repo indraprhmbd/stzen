@@ -26,6 +26,7 @@ const AdminProducts = lazy(() => import('./pages/admin/Products'))
 const AdminOrders = lazy(() => import('./pages/admin/Orders'))
 const History = lazy(() => import('./pages/admin/History'))
 const Settings = lazy(() => import('./pages/admin/Settings'))
+const Account = lazy(() => import('./pages/admin/Account'))
 const Guide = lazy(() => import('./pages/admin/Guide'))
 
 function PageLoader() {
@@ -73,6 +74,7 @@ function App() {
             <Route path="orders" element={<AdminOrders />} />
             <Route path="history" element={<History />} />
             <Route path="settings" element={<Settings />} />
+            <Route path="account" element={<Account />} />
             <Route path="guide" element={<Guide />} />
           </Route>
 

@@ -1,6 +1,6 @@
 import { NavLink } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
-import { Dashboard, Cube, ShoppingBag, ClockRotateRight, Settings, Book, Shop, SidebarCollapse, LogOut } from 'iconoir-react'
+import { Dashboard, Cube, ShoppingBag, ClockRotateRight, Settings, Book, User, Shop, SidebarCollapse, LogOut } from 'iconoir-react'
 
 const items = [
   { to: '/admin', label: 'Ringkasan', Icon: Dashboard, end: true },
@@ -9,6 +9,7 @@ const items = [
   { to: '/admin/history', label: 'Riwayat', Icon: ClockRotateRight, end: false },
   { to: '/admin/settings', label: 'Pengaturan', Icon: Settings, end: false },
   { to: '/admin/guide', label: 'Panduan', Icon: Book, end: false },
+  { to: '/admin/account', label: 'Akun', Icon: User, end: false },
 ]
 
 export default function AdminSidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => void }) {
