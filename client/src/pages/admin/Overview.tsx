@@ -317,6 +317,7 @@ export default function Overview() {
         </div>
       </div>
 
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
       {byStatus.length ? (
         <div className="ad-card">
           <div className="ad-card-head">
@@ -345,6 +346,32 @@ export default function Overview() {
           </div>
         </div>
       ) : null}
+        <div className="ad-card">
+          <div className="ad-card-head">
+            <div className="ad-card-title">Varian Habis</div>
+            <span className="ad-card-hint ad-num">{stockSummary.low} menipis</span>
+          </div>
+          <div className="px-4 py-3 flex items-end gap-2">
+            <span className="ad-num text-4xl font-black leading-none">{lsLoading ? '…' : stockSummary.out}</span>
+            <span className="text-xs text-[#6e6e73] pb-1">varian tak bisa dibeli</span>
+          </div>
+          {!lsLoading && lowStock.some((p) => p.stock_count === 0) && (
+            <div className="px-4 pb-2 flex flex-col">
+              {lowStock.filter((p) => p.stock_count === 0).slice(0, 4).map((p) => (
+                <button
+                  key={p.id}
+                  onClick={() => navigate(`/admin/products?tab=stok&variant=${p.id}&import=1`)}
+                  className="flex items-center justify-between gap-2 text-left py-1.5 border-t border-[#f1f1f4]"
+                >
+                  <span className="text-xs font-medium truncate">{p.name}</span>
+                  <span className="text-[11px] font-semibold text-[#6e6e73] shrink-0">+ Tambah</span>
+                </button>
+              ))}
+            </div>
+          )}
+          <button onClick={() => navigate('/admin/products?tab=stok')} className="w-full px-4 py-2.5 text-center text-xs font-semibold text-[#6e6e73] hover:text-[#1d1d1f] border-t border-[#f1f1f4]">Kelola stok</button>
+        </div>
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         <div className="ad-card">
@@ -387,7 +414,6 @@ export default function Overview() {
         <div className="ad-card">
           <div className="ad-card-head">
             <div className="ad-card-title">Stok Menipis</div>
-            <span className="ad-card-hint ad-num">{stockSummary.out} habis · {stockSummary.low} menipis</span>
           </div>
           {lsLoading ? (
             <DataTable columns={[{ label: 'VARIAN' }, { label: 'SISA' }, { label: 'AKSI', className: 'text-right' }]} empty={false}>
