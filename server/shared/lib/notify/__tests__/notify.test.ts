@@ -117,6 +117,12 @@ describe('gcal buildEventBody', () => {
     assert.deepEqual(body.start, { date: '2026-10-01', timeZone: 'Asia/Jakarta' })
     assert.deepEqual(body.end, { date: '2026-10-02', timeZone: 'Asia/Jakarta' })
     assert.deepEqual(body.extendedProperties, { private: { stzenOrder: 'STZ-1' } })
+    const desc = body.description as string
+    assert.ok(desc.includes('Order: STZ-1'))
+    assert.ok(desc.includes('SKU: N-001'))
+    assert.ok(desc.includes('Durasi: 1 bulan (dibayar 01 Sep 2026)'))
+    assert.ok(desc.includes('Nominal: Rp50.000'))
+    assert.ok(desc.includes('Dikelola otomatis'))
     const reminders = body.reminders as { useDefault: boolean; overrides: { method: string; minutes: number }[] }
     assert.equal(reminders.useDefault, false)
     assert.deepEqual(reminders.overrides, [

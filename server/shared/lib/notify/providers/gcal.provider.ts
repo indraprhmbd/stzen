@@ -102,7 +102,31 @@ function toISODate(d: Date): string {
   return toJakartaDate(d)
 }
 
+const ID_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des']
+
+function formatRupiah(amount: string | number): string {
+  const n = Number.parseInt(String(amount), 10)
+  if (!Number.isFinite(n)) return `Rp${amount}`
+  return `Rp${n.toLocaleString('id-ID')}`
+}
+
+function durationLabel(value: number | null | undefined, unit: string | null | undefined): string {
+  if (value == null || !unit) return '-'
+  const noun = unit === 'day' ? 'hari' : unit === 'week' ? 'minggu' : unit === 'month' ? 'bulan' : unit
+  return `${value} ${noun}`
+}
+
+function shortJakartaDate(iso: string): string {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return '-'
+  const [y, m, day] = toJakartaDate(d).split('-')
+  return `${day} ${ID_MONTHS[Number.parseInt(m!, 10) - 1]} ${y}`
+}
+
 // Pure payload builder: unit-tested without network.
+// Google Calendar renders descriptions as plain text (no markdown), so
+// structure = stable "Label: value" lines. Kept short: GCal truncates
+// previews after ~2 lines in month view.
 export function buildEventBody(
   facts: OrderReminderFacts,
   expiry: Date,
@@ -112,16 +136,20 @@ export function buildEventBody(
   const next = new Date(expiry.getTime() + 24 * 3600 * 1000)
   const overrides = [{ method: 'popup', minutes: 12 * 60 }]
   if (remindDays > 0) overrides.unshift({ method: 'popup', minutes: remindDays * 24 * 60 })
+  const description = [
+    `Order: ${facts.publicId}`,
+    facts.variantName ? `SKU: ${facts.variantName}` : null,
+    `Durasi: ${durationLabel(facts.durationValue, facts.durationUnit)} (dibayar ${shortJakartaDate(String(facts.paidAt ?? ''))})`,
+    `Nominal: ${formatRupiah(facts.amount)}`,
+    facts.customerEmail ? `Pelanggan: ${facts.customerEmail}` : null,
+    '',
+    'Dikelola otomatis. Batalkan lewat menu Reminders di admin, jangan hapus manual.',
+  ]
+    .filter((l) => l !== null)
+    .join('\n')
   return {
     summary: `STZEN ${facts.productName} kadaluarsa`,
-    description: [
-      `Order ${facts.publicId}`,
-      facts.variantName ? `Varian ${facts.variantName}` : null,
-      `Nominal Rp${facts.amount}`,
-      facts.customerEmail ? `Pelanggan ${facts.customerEmail}` : null,
-    ]
-      .filter(Boolean)
-      .join('\n'),
+    description,
     start: { date: day, timeZone: 'Asia/Jakarta' },
     end: { date: toISODate(next), timeZone: 'Asia/Jakarta' },
     extendedProperties: { private: { stzenOrder: facts.publicId } },
