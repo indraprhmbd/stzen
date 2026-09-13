@@ -1,17 +1,19 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { authedApiRequest } from '../../lib/api'
 import { useAdminQuery } from '../../hooks/useAdminQuery'
 import DataTable from '../../components/admin/DataTable'
+import TablePagination from '../../components/admin/TablePagination'
 import StatusChip from '../../components/admin/StatusChip'
-import { Refresh, ArrowUpRight } from 'iconoir-react'
+import { useTableSort } from '../../hooks/useTableSort'
+import TableSortMenu from '../../components/admin/TableSortMenu'
+import { Refresh, ArrowUpRight, Search } from 'iconoir-react'
 
 // ─── Pengingat ──────────────────────────────────────────────────────────────
-// Dedicated page for the provider-agnostic reminder system. Read-only
-// preview of which live orders resolve to a future expiry, plus a manual
-// backfill (preview-then-execute, DangerZone pattern) for orders paid
-// before the feature shipped or while a channel was down.
-// Non-destructive (creates external events only): no password re-auth.
+// Stateful reminder table. Toggle mirrors Google truth: ON = expiry event
+// exists, OFF = deleted. Bulk bar schedules/cancels the page selection.
+// Mobile: STATUS/BAYAR columns hide below md (Column.className); sort moves
+// to TableSortMenu; filter row and bulk buttons stack full-width.
 
 interface PreviewRow {
   publicId: string
@@ -20,15 +22,20 @@ interface PreviewRow {
   paidAt: string | null
   expiry: string | null
   durationSource: 'snapshot' | 'varian' | null
+  reminderState: 'none' | 'scheduled'
   eligible: boolean
   reason: string
 }
 
-interface BackfillResult {
-  scanned: number
-  scheduled: number
-  skipped: number
-}
+const columns = [
+  { label: '', className: 'w-10' },
+  { label: 'ORDER' },
+  { label: 'PRODUK', sortKey: 'product' },
+  { label: 'STATUS', className: 'hidden md:table-cell' },
+  { label: 'BAYAR', sortKey: 'paidAt', className: 'hidden md:table-cell' },
+  { label: 'KADALUARSA', sortKey: 'expiry' },
+  { label: 'JADWAL', className: 'text-right' },
+]
 
 function formatIdDate(iso: string | null) {
   if (!iso) return '-'
@@ -38,44 +45,88 @@ function formatIdDate(iso: string | null) {
 }
 
 export default function Reminders() {
-  const [limit, setLimit] = useState('10')
-  const [backfillMsg, setBackfillMsg] = useState<string | null>(null)
-  const [backfillBusy, setBackfillBusy] = useState(false)
+  const [stateFilter, setStateFilter] = useState<'all' | 'none' | 'scheduled'>('all')
+  const [q, setQ] = useState('')
+  const [offset, setOffset] = useState(0)
+  const [limit, setLimit] = useState(10)
+  const [selected, setSelected] = useState<string[]>([])
+  const [busyId, setBusyId] = useState<string | null>(null)
+  const [bulkBusy, setBulkBusy] = useState(false)
+  const [msg, setMsg] = useState<string | null>(null)
+
+  const { sortKey, sortDir, toggleSort } = useTableSort([], { urlKey: 'sort', defaultKey: 'paidAt', defaultDir: 'desc' })
 
   const { data, loading, error, fetchedAt, refetch } = useAdminQuery(async () => {
+    const params: Record<string, string> = { limit: String(limit), offset: String(offset) }
+    if (stateFilter !== 'all') params.state = stateFilter
+    if (q) params.q = q
+    if (sortKey) { params.sort = sortKey; params.sortDir = sortDir ?? 'desc' }
     const res = await authedApiRequest((c) =>
-      c.api.v1.admin.reminders.preview.$get({ query: { limit: '50' } })
+      c.api.v1.admin.reminders.preview.$get({ query: params })
     )
     if (!res.ok) {
       const err = (await res.json().catch(() => ({}))) as { error?: string }
       throw new Error(err.error || `Gagal (${res.status})`)
     }
-    return (await res.json()) as { rows: PreviewRow[] }
-  }, [])
+    return (await res.json()) as { rows: PreviewRow[]; total: number }
+  }, [stateFilter, q, offset, limit, sortKey, sortDir])
   const rows = data?.rows ?? []
-  const eligible = rows.filter((r) => r.eligible)
+  const total = data?.total ?? 0
 
-  async function executeBackfill() {
-    if (backfillBusy || eligible.length === 0) return
-    setBackfillBusy(true)
-    setBackfillMsg(null)
+  useEffect(() => { setOffset(0); setSelected([]) }, [stateFilter, q, limit, sortKey, sortDir])
+
+  async function flipRow(row: PreviewRow, turnOn: boolean) {
+    if (busyId) return
+    setBusyId(row.publicId)
+    setMsg(null)
     try {
-      const n = Math.min(20, Math.max(1, parseInt(limit, 10) || 10))
+      const endpoint = (turnOn ? 'schedule' : 'cancel') as 'schedule' | 'cancel'
       const res = await authedApiRequest((c) =>
-        c.api.v1.admin.reminders.backfill.$post({ json: { limit: n } })
+        c.api.v1.admin.reminders[':id'][endpoint].$post({ param: { id: row.publicId } })
       )
       if (!res.ok) {
         const err = (await res.json().catch(() => ({}))) as { error?: string }
         throw new Error(err.error || `Gagal (${res.status})`)
       }
-      const out = (await res.json()) as BackfillResult
-      setBackfillMsg(`Dijadwalkan: ${out.scheduled} dari ${out.scanned} dipindai (${out.skipped} dilewati)`)
       await refetch()
     } catch (e: unknown) {
-      setBackfillMsg(e instanceof Error ? e.message : 'Gagal mengeksekusi')
+      setMsg(e instanceof Error ? e.message : 'Gagal mengubah jadwal')
     } finally {
-      setBackfillBusy(false)
+      setBusyId(null)
     }
+  }
+
+  async function bulk(action: 'schedule' | 'cancel') {
+    if (bulkBusy || selected.length === 0) return
+    setBulkBusy(true)
+    setMsg(null)
+    try {
+      const res = await authedApiRequest((c) =>
+        c.api.v1.admin.reminders.bulk.$post({ json: { action, ids: selected.slice(0, 20) } })
+      )
+      if (!res.ok) {
+        const err = (await res.json().catch(() => ({}))) as { error?: string }
+        throw new Error(err.error || `Gagal (${res.status})`)
+      }
+      const out = (await res.json()) as { scheduled: number; scanned: number; skipped: number }
+      setMsg(
+        action === 'schedule'
+          ? `Dijadwalkan: ${out.scheduled} dari ${out.scanned}`
+          : `Dibatalkan: ${out.scheduled} dari ${out.scanned}`,
+      )
+      setSelected([])
+      await refetch()
+    } catch (e: unknown) {
+      setMsg(e instanceof Error ? e.message : 'Gagal eksekusi massal')
+    } finally {
+      setBulkBusy(false)
+    }
+  }
+
+  const pageIds = rows.map((r) => r.publicId)
+  const allChecked = pageIds.length > 0 && pageIds.every((id) => selected.includes(id))
+  function togglePage() {
+    setSelected(allChecked ? selected.filter((id) => !pageIds.includes(id)) : [...new Set([...selected, ...pageIds])])
   }
 
   if (error) return <div className="ad-card-flat p-8 text-center"><div className="text-sm font-semibold text-red-600">Gagal memuat</div><div className="text-xs text-[#6e6e73] mt-1">{error}</div><button onClick={refetch} className="ad-btn ad-btn-dark mt-4">Coba lagi</button></div>
@@ -93,55 +144,76 @@ export default function Reminders() {
         </button>
       </div>
 
-      <div className="ad-card p-5 flex flex-col gap-3">
-        <div className="ad-card-title text-[#aeaeb2]">Isi ulang pengingat</div>
-        <p className="text-[13px] text-[#6e6e73] leading-relaxed">
-          Membuat event kalender untuk order lunas yang belum terjadwal (bayar sebelum fitur aktif atau saat kanal mati).
-          Pratinjau di bawah menunjukkan {eligible.length} order siap dijadwalkan.
-        </p>
-        <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
-          <label className="ad-label">
-            Batas per eksekusi (1-20)
-            <input
-              type="number"
-              min={1}
-              max={20}
-              value={limit}
-              onChange={(e) => setLimit(e.target.value)}
-              className="ad-input mt-1.5 ad-num sm:w-32"
-            />
-          </label>
-          <button
-            onClick={executeBackfill}
-            disabled={backfillBusy || eligible.length === 0}
-            className="ad-btn ad-btn-dark"
-          >
-            {backfillBusy ? 'Menjadwalkan...' : `Jadwalkan ${Math.min(eligible.length, Math.min(20, Math.max(1, parseInt(limit, 10) || 10)))} order`}
-          </button>
+      <div className="ad-card-flat p-3 flex flex-col gap-3">
+        <div role="tablist" aria-label="Filter status jadwal" className="ad-seg self-start max-w-full overflow-x-auto">
+          {(['all', 'none', 'scheduled'] as const).map((s) => (
+            <button
+              key={s}
+              role="tab"
+              aria-selected={stateFilter === s}
+              onClick={() => setStateFilter(s)}
+            >
+              {s === 'all' ? 'Semua' : s === 'none' ? 'Belum' : 'Terjadwal'}
+            </button>
+          ))}
         </div>
-        {backfillMsg && <p className="text-xs font-semibold text-[#1d1d1f]">{backfillMsg}</p>}
+        <div className="flex flex-col sm:flex-row gap-3">
+          <label className="ad-input flex items-center gap-2 flex-1">
+            <Search width={15} height={15} strokeWidth={1.5} className="shrink-0 text-[#aeaeb2]" />
+            <input placeholder="order id, produk..." value={q} onChange={(e) => setQ(e.target.value)} className="grow bg-transparent text-sm outline-none" />
+          </label>
+        </div>
+        <div className="flex justify-end">
+          <TableSortMenu columns={columns} sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+        </div>
       </div>
 
-      <div className="ad-card-flat overflow-hidden">
-        <div className="px-4 pt-4 pb-2 flex items-center justify-between">
-          <div className="ad-card-title text-[#aeaeb2]">Pratinjau order lunas ({rows.length})</div>
+      {selected.length > 0 && (
+        <div className="ad-card p-3 flex flex-col sm:flex-row gap-2 sm:items-center">
+          <span className="text-[13px] font-semibold text-[#1d1d1f] sm:mr-auto">{selected.length} dipilih</span>
+          <button onClick={() => bulk('schedule')} disabled={bulkBusy} className="ad-btn ad-btn-dark w-full sm:w-auto">
+            {bulkBusy ? 'Memproses...' : `Jadwalkan (${selected.length})`}
+          </button>
+          <button onClick={() => bulk('cancel')} disabled={bulkBusy} className="ad-btn w-full sm:w-auto">
+            Batalkan
+          </button>
+          <button onClick={() => setSelected([])} className="ad-btn w-full sm:w-auto">Bersihkan</button>
         </div>
-        {loading ? (
-          <p className="px-4 pb-4 text-[13px] text-[#aeaeb2]">Memuat...</p>
-        ) : rows.length === 0 ? (
-          <p className="px-4 pb-4 text-[13px] text-[#aeaeb2]">Belum ada order lunas.</p>
-        ) : (
-          <DataTable
-            columns={[{ label: 'ORDER' }, { label: 'PRODUK' }, { label: 'STATUS' }, { label: 'BAYAR' }, { label: 'KADALUARSA' }, { label: 'JADWAL' }]}
-            empty={false}
-            emptyText="Belum ada order lunas."
-          >
-            {rows.map((r) => (
+      )}
+
+      {msg && <p className="text-xs font-semibold text-[#1d1d1f]">{msg}</p>}
+
+      <div className="ad-card">
+        <DataTable
+          columns={columns}
+          empty={!loading && rows.length === 0}
+          emptyText="Belum ada order pada filter ini."
+          sortKey={sortKey}
+          sortDir={sortDir}
+          onSort={toggleSort}
+        >
+          {rows.map((r) => {
+            const on = r.reminderState === 'scheduled'
+            const rowBusy = busyId === r.publicId
+            return (
               <tr key={r.publicId}>
+                <td>
+                  <input
+                    type="checkbox"
+                    aria-label={`Pilih ${r.publicId}`}
+                    className="checkbox checkbox-sm"
+                    checked={selected.includes(r.publicId)}
+                    onChange={() => setSelected(
+                      selected.includes(r.publicId)
+                        ? selected.filter((id) => id !== r.publicId)
+                        : [...selected, r.publicId],
+                    )}
+                  />
+                </td>
                 <td>
                   <Link
                     to={`/admin/orders?status=semua&q=${encodeURIComponent(r.publicId)}`}
-                    title={`Buka ${r.publicId} di Pesanan`}
+                    title={`Buka ${r.publicId} di Pesanan (tab Semua)`}
                     className="inline-flex items-center gap-1 font-mono text-xs font-bold text-[#1d1d1f] hover:underline"
                   >
                     {r.publicId}
@@ -149,18 +221,37 @@ export default function Reminders() {
                   </Link>
                 </td>
                 <td className="text-[13px]">{r.productName}</td>
-                <td><StatusChip status={r.status}>{r.status}</StatusChip></td>
-                <td className="text-[13px]">{formatIdDate(r.paidAt)}</td>
-                <td className="text-[13px]" title={r.durationSource === 'varian' ? 'Durasi dari varian saat ini (order lama tanpa snapshot)' : undefined}>
+                <td className="hidden md:table-cell"><StatusChip status={r.status}>{r.status}</StatusChip></td>
+                <td className="hidden md:table-cell text-[13px]">{formatIdDate(r.paidAt)}</td>
+                <td
+                  className="text-[13px]"
+                  title={r.durationSource === 'varian' ? 'Durasi dari varian saat ini (order lama tanpa snapshot)' : undefined}
+                >
                   {formatIdDate(r.expiry)}{r.durationSource === 'varian' ? ' *' : ''}
                 </td>
-                <td title={r.reason}>
-                  <StatusChip tone={r.eligible ? 'blue' : 'zinc'}>{r.eligible ? 'Siap' : 'Lewati'}</StatusChip>
+                <td className="text-right">
+                  <input
+                    type="checkbox"
+                    role="switch"
+                    aria-label={`Pengingat ${r.publicId} ${on ? 'aktif' : 'mati'}`}
+                    title={r.eligible || on ? r.reason : r.reason}
+                    className="toggle toggle-sm"
+                    checked={on}
+                    disabled={rowBusy || (!r.eligible && !on)}
+                    onChange={() => flipRow(r, !on)}
+                  />
                 </td>
               </tr>
-            ))}
-          </DataTable>
-        )}
+            )
+          })}
+        </DataTable>
+        <TablePagination
+          total={total}
+          limit={limit}
+          offset={offset}
+          onLimitChange={setLimit}
+          onOffsetChange={setOffset}
+        />
       </div>
     </div>
   )

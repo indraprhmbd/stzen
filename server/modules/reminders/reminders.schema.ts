@@ -1,5 +1,6 @@
 import { z } from 'zod'
 
-export const BackfillSchema = z.object({
-  limit: z.number().int().min(1).max(20).default(10),
+export const BulkSchema = z.object({
+  ids: z.array(z.string().min(1).max(32)).min(1).max(20),
+  action: z.enum(['schedule', 'cancel']),
 })

@@ -2,6 +2,8 @@
 
 import type { NotifyResult } from '../../shared/lib/notify/notify.types'
 
+export type ReminderState = 'none' | 'scheduled'
+
 export interface PreviewRow {
   publicId: string
   productName: string
@@ -9,6 +11,7 @@ export interface PreviewRow {
   paidAt: string | null
   expiry: string | null
   durationSource: 'snapshot' | 'varian' | null
+  reminderState: ReminderState
   eligible: boolean
   reason: string
 }
