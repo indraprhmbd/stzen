@@ -337,7 +337,7 @@ export default function Overview() {
               </ResponsiveContainer>
               )}
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-col items-start gap-2">
               {byStatus.map((s) => (
                 <StatusChip key={s.status} status={s.status}>{s.status} {s.count}</StatusChip>
               ))}
