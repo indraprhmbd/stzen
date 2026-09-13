@@ -83,7 +83,9 @@ export default function VariantGroups({ groups, filteredCount, collapsedGroups, 
 
   return (
     <div className="ad-card">
-      <div className="ad-card-head" style={{ justifyContent: 'flex-end' }}>
+      {/* flex-wrap: Urutkan + Buka semua + Varian exceed 360px. Without
+          wrap the row overflows left and the sort menu opens off-screen. */}
+      <div className="ad-card-head flex-wrap" style={{ justifyContent: 'flex-end' }}>
         <TableSortMenu columns={variantColumns} sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
         <button onClick={toggleAll} className="ad-btn" title={allCollapsed ? 'Buka semua' : 'Tutup semua'}>
           {allCollapsed
