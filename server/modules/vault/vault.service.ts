@@ -111,20 +111,35 @@ export const vaultService = {
         )
       `)
       .eq('variant_id', variantId)
-      .order('created_at', { ascending: sortDir === 'asc' })
+
+    // Sort key honored in SQL before .range(): sorting the fetched page in
+    // memory would order rows within the page only. Unknown keys fall back
+    // to created_at. Direction stays driven by sortDir (default desc).
+    const VAULT_SORT_COLUMNS: Record<string, string> = { status: 'status', createdAt: 'created_at' }
+    query = query.order(VAULT_SORT_COLUMNS[sort ?? ''] ?? 'created_at', { ascending: sortDir === 'asc' })
+
+    // orderQuery matches order public_ids. vault_items has no order FK, so
+    // resolve matching vault_item_ids via orders first, then constrain by
+    // id - filtering the fetched page in memory would break paging.
+    if (orderQuery) {
+      const raw = orderQuery.replace(/[%_]/g, (c) => `\\${c}`)
+      const { data: orderRows, error: orderError } = await supabaseAdmin
+        .from(ORDERS)
+        .select('vault_item_id')
+        .ilike('public_id', `%${raw}%`)
+        .limit(200)
+      if (orderError) throw new Error(orderError.message)
+      const ids = [...new Set((orderRows || []).map((r: any) => r.vault_item_id).filter(Boolean))]
+      if (ids.length === 0) {
+        return { items: [], page, hasMore: false, total: 0, counts: {} }
+      }
+      query = query.in('id', ids)
+    }
 
     let rows: any[] = []
     const { data: rangeData, error: rangeError } = await query.range(offset, offset + limit)
     if (rangeError) throw new Error(rangeError.message)
     rows = rangeData || []
-
-    if (orderQuery) {
-      const q = orderQuery.toLowerCase()
-      rows = rows.filter((r: any) => {
-        const order = Array.isArray(r.orders) ? r.orders[0] : (r.orders || {})
-        return order?.public_id?.toLowerCase().includes(q)
-      })
-    }
 
     const key = await getKey()
     const hasMore = (rows?.length || 0) > limit

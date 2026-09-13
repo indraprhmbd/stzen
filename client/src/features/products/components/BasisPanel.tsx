@@ -3,7 +3,7 @@ import DataTable from '../../../components/admin/DataTable'
 import TableSortMenu from '../../../components/admin/TableSortMenu'
 import StatusChip from '../../../components/admin/StatusChip'
 import { SkeletonRows } from '../../../components/admin/TableSkeleton'
-import { useTableSort } from '../../../hooks/useTableSort'
+import { useTableSort, sortByKey } from '../../../hooks/useTableSort'
 import { Plus, EditPencil, Trash } from 'iconoir-react'
 import type { Product, Variant } from '../types'
 
@@ -103,7 +103,10 @@ export default function BasisPanel({ products, variants, onCreate, onEdit, onDel
     }
   }), [products, priceMap, variantStats])
 
-  const { sorted, sortKey, sortDir, toggleSort } = useTableSort(rows, { defaultKey: 'name', defaultDir: 'asc' })
+  // Sort key persisted in URL (?sort&sort_dir); rows are enriched locally
+  // (avg/median/stats), so the actual ordering stays in-memory via sortByKey.
+  const { sortKey, sortDir, toggleSort } = useTableSort([], { urlKey: 'sort_basis', defaultKey: 'name', defaultDir: 'asc' })
+  const sorted = useMemo(() => sortByKey(rows, sortKey, sortDir), [rows, sortKey, sortDir])
 
   return (
     <>

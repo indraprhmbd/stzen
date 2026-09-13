@@ -38,9 +38,10 @@ const variantColumns = [
 ]
 
 export default function VariantGroups({ groups, filteredCount, collapsedGroups, setCollapsedGroups, onCreateVariant, onEditVariant, onDeleteVariant, onOpenVault, loading }: Props) {
-  // Sort state shared across groups. Variant keys (name/sku/price/stockCount/
-  // isActive) sort items within each group; groups keep category order.
-  const { sortKey, sortDir, toggleSort } = useTableSort<VariantGroup>(groups, {})
+  // Sort state shared across groups and persisted in URL (?sort&sort_dir).
+  // Variant keys sort items within each group in memory (groups keep
+  // category order); the URL only carries the key so refresh/links keep it.
+  const { sortKey, sortDir, toggleSort } = useTableSort<VariantGroup>([], { urlKey: 'sort' })
   const itemKey = sortKey === 'priceNum' || sortKey === 'name' || sortKey === 'sku' || sortKey === 'stockCount' || sortKey === 'isActive' ? sortKey : null
 
   const sortedGroups = useMemo(() => groups.map((g) => {

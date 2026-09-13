@@ -7,6 +7,7 @@ import CopyCell from '../../../components/admin/CopyCell'
 import StatusChip from '../../../components/admin/StatusChip'
 import ConfirmDialog, { openConfirm } from '../../../components/admin/ConfirmDialog'
 import { useVaultManager } from '../hooks/useVaultManager'
+import { useTableSort } from '../../../hooks/useTableSort'
 import { authedApiRequest } from '../../../lib/api'
 import type { Variant } from '../types'
 import { Lock, LockSlash, Refresh, Copy, EditPencil, Trash, Prohibition, Redo, Search, NavArrowLeft, NavArrowRight, Plus, ArrowUpRightSquare } from 'iconoir-react'
@@ -23,7 +24,12 @@ const vaultColumns = [
 ]
 
 export default function VaultList({ variants, fetchedAt, initialVariantId, onVariantSelected, initialOrderId, autoImport = true }: Props) {
-  const v = useVaultManager(variants)
+  // Server-side sort persisted in URL (?sort&sort_dir), shared with the
+  // desktop headers and the mobile sort menu. Page resets on sort change
+  // (vault paging is local state, not URL).
+  const { sortKey, sortDir, toggleSort: toggleUrlSort } = useTableSort([], { urlKey: 'sort_vault', defaultKey: 'createdAt', defaultDir: 'desc' })
+  const v = useVaultManager(variants, sortKey ?? 'createdAt', sortDir ?? 'desc')
+  function toggleSort(key: string) { v.setPage(0); toggleUrlSort(key) }
   const navigate = useNavigate()
   const [editing, setEditing] = useState<{ id: string; text: string } | null>(null)
   const [pendingDelete, setPendingDelete] = useState<{ id: string } | null>(null)
@@ -166,7 +172,7 @@ export default function VaultList({ variants, fetchedAt, initialVariantId, onVar
               <span className="text-[11px] text-[#aeaeb2] ad-num">Terkunci dalam {Math.floor(v.relockIn / 60)}:{String(v.relockIn % 60).padStart(2, '0')}</span>
               <button onClick={v.relock} title="Kunci ulang" className="ad-btn !px-2"><Lock width={14} height={14} strokeWidth={1.5} /></button>
               <button onClick={() => v.fetchList()} title="Muat ulang" className="ad-btn !px-2"><Refresh width={14} height={14} strokeWidth={1.5} /></button>
-              {v.variantId && <TableSortMenu columns={vaultColumns} sortKey={v.sortKey} sortDir={v.sortDir} onSort={v.toggleSort} />}
+              {v.variantId && <TableSortMenu columns={vaultColumns} sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />}
             </div>
           </div>
 
@@ -177,9 +183,9 @@ export default function VaultList({ variants, fetchedAt, initialVariantId, onVar
                 columns={vaultColumns}
                 empty={items.length === 0}
                 emptyText="Tidak ada kredensial untuk varian ini."
-                sortKey={v.sortKey}
-                sortDir={v.sortDir}
-                onSort={v.toggleSort}
+                sortKey={sortKey}
+                sortDir={sortDir}
+                onSort={toggleSort}
               >
                 {items.map((item) => (
                   <tr key={item.id}>

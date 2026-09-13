@@ -373,6 +373,18 @@ export const ordersService = {
       query = query.or(orFilter)
     }
 
+    // Sort in SQL before .range(): sorting the fetched page in memory
+    // would order rows within the page only, breaking global order
+    // across pages. Unknown keys fall back to newest-first.
+    const SORT_COLUMNS: Record<string, string> = { amount: 'amount', status: 'status', createdAt: 'created_at' }
+    if (sort && SORT_COLUMNS[sort]) {
+      query = query.order(SORT_COLUMNS[sort], { ascending: sortDir === 'asc' })
+    } else if (oldest) {
+      query = query.order('created_at', { ascending: true })
+    } else {
+      query = query.order('created_at', { ascending: false })
+    }
+
     const [{ data: rows, error }, { count: total }] = await Promise.all([
       query.range(offset, offset + limit - 1),
       (async () => {
@@ -399,32 +411,9 @@ export const ordersService = {
 
     if (error) throw new Error(error.message)
 
-    let sorted = rows || []
-    if (sort === 'amount') {
-      sorted.sort((a: any, b: any) => {
-        const av = parseInt(a.amount || '0', 10)
-        const bv = parseInt(b.amount || '0', 10)
-        return sortDir === 'asc' ? av - bv : bv - av
-      })
-    } else if (sort === 'status') {
-      sorted.sort((a: any, b: any) => {
-        return sortDir === 'asc' ? a.status.localeCompare(b.status) : b.status.localeCompare(a.status)
-      })
-    } else if (sort === 'createdAt') {
-      sorted.sort((a: any, b: any) => {
-        const diff = new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-        return sortDir === 'asc' ? diff : -diff
-      })
-    } else if (oldest) {
-      sorted.sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
-    } else {
-      sorted.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-    }
-
-    // Rows already carry the DB page via .range() above (line ~377). Sort
-    // in memory only; slicing again here would drop every page past the
-    // first (page 2 fetches rows 10-19 then slice(10,20) yields nothing).
-    const paginated = sorted
+    // Rows arrive globally ordered from SQL (.order() above runs before
+    // .range(), so every page continues the same order).
+    const paginated = rows || []
 
     const statusCounts = await getStatusCounts()
     const counts: Record<string, number> = { ALL: total || 0 }
