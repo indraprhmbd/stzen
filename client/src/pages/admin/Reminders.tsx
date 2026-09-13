@@ -195,19 +195,28 @@ export default function Reminders() {
           {rows.map((r) => {
             const on = r.reminderState === 'scheduled'
             const rowBusy = busyId === r.publicId
+            const isSelected = selected.includes(r.publicId)
+            function toggleSelect() {
+              setSelected(isSelected ? selected.filter((id) => id !== r.publicId) : [...selected, r.publicId])
+            }
             return (
-              <tr key={r.publicId}>
+              <tr
+                key={r.publicId}
+                onClick={(e) => {
+                  // Row-body select: ignore clicks on interactive children
+                  // (order link, checkbox, toggle) so they keep their own actions.
+                  if ((e.target as HTMLElement).closest('a,input,button,label')) return
+                  toggleSelect()
+                }}
+                className={`cursor-pointer ${isSelected ? 'bg-[#f5f5f7]' : ''}`}
+              >
                 <td>
                   <input
                     type="checkbox"
                     aria-label={`Pilih ${r.publicId}`}
                     className="checkbox checkbox-sm"
-                    checked={selected.includes(r.publicId)}
-                    onChange={() => setSelected(
-                      selected.includes(r.publicId)
-                        ? selected.filter((id) => id !== r.publicId)
-                        : [...selected, r.publicId],
-                    )}
+                    checked={isSelected}
+                    onChange={toggleSelect}
                   />
                 </td>
                 <td>
@@ -230,16 +239,21 @@ export default function Reminders() {
                   {formatIdDate(r.expiry)}{r.durationSource === 'varian' ? ' *' : ''}
                 </td>
                 <td className="text-right">
-                  <input
-                    type="checkbox"
-                    role="switch"
-                    aria-label={`Pengingat ${r.publicId} ${on ? 'aktif' : 'mati'}`}
-                    title={r.eligible || on ? r.reason : r.reason}
-                    className="toggle toggle-sm"
-                    checked={on}
-                    disabled={rowBusy || (!r.eligible && !on)}
-                    onChange={() => flipRow(r, !on)}
-                  />
+                  <label className="inline-flex cursor-pointer items-center justify-end gap-2">
+                    <span className={`text-[11px] font-semibold ${on ? 'text-[#1d1d1f]' : 'text-[#aeaeb2]'}`}>
+                      {rowBusy ? '...' : on ? 'Aktif' : 'Mati'}
+                    </span>
+                    <input
+                      type="checkbox"
+                      role="switch"
+                      aria-label={`Pengingat ${r.publicId} ${on ? 'aktif' : 'mati'}`}
+                      title={r.reason}
+                      className="toggle toggle-sm"
+                      checked={on}
+                      disabled={rowBusy || (!r.eligible && !on)}
+                      onChange={() => flipRow(r, !on)}
+                    />
+                  </label>
                 </td>
               </tr>
             )
