@@ -57,6 +57,7 @@
         "PAYMENT_ACTIVE_PROVIDER": "sumopod",
     "PAYMENT_SUMOPOD_METHOD_CODE": "QRIS",
     "PAYMENT_DUITKU_BASE_URL": "",
+    "NOTIFY_PROVIDERS": "gcal",
     "NOTIFY_PROVIDERS": ""
       }
     }
