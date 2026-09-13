@@ -119,10 +119,13 @@ export const adminOrderRoutes = new Hono<AdminOrderEnv>()
     const user = c.get('user')
     const { customerEmail, variantId, paymentRef, amount } = c.req.valid('json')
 
+    // Auth stores emails lowercase; exact-match lookup would 404 on
+    // `User@Mail.com`, so normalize before comparing.
+    const normalizedEmail = customerEmail.trim().toLowerCase()
     const { data: profile, error } = await supabaseAdmin
       .from(PROFILES)
       .select('id')
-      .eq('email', customerEmail)
+      .eq('email', normalizedEmail)
       .limit(1)
 
     if (error) throw new Error(error.message)
