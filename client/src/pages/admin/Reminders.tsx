@@ -6,7 +6,7 @@ import DataTable from '../../components/admin/DataTable'
 import TablePagination from '../../components/admin/TablePagination'
 import StatusChip from '../../components/admin/StatusChip'
 import SlideToggle from '../../components/admin/SlideToggle'
-import ToastStack from '../../components/Toast'
+import AdminToastStack from '../../components/admin/AdminToast'
 import { useToast } from '../../hooks/useToast'
 import { useTableSort } from '../../hooks/useTableSort'
 import TableSortMenu from '../../components/admin/TableSortMenu'
@@ -184,7 +184,7 @@ export default function Reminders() {
         </div>
       )}
 
-      <ToastStack toasts={toasts} onDone={dismissToast} />
+      <AdminToastStack toasts={toasts} onDone={dismissToast} />
 
       <div className="ad-card">
         <DataTable
