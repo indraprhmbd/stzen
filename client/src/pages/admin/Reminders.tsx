@@ -6,6 +6,8 @@ import DataTable from '../../components/admin/DataTable'
 import TablePagination from '../../components/admin/TablePagination'
 import StatusChip from '../../components/admin/StatusChip'
 import SlideToggle from '../../components/admin/SlideToggle'
+import ToastStack from '../../components/Toast'
+import { useToast } from '../../hooks/useToast'
 import { useTableSort } from '../../hooks/useTableSort'
 import TableSortMenu from '../../components/admin/TableSortMenu'
 import { Refresh, ArrowUpRight, Search } from 'iconoir-react'
@@ -53,7 +55,7 @@ export default function Reminders() {
   const [selected, setSelected] = useState<string[]>([])
   const [busyId, setBusyId] = useState<string | null>(null)
   const [bulkBusy, setBulkBusy] = useState(false)
-  const [msg, setMsg] = useState<string | null>(null)
+  const { toasts, showToast, dismissToast } = useToast()
 
   const { sortKey, sortDir, toggleSort } = useTableSort([], { urlKey: 'sort', defaultKey: 'paidAt', defaultDir: 'desc' })
 
@@ -79,7 +81,6 @@ export default function Reminders() {
   async function flipRow(row: PreviewRow, turnOn: boolean) {
     if (busyId) return
     setBusyId(row.publicId)
-    setMsg(null)
     try {
       const endpoint = (turnOn ? 'schedule' : 'cancel') as 'schedule' | 'cancel'
       const res = await authedApiRequest((c) =>
@@ -89,9 +90,10 @@ export default function Reminders() {
         const err = (await res.json().catch(() => ({}))) as { error?: string }
         throw new Error(err.error || `Gagal (${res.status})`)
       }
+      showToast(turnOn ? `Pengingat ${row.publicId} aktif` : `Pengingat ${row.publicId} mati`, 'success')
       await refetch()
     } catch (e: unknown) {
-      setMsg(e instanceof Error ? e.message : 'Gagal mengubah jadwal')
+      showToast(e instanceof Error ? e.message : 'Gagal mengubah jadwal', 'error')
     } finally {
       setBusyId(null)
     }
@@ -100,7 +102,6 @@ export default function Reminders() {
   async function bulk(action: 'schedule' | 'cancel') {
     if (bulkBusy || selected.length === 0) return
     setBulkBusy(true)
-    setMsg(null)
     try {
       const res = await authedApiRequest((c) =>
         c.api.v1.admin.reminders.bulk.$post({ json: { action, ids: selected.slice(0, 20) } })
@@ -110,15 +111,16 @@ export default function Reminders() {
         throw new Error(err.error || `Gagal (${res.status})`)
       }
       const out = (await res.json()) as { scheduled: number; scanned: number; skipped: number }
-      setMsg(
+      showToast(
         action === 'schedule'
           ? `Dijadwalkan: ${out.scheduled} dari ${out.scanned}`
           : `Dibatalkan: ${out.scheduled} dari ${out.scanned}`,
+        out.skipped > 0 ? 'error' : 'success',
       )
       setSelected([])
       await refetch()
     } catch (e: unknown) {
-      setMsg(e instanceof Error ? e.message : 'Gagal eksekusi massal')
+      showToast(e instanceof Error ? e.message : 'Gagal eksekusi massal', 'error')
     } finally {
       setBulkBusy(false)
     }
@@ -182,7 +184,7 @@ export default function Reminders() {
         </div>
       )}
 
-      {msg && <p className="text-xs font-semibold text-[#1d1d1f]">{msg}</p>}
+      <ToastStack toasts={toasts} onDone={dismissToast} />
 
       <div className="ad-card">
         <DataTable
