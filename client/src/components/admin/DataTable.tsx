@@ -2,7 +2,7 @@ import { Children, Fragment, isValidElement, cloneElement, type ReactNode, type 
 import { NavArrowDown } from 'iconoir-react'
 import EmptyState from './EmptyState'
 
-interface Column {
+export interface Column {
   label: string
   className?: string
   /** Field name to sort by. Omit for non-sortable columns (e.g. AKSI). */

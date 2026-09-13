@@ -1,5 +1,6 @@
 import { Fragment, useMemo } from 'react'
 import DataTable from '../../../components/admin/DataTable'
+import TableSortMenu from '../../../components/admin/TableSortMenu'
 import CopyCell from '../../../components/admin/CopyCell'
 import StatusChip, { type ChipTone } from '../../../components/admin/StatusChip'
 import { SkeletonRows } from '../../../components/admin/TableSkeleton'
@@ -25,6 +26,16 @@ interface Props {
   onOpenVault?: (v: Variant) => void
   loading?: boolean
 }
+
+// Shared by DataTable headers (desktop) and TableSortMenu (mobile <sm).
+const variantColumns = [
+  { label: 'VARIAN', sortKey: 'name' },
+  { label: 'SKU', sortKey: 'sku' },
+  { label: 'HARGA', sortKey: 'priceNum' },
+  { label: 'STOK', sortKey: 'stockCount' },
+  { label: 'STATUS', sortKey: 'isActive' },
+  { label: 'AKSI', className: 'text-right' },
+]
 
 export default function VariantGroups({ groups, filteredCount, collapsedGroups, setCollapsedGroups, onCreateVariant, onEditVariant, onDeleteVariant, onOpenVault, loading }: Props) {
   // Sort state shared across groups. Variant keys (name/sku/price/stockCount/
@@ -73,6 +84,7 @@ export default function VariantGroups({ groups, filteredCount, collapsedGroups, 
   return (
     <div className="ad-card">
       <div className="ad-card-head" style={{ justifyContent: 'flex-end' }}>
+        <TableSortMenu columns={variantColumns} sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
         <button onClick={toggleAll} className="ad-btn" title={allCollapsed ? 'Buka semua' : 'Tutup semua'}>
           {allCollapsed
             ? <Expand width={15} height={15} strokeWidth={1.5} />
@@ -82,14 +94,7 @@ export default function VariantGroups({ groups, filteredCount, collapsedGroups, 
         <button onClick={() => onCreateVariant()} className="ad-btn ad-btn-dark"><Plus width={15} height={15} strokeWidth={1.5} />Varian</button>
       </div>
       <DataTable
-        columns={[
-          { label: 'VARIAN', sortKey: 'name' },
-          { label: 'SKU', sortKey: 'sku' },
-          { label: 'HARGA', sortKey: 'priceNum' },
-          { label: 'STOK', sortKey: 'stockCount' },
-          { label: 'STATUS', sortKey: 'isActive' },
-          { label: 'AKSI', className: 'text-right' },
-        ]}
+        columns={variantColumns}
         empty={!loading && filteredCount === 0}
         emptyText="Belum ada varian."
         sortKey={sortKey}

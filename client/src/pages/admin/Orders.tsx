@@ -12,6 +12,20 @@ import { printReceipt as printOrderReceipt } from '../../lib/receipt'
 import { Refresh, Plus, Search, Key, EditPencil, Trash, Notes } from 'iconoir-react'
 import { SkeletonRows } from '../../components/admin/TableSkeleton'
 import { useTableSort } from '../../hooks/useTableSort'
+import TableSortMenu from '../../components/admin/TableSortMenu'
+
+// Shared by DataTable headers (desktop) and TableSortMenu (mobile <sm).
+const orderColumns = [
+  { label: 'ID' },
+  { label: 'TANGGAL', sortKey: 'createdAt' },
+  { label: 'UMUR' },
+  { label: 'PRODUK' },
+  { label: 'ALUR' },
+  { label: 'PELANGGAN' },
+  { label: 'JUMLAH', sortKey: 'amount' },
+  { label: 'STATUS', sortKey: 'status' },
+  { label: 'AKSI', className: 'text-right' },
+]
 
 interface AdminOrder {
   id: string
@@ -311,22 +325,15 @@ export default function Orders() {
             if (v && tab !== 'semua') setSearchParams({ status: 'semua' })
           }} className="grow bg-transparent text-sm outline-none" />
         </label>
+        <div className="flex justify-end">
+          <TableSortMenu columns={orderColumns} sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+        </div>
       </div>
       {actionErr && <div className="bg-[#fdecec] rounded-[10px] px-4 py-2.5 text-xs font-semibold text-[#b91c1c]">{actionErr}</div>}
 
       <div className="ad-card">
         <DataTable
-          columns={[
-            { label: 'ID' },
-            { label: 'TANGGAL', sortKey: 'createdAt' },
-            { label: 'UMUR' },
-            { label: 'PRODUK' },
-            { label: 'ALUR' },
-            { label: 'PELANGGAN' },
-            { label: 'JUMLAH', sortKey: 'amount' },
-            { label: 'STATUS', sortKey: 'status' },
-            { label: 'AKSI', className: 'text-right' },
-          ]}
+          columns={orderColumns}
           empty={!loading && orders.length === 0}
           sortKey={sortKey}
           sortDir={sortDir}

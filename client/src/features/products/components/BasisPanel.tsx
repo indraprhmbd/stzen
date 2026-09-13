@@ -1,5 +1,6 @@
 ﻿import { useMemo } from 'react'
 import DataTable from '../../../components/admin/DataTable'
+import TableSortMenu from '../../../components/admin/TableSortMenu'
 import StatusChip from '../../../components/admin/StatusChip'
 import { SkeletonRows } from '../../../components/admin/TableSkeleton'
 import { useTableSort } from '../../../hooks/useTableSort'
@@ -14,6 +15,20 @@ interface Props {
   onDelete: (p: Product) => void
   loading?: boolean
 }
+
+// Shared by DataTable headers (desktop) and TableSortMenu (mobile <sm).
+const basisColumns = [
+  { label: 'INDUK', sortKey: 'name' },
+  { label: 'KATEGORI', sortKey: 'category' },
+  { label: 'STOK' },
+  { label: 'DURASI' },
+  { label: 'AVG', sortKey: 'avg' },
+  { label: 'MEDIAN', sortKey: 'median' },
+  { label: 'MODUS', sortKey: 'mode' },
+  { label: 'RENTANG' },
+  { label: 'STATUS', sortKey: 'isActive' },
+  { label: 'AKSI', className: 'text-right' },
+]
 
 export default function BasisPanel({ products, variants, onCreate, onEdit, onDelete, loading }: Props) {
   const priceMap = useMemo(() => {
@@ -101,22 +116,12 @@ export default function BasisPanel({ products, variants, onCreate, onEdit, onDel
         <div className="text-2xl font-semibold leading-none ad-num">{loading ? '-' : new Set(products.map((p) => p.category)).size}</div>
         <div className="text-[11px] font-semibold tracking-wider uppercase text-[#6e6e73] mt-1">Kategori</div>
       </div>
+      <TableSortMenu columns={basisColumns} sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
       <button onClick={onCreate} className="ad-btn ml-auto"><Plus width={15} height={15} strokeWidth={1.5} />Induk</button>
     </div>
     <div className="ad-card">
       <DataTable
-        columns={[
-          { label: 'INDUK', sortKey: 'name' },
-          { label: 'KATEGORI', sortKey: 'category' },
-          { label: 'STOK' },
-          { label: 'DURASI' },
-          { label: 'AVG', sortKey: 'avg' },
-          { label: 'MEDIAN', sortKey: 'median' },
-          { label: 'MODUS', sortKey: 'mode' },
-          { label: 'RENTANG' },
-          { label: 'STATUS', sortKey: 'isActive' },
-          { label: 'AKSI', className: 'text-right' },
-        ]}
+        columns={basisColumns}
         empty={!loading && products.length === 0}
         emptyText="Belum ada induk."
         sortKey={sortKey}

@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import SearchableSelect from '../../../components/admin/SearchableSelect'
 import DataTable from '../../../components/admin/DataTable'
+import TableSortMenu from '../../../components/admin/TableSortMenu'
 import CopyCell from '../../../components/admin/CopyCell'
 import StatusChip from '../../../components/admin/StatusChip'
 import ConfirmDialog, { openConfirm } from '../../../components/admin/ConfirmDialog'
@@ -11,6 +12,15 @@ import type { Variant } from '../types'
 import { Lock, LockSlash, Refresh, Copy, EditPencil, Trash, Prohibition, Redo, Search, NavArrowLeft, NavArrowRight, Plus, ArrowUpRightSquare } from 'iconoir-react'
 
 interface Props { variants: Variant[]; fetchedAt: number | null; initialVariantId?: string | null; onVariantSelected?: () => void; /** Prefill order search (orders deep-link: jump straight to that order's credential). */ initialOrderId?: string | null; /** Open import dialog on preselect (create flow). Deep-links only preselect. */ autoImport?: boolean }
+
+// Shared by DataTable headers (desktop) and TableSortMenu (mobile <sm).
+const vaultColumns = [
+  { label: 'KREDENSIAL' },
+  { label: 'STATUS', sortKey: 'status' },
+  { label: 'ORDER' },
+  { label: 'TANGGAL', sortKey: 'createdAt' },
+  { label: '', className: 'text-right' },
+]
 
 export default function VaultList({ variants, fetchedAt, initialVariantId, onVariantSelected, initialOrderId, autoImport = true }: Props) {
   const v = useVaultManager(variants)
@@ -156,6 +166,7 @@ export default function VaultList({ variants, fetchedAt, initialVariantId, onVar
               <span className="text-[11px] text-[#aeaeb2] ad-num">Terkunci dalam {Math.floor(v.relockIn / 60)}:{String(v.relockIn % 60).padStart(2, '0')}</span>
               <button onClick={v.relock} title="Kunci ulang" className="ad-btn !px-2"><Lock width={14} height={14} strokeWidth={1.5} /></button>
               <button onClick={() => v.fetchList()} title="Muat ulang" className="ad-btn !px-2"><Refresh width={14} height={14} strokeWidth={1.5} /></button>
+              {v.variantId && <TableSortMenu columns={vaultColumns} sortKey={v.sortKey} sortDir={v.sortDir} onSort={v.toggleSort} />}
             </div>
           </div>
 
@@ -163,7 +174,7 @@ export default function VaultList({ variants, fetchedAt, initialVariantId, onVar
           {v.variantId && !v.error && (
             <div className="ad-card">
               <DataTable
-                columns={[{ label: 'KREDENSIAL' }, { label: 'STATUS', sortKey: 'status' }, { label: 'ORDER' }, { label: 'TANGGAL', sortKey: 'createdAt' }, { label: '', className: 'text-right' }]}
+                columns={vaultColumns}
                 empty={items.length === 0}
                 emptyText="Tidak ada kredensial untuk varian ini."
                 sortKey={v.sortKey}

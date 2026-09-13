@@ -7,6 +7,15 @@ import StatusChip from '../../components/admin/StatusChip'
 import { Refresh, Search } from 'iconoir-react'
 import { SkeletonRows } from '../../components/admin/TableSkeleton'
 import { useTableSort } from '../../hooks/useTableSort'
+import TableSortMenu from '../../components/admin/TableSortMenu'
+
+// Shared by DataTable headers (desktop) and TableSortMenu (mobile <sm).
+const logColumns = [
+  { label: 'WAKTU', sortKey: 'createdAt' },
+  { label: 'AKTOR' },
+  { label: 'AKSI', sortKey: 'action' },
+  { label: 'TEKS' },
+]
 
 interface Log {
   id: string
@@ -103,11 +112,14 @@ export default function History() {
           <input placeholder="public id, teks, aktor..." value={q} onChange={(e) => setQ(e.target.value)} className="grow bg-transparent text-sm outline-none" />
         </label>
         </div>
+        <div className="flex justify-end">
+          <TableSortMenu columns={logColumns} sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+        </div>
       </div>
 
       <div className="ad-card">
         <DataTable
-          columns={[{ label: 'WAKTU', sortKey: 'createdAt' }, { label: 'AKTOR' }, { label: 'AKSI', sortKey: 'action' }, { label: 'TEKS' }]}
+          columns={logColumns}
           empty={!loading && logs.length === 0}
           emptyText="Belum ada riwayat."
           sortKey={sortKey}
