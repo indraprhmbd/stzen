@@ -1,9 +1,10 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { authedApiRequest } from '../../lib/api'
 import { useAdminQuery } from '../../hooks/useAdminQuery'
 import DataTable from '../../components/admin/DataTable'
 import StatusChip from '../../components/admin/StatusChip'
-import { Refresh } from 'iconoir-react'
+import { Refresh, ArrowUpRight } from 'iconoir-react'
 
 // ─── Pengingat ──────────────────────────────────────────────────────────────
 // Dedicated page for the provider-agnostic reminder system. Read-only
@@ -18,6 +19,7 @@ interface PreviewRow {
   status: string
   paidAt: string | null
   expiry: string | null
+  durationSource: 'snapshot' | 'varian' | null
   eligible: boolean
   reason: string
 }
@@ -136,11 +138,22 @@ export default function Reminders() {
           >
             {rows.map((r) => (
               <tr key={r.publicId}>
-                <td className="font-mono text-xs font-bold">{r.publicId}</td>
+                <td>
+                  <Link
+                    to={`/admin/orders?status=semua&q=${encodeURIComponent(r.publicId)}`}
+                    title={`Buka ${r.publicId} di Pesanan`}
+                    className="inline-flex items-center gap-1 font-mono text-xs font-bold text-[#1d1d1f] hover:underline"
+                  >
+                    {r.publicId}
+                    <ArrowUpRight width={13} height={13} strokeWidth={2} className="text-[#aeaeb2]" />
+                  </Link>
+                </td>
                 <td className="text-[13px]">{r.productName}</td>
                 <td><StatusChip status={r.status}>{r.status}</StatusChip></td>
                 <td className="text-[13px]">{formatIdDate(r.paidAt)}</td>
-                <td className="text-[13px]">{formatIdDate(r.expiry)}</td>
+                <td className="text-[13px]" title={r.durationSource === 'varian' ? 'Durasi dari varian saat ini (order lama tanpa snapshot)' : undefined}>
+                  {formatIdDate(r.expiry)}{r.durationSource === 'varian' ? ' *' : ''}
+                </td>
                 <td title={r.reason}>
                   <StatusChip tone={r.eligible ? 'blue' : 'zinc'}>{r.eligible ? 'Siap' : 'Lewati'}</StatusChip>
                 </td>

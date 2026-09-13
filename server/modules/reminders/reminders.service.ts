@@ -14,6 +14,7 @@ import { service as ordersService } from '../orders'
 import type { BackfillResult, PreviewRow } from './reminders.types'
 
 const ORDERS = 'orders'
+const PRODUCT_VARIANTS = 'product_variants'
 
 function toFacts(order: {
   id: string
@@ -33,6 +34,32 @@ function toFacts(order: {
     durationValue: order.durationValue,
     durationUnit: order.durationUnit,
   }
+}
+
+// Duration resolution: order snapshot first, live variant as fallback.
+// Snapshots predate older orders (null even for subscription products),
+// so without fallback those orders could never get an expiry. Explicit
+// null only when neither source has a duration (lifetime products).
+async function resolveDuration(
+  snapshotValue: number | null,
+  snapshotUnit: string | null,
+  variantId: string | null,
+): Promise<{ value: number | null; unit: string | null; source: 'snapshot' | 'varian' | null }> {
+  if (snapshotValue != null && snapshotUnit != null) {
+    return { value: snapshotValue, unit: snapshotUnit, source: 'snapshot' }
+  }
+  if (variantId) {
+    const { data: v } = await supabaseAdmin
+      .from(PRODUCT_VARIANTS)
+      .select('duration_months, duration_unit')
+      .eq('id', variantId)
+      .limit(1)
+    const live = v?.[0] as any
+    if (live?.duration_months != null && live?.duration_unit != null) {
+      return { value: live.duration_months, unit: live.duration_unit, source: 'varian' }
+    }
+  }
+  return { value: null, unit: null, source: null }
 }
 
 export const remindersService = {
@@ -59,32 +86,38 @@ export const remindersService = {
     const { data: rows, error } = await supabaseAdmin
       .from(ORDERS)
       .select(
-        'public_id, status, paid_at, amount, duration_snapshot, duration_snapshot_unit, variant_name_snapshot, base_name_snapshot',
+        'public_id, status, paid_at, amount, variant_id, duration_snapshot, duration_snapshot_unit, variant_name_snapshot, base_name_snapshot',
       )
       .in('status', ['PAID', 'DELIVERED'])
       .order('paid_at', { ascending: false })
       .limit(limit)
 
     if (error) throw new Error(error.message)
-    return (rows ?? []).map((r: any) => {
-      const expiry = computeExpiry(r.paid_at, r.duration_snapshot, r.duration_snapshot_unit)
+    const out: PreviewRow[] = []
+    for (const r of (rows ?? []) as any[]) {
+      const dur = await resolveDuration(r.duration_snapshot, r.duration_snapshot_unit, r.variant_id)
+      const expiry = computeExpiry(r.paid_at, dur.value, dur.unit)
       const eligible = expiry != null && expiry.getTime() > Date.now()
-      return {
+      out.push({
         publicId: r.public_id,
         productName: r.variant_name_snapshot ?? r.base_name_snapshot ?? 'Produk',
         status: r.status,
         paidAt: r.paid_at,
         expiry: expiry ? expiry.toISOString() : null,
+        durationSource: dur.source,
         eligible,
         reason: !r.paid_at
           ? 'tanpa paid_at'
-          : r.duration_snapshot == null
-            ? 'tanpa durasi'
+          : dur.source == null
+            ? 'tanpa durasi (snapshot + varian)'
             : expiry && expiry.getTime() <= Date.now()
               ? 'sudah kadaluarsa'
-              : 'siap dijadwalkan',
-      }
-    })
+              : dur.source === 'varian'
+                ? 'siap dijadwalkan (durasi dari varian saat ini)'
+                : 'siap dijadwalkan',
+      })
+    }
+    return out
   },
 
   // Manual catch-up for orders paid before the feature shipped (or while a
@@ -96,7 +129,25 @@ export const remindersService = {
     const results: BackfillResult['results'] = []
     for (const row of due) {
       const order = await ordersService.getById(row.publicId)
-      const res = await dispatchReminder('order.paid', toFacts(order))
+      // Preview may have resolved duration from the live variant while the
+      // snapshot is null: carry the same fallback so schedule sees it.
+      let value = order.durationValue
+      let unit = order.durationUnit
+      if ((value == null || unit == null) && row.durationSource === 'varian') {
+        const { data } = await supabaseAdmin
+          .from(ORDERS)
+          .select('variant_id')
+          .eq('public_id', row.publicId)
+          .limit(1)
+        const vid = (data?.[0] as any)?.variant_id ?? null
+        const dur = await resolveDuration(null, null, vid)
+        value = dur.value
+        unit = dur.unit
+      }
+      const res = await dispatchReminder(
+        'order.paid',
+        toFacts({ ...order, durationValue: value, durationUnit: unit }),
+      )
       results.push(...res)
       if (res.some((x) => x.ok)) scheduled += 1
     }

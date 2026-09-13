@@ -8,6 +8,7 @@ export interface PreviewRow {
   status: string
   paidAt: string | null
   expiry: string | null
+  durationSource: 'snapshot' | 'varian' | null
   eligible: boolean
   reason: string
 }
