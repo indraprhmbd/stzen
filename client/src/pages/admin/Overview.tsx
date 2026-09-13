@@ -437,8 +437,12 @@ export default function Overview() {
                 {lowStock.map((p) => (
                   <tr key={p.id}>
                     <td>
-                      <div className="text-[13px] font-medium">{p.name}</div>
-                      <div className="text-[11px] text-[#6e6e73]">{p.product_name} · <CopyCell value={p.sku} className="ad-num" /></div>
+                      {/* Single wrapper: mobile card layout is flex-row, so the
+                          two lines need one parent to stack + right-align. */}
+                      <div className="max-sm:text-right">
+                        <div className="text-[13px] font-medium">{p.name}</div>
+                        <div className="text-[11px] text-[#6e6e73]">{p.product_name} · <CopyCell value={p.sku} className="ad-num" /></div>
+                      </div>
                     </td>
                     <td><StatusChip tone={p.stock_count === 0 ? 'red' : 'amber'}>{p.stock_count}</StatusChip></td>
                     <td className="text-right">
