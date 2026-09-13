@@ -123,6 +123,8 @@ describe('gcal buildEventBody', () => {
     assert.ok(desc.includes('Durasi: 1 bulan (dibayar 01 Sep 2026)'))
     assert.ok(desc.includes('Nominal: Rp50.000'))
     assert.ok(desc.includes('Dikelola otomatis'))
+    const withLink = buildEventBody(facts, new Date('2026-10-01T00:00:00.000Z'), 3, 'https://dev.stzen.web.id')
+    assert.ok((withLink.description as string).includes('Tautan admin: https://dev.stzen.web.id/admin/orders?status=semua&q=STZ-1'))
     const reminders = body.reminders as { useDefault: boolean; overrides: { method: string; minutes: number }[] }
     assert.equal(reminders.useDefault, false)
     assert.deepEqual(reminders.overrides, [

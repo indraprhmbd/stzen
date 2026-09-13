@@ -138,24 +138,25 @@ export function buildEventBody(
   const next = new Date(expiry.getTime() + 24 * 3600 * 1000)
   const overrides = [{ method: 'popup', minutes: 12 * 60 }]
   if (remindDays > 0) overrides.unshift({ method: 'popup', minutes: remindDays * 24 * 60 })
+  const adminUrl =
+    adminBaseUrl && adminBaseUrl.startsWith('http')
+      ? `${adminBaseUrl.replace(/\/$/, '')}/admin/orders?status=semua&q=${encodeURIComponent(facts.publicId)}`
+      : null
   const description = [
     `Order: ${facts.publicId}`,
     facts.variantName ? `SKU: ${facts.variantName}` : null,
     `Durasi: ${durationLabel(facts.durationValue, facts.durationUnit)} (dibayar ${shortJakartaDate(String(facts.paidAt ?? ''))})`,
     `Nominal: ${formatRupiah(facts.amount)}`,
     facts.customerEmail ? `Pelanggan: ${facts.customerEmail}` : null,
+    adminUrl ? `Tautan admin: ${adminUrl}` : null,
     '',
     'Dikelola otomatis. Batalkan lewat menu Reminders di admin, jangan hapus manual.',
   ]
     .filter((l) => l !== null)
     .join('\n')
-  const source =
-    adminBaseUrl && adminBaseUrl.startsWith('http')
-      ? {
-          title: 'STZEN Admin',
-          url: `${adminBaseUrl.replace(/\/$/, '')}/admin/orders?status=semua&q=${encodeURIComponent(facts.publicId)}`,
-        }
-      : undefined
+  const source = adminUrl
+    ? { title: 'STZEN Admin', url: adminUrl }
+    : undefined
   return {
     summary: `STZEN ${facts.productName} kadaluarsa`,
     description,
