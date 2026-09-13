@@ -127,7 +127,13 @@ export default function Orders() {
     setQ('')
     setOffset(0)
     setActionErr(null)
-    setSearchParams(key === 'butuh-tindakan' ? {} : { status: key })
+    // Merge: keep sort/page params so an active sort persists across tabs.
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev)
+      if (key === 'butuh-tindakan') next.delete('status')
+      else next.set('status', key)
+      return next
+    })
   }
 
   function tabCount(key: TabKey): number {
@@ -322,7 +328,12 @@ export default function Orders() {
             const v = e.target.value
             setQ(v)
             // Typing searches the whole dataset: jump to Semua tab.
-            if (v && tab !== 'semua') setSearchParams({ status: 'semua' })
+            // Merge: keep sort params so an active sort persists while searching.
+            if (v && tab !== 'semua') setSearchParams((prev) => {
+              const next = new URLSearchParams(prev)
+              next.set('status', 'semua')
+              return next
+            })
           }} className="grow bg-transparent text-sm outline-none" />
         </label>
         <div className="flex justify-end">
