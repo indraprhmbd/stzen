@@ -5,6 +5,7 @@ import { useAdminQuery } from '../../hooks/useAdminQuery'
 import DataTable from '../../components/admin/DataTable'
 import TablePagination from '../../components/admin/TablePagination'
 import StatusChip from '../../components/admin/StatusChip'
+import SlideToggle from '../../components/admin/SlideToggle'
 import { useTableSort } from '../../hooks/useTableSort'
 import TableSortMenu from '../../components/admin/TableSortMenu'
 import { Refresh, ArrowUpRight, Search } from 'iconoir-react'
@@ -239,21 +240,15 @@ export default function Reminders() {
                   {formatIdDate(r.expiry)}{r.durationSource === 'varian' ? ' *' : ''}
                 </td>
                 <td className="text-right">
-                  <label className="inline-flex cursor-pointer items-center justify-end gap-2">
-                    <span className={`text-[11px] font-semibold ${on ? 'text-[#1d1d1f]' : 'text-[#aeaeb2]'}`}>
-                      {rowBusy ? '...' : on ? 'Aktif' : 'Mati'}
-                    </span>
-                    <input
-                      type="checkbox"
-                      role="switch"
-                      aria-label={`Pengingat ${r.publicId} ${on ? 'aktif' : 'mati'}`}
-                      title={r.reason}
-                      className="toggle toggle-sm"
+                  <span title={r.reason} className="inline-flex justify-end">
+                    <SlideToggle
                       checked={on}
-                      disabled={rowBusy || (!r.eligible && !on)}
-                      onChange={() => flipRow(r, !on)}
+                      busy={rowBusy}
+                      disabled={!r.eligible && !on}
+                      label={`Pengingat ${r.publicId} ${on ? 'aktif' : 'mati'}. ${r.reason}`}
+                      onChange={(next) => flipRow(r, next)}
                     />
-                  </label>
+                  </span>
                 </td>
               </tr>
             )
