@@ -1,17 +1,16 @@
 import { Hono } from 'hono'
 import { supabaseAdmin } from '../../shared/db'
 import { type AuthEnv } from '../../shared/middleware/auth'
-import { getIntSetting } from '../../shared/lib/settings'
 
 type OverviewEnv = AuthEnv
 
 // ─── Admin Overview (composite) ─────────────────────────────────────────────
 // One round trip for the Overview page: stats tiles + analytics charts +
-// recent actionable orders + low-stock rows. Previously 4 parallel client
-// calls that scanned the same orders window twice (stats revenue +
-// analytics dailySales) and counted every variant (low-stock N+1).
-// Shape mirrors the four legacy payloads so the client render path is
-// unchanged; legacy endpoints stay for direct links/deep refreshes.
+// recent actionable orders. Low-stock lives on its own paged endpoint
+// (stats/low-stock, full under-threshold set, 5 per page) so the widget can
+// page/sort SISA without refetching tiles and charts.
+// Shape mirrors the legacy payloads so the client render path is unchanged;
+// legacy endpoints stay for direct links/deep refreshes.
 
 function rangeCutoff(range: string): { days: number; cutoff: string } {
   const days = range === '1d' ? 1 : range === '7d' ? 7 : range === '90d' ? 90 : 30
@@ -23,11 +22,6 @@ export const adminOverviewRoutes = new Hono<OverviewEnv>()
   .get('/', async (c) => {
     const range = c.req.query('range') || '30d'
     const { days, cutoff } = rangeCutoff(range)
-    const thresholdParam = c.req.query('threshold')
-    const threshold = thresholdParam
-      ? parseInt(thresholdParam, 10)
-      : await getIntSetting('ops.low_threshold', 5, 1, 100).catch(() => 5)
-    const lowLimit = Math.min(parseInt(c.req.query('limit') || '5', 10), 50)
 
     try {
       const [
@@ -40,8 +34,6 @@ export const adminOverviewRoutes = new Hono<OverviewEnv>()
         byCategoryRes,
         topProductsRes,
         { data: recentOrders, error: recentError },
-        { data: lowRows, error: lowRowsError },
-        { data: lowSummary, error: lowSummaryError },
       ] = await Promise.all([
         supabaseAdmin.from('products').select('*', { count: 'exact', head: true }),
         supabaseAdmin.from('vault_items').select('*', { count: 'estimated', head: true }).eq('status', 'AVAILABLE'),
@@ -57,13 +49,9 @@ export const adminOverviewRoutes = new Hono<OverviewEnv>()
           .in('status', ['PENDING', 'PAID'])
           .order('created_at', { ascending: true })
           .limit(5),
-        supabaseAdmin.rpc('low_stock_variants', { p_threshold: threshold, p_limit: lowLimit }),
-        supabaseAdmin.rpc('low_stock_summary', { p_threshold: threshold }),
       ])
 
       if (recentError) throw new Error(recentError.message)
-      if (lowRowsError) throw new Error(lowRowsError.message)
-      if (lowSummaryError) throw new Error(lowSummaryError.message)
 
       const revenue = (paidOrders || []).reduce((sum, order) => sum + parseInt((order as any).amount || '0', 10), 0)
 
@@ -105,8 +93,6 @@ export const adminOverviewRoutes = new Hono<OverviewEnv>()
         topProductsMap.set(name, (topProductsMap.get(name) || 0) + 1)
       }
 
-      const summary = Array.isArray(lowSummary) ? lowSummary[0] : lowSummary
-
       return c.json({
         stats: {
           totalProducts: totalProducts || 0,
@@ -137,17 +123,6 @@ export const adminOverviewRoutes = new Hono<OverviewEnv>()
             createdAt: r.created_at,
           }
         }),
-        lowStock: {
-          rows: (lowRows || []).map((r: any) => ({
-            id: r.id,
-            name: r.name,
-            sku: r.sku,
-            product_name: r.product_name,
-            stock_count: Number(r.stock_count ?? 0),
-          })),
-          outOfStock: Number(summary?.out_of_stock ?? 0),
-          runningLow: Number(summary?.running_low ?? 0),
-        },
       })
     } catch (e) {
       console.error('overview composite failed', e)
@@ -155,7 +130,6 @@ export const adminOverviewRoutes = new Hono<OverviewEnv>()
         stats: { totalProducts: 0, totalStock: 0, pendingOrders: 0, revenue: '0' },
         analytics: { dailySales: [], byStatus: [], byCategory: [], topProducts: [] },
         orders: [],
-        lowStock: { rows: [], outOfStock: 0, runningLow: 0 },
       })
     }
   })

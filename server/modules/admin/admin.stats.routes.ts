@@ -38,17 +38,28 @@ export const adminStatsRoutes = new Hono<AdminStatsEnv>()
   })
 
   .get('/low-stock', async (c) => {
+    // Threshold defaults to the ops.low_threshold setting (Admin > Settings)
+    // when the caller omits it, so the widget always respects the operator's
+    // warning level. Full under-threshold set, paged server-side (page/limit)
+    // and sorted by SISA (sortDir asc = most urgent first).
     const thresholdParam = c.req.query('threshold')
     const threshold = thresholdParam
       ? parseInt(thresholdParam, 10)
       : await getIntSetting('ops.low_threshold', 5, 1, 100).catch(() => 5)
-    const limit = Math.min(parseInt(c.req.query('limit') || '10', 10), 50)
+    const limit = Math.min(Math.max(parseInt(c.req.query('limit') || '5', 10), 1), 50)
+    const page = Math.max(parseInt(c.req.query('page') || '1', 10), 1)
+    const desc = c.req.query('sortDir') === 'desc'
 
     try {
-      // Single GROUP BY aggregate per call (migration 0011): threshold and
-      // limit apply in SQL, replacing the old 1+V per-variant count loop.
+      // Single GROUP BY aggregate per call (migration 0011/0012): threshold,
+      // sort and page apply in SQL, replacing the old 1+V per-variant loop.
       const [{ data: rows, error: rowsError }, { data: summary, error: summaryError }] = await Promise.all([
-        supabaseAdmin.rpc('low_stock_variants', { p_threshold: threshold, p_limit: limit }),
+        supabaseAdmin.rpc('low_stock_variants', {
+          p_threshold: threshold,
+          p_limit: limit,
+          p_offset: (page - 1) * limit,
+          p_desc: desc,
+        }),
         supabaseAdmin.rpc('low_stock_summary', { p_threshold: threshold }),
       ])
 
@@ -56,6 +67,9 @@ export const adminStatsRoutes = new Hono<AdminStatsEnv>()
       if (summaryError) throw new Error(summaryError.message)
 
       const s = Array.isArray(summary) ? summary[0] : summary
+      const outOfStock = Number(s?.out_of_stock ?? 0)
+      const runningLow = Number(s?.running_low ?? 0)
+      const total = outOfStock + runningLow
       return c.json({
         rows: (rows || []).map((r: any) => ({
           id: r.id,
@@ -64,11 +78,15 @@ export const adminStatsRoutes = new Hono<AdminStatsEnv>()
           product_name: r.product_name,
           stock_count: Number(r.stock_count ?? 0),
         })),
-        outOfStock: Number(s?.out_of_stock ?? 0),
-        runningLow: Number(s?.running_low ?? 0),
+        outOfStock,
+        runningLow,
+        total,
+        page,
+        limit,
+        totalPages: Math.max(1, Math.ceil(total / limit)),
       })
     } catch (e) {
       console.error('low-stock query failed', e)
-      return c.json({ rows: [], outOfStock: 0, runningLow: 0 })
+      return c.json({ rows: [], outOfStock: 0, runningLow: 0, total: 0, page, limit, totalPages: 1 })
     }
   })

@@ -4,6 +4,7 @@ import { authedApiRequest } from '../../lib/api'
 import { useAdminQuery } from '../../hooks/useAdminQuery'
 import StatCard from '../../components/admin/StatCard'
 import DataTable from '../../components/admin/DataTable'
+import TablePagination from '../../components/admin/TablePagination'
 import StatusChip from '../../components/admin/StatusChip'
 import CopyCell from '../../components/admin/CopyCell'
 import { SkeletonRows, SkeletonCards } from '../../components/admin/TableSkeleton'
@@ -57,6 +58,16 @@ const tooltipStyle = { fontSize: 12, border: '1px solid #e8e8ed', borderRadius: 
 
 export default function Overview() {
   const [range, setRange] = useState<'1d' | '7d' | '30d' | '90d'>('30d')
+  // Low-stock widget owns its paging: full under-threshold set, 5 per page,
+  // SISA sorted server-side (asc = most urgent first). Threshold itself is
+  // NOT sent — the server falls back to ops.low_threshold from Settings.
+  const [lsPage, setLsPage] = useState(1)
+  const [lsDir, setLsDir] = useState<'asc' | 'desc'>('asc')
+  const LS_LIMIT = 5
+  function toggleLsSort() {
+    setLsDir((d) => (d === 'asc' ? 'desc' : 'asc'))
+    setLsPage(1)
+  }
   const navigate = useNavigate()
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [showRevenue, setShowRevenue] = useState(() => {
@@ -84,25 +95,44 @@ export default function Overview() {
       stats: Stats
       analytics: { dailySales: unknown[]; byStatus: unknown[]; byCategory: unknown[]; topProducts: unknown[] }
       orders: Order[]
-      lowStock: { rows: LowStockVariant[]; outOfStock: number; runningLow: number }
     }
-    const lsRows = Array.isArray(j.lowStock?.rows) ? j.lowStock.rows : []
 
     return {
       stats: j.stats,
       analytics: j.analytics,
       orders: (Array.isArray(j.orders) ? j.orders : []).slice(0, 5),
-      lowStock: lsRows.slice(0, 5),
-      stockSummary: { out: j.lowStock?.outOfStock ?? 0, low: j.lowStock?.runningLow ?? 0 },
     }
   }, [range])
+  // Separate query so widget paging/sorting never refetches tiles+charts.
+  const { data: lsData, loading: lsLoading } = useAdminQuery(async () => {
+    const res = await authedApiRequest((c) => c.api.v1.admin.stats['low-stock'].$get({
+      query: { page: String(lsPage), limit: String(LS_LIMIT), sortDir: lsDir },
+    }))
+    const j = (await res.json()) as {
+      rows: LowStockVariant[]
+      outOfStock: number
+      runningLow: number
+      total: number
+      page: number
+      limit: number
+      totalPages: number
+    }
+    return {
+      rows: Array.isArray(j.rows) ? j.rows : [],
+      out: j.outOfStock ?? 0,
+      low: j.runningLow ?? 0,
+      total: j.total ?? 0,
+      totalPages: j.totalPages ?? 1,
+    }
+  }, [lsPage, lsDir])
   const stats = data?.stats ?? null
   const analytics = data?.analytics ?? null
 
   // Derived lists memoized so recharts trees skip re-render on unrelated state
   const orders = useMemo(() => data?.orders ?? [], [data])
-  const lowStock = useMemo(() => data?.lowStock ?? [], [data])
-  const stockSummary = useMemo(() => data?.stockSummary ?? { out: 0, low: 0 }, [data])
+  const lowStock = useMemo(() => lsData?.rows ?? [], [lsData])
+  const stockSummary = useMemo(() => ({ out: lsData?.out ?? 0, low: lsData?.low ?? 0 }), [lsData])
+  const lsTotal = lsData?.total ?? 0
   const dailySales = useMemo(() => analytics?.dailySales ?? [], [analytics])
   const byCategory = useMemo(() => analytics?.byCategory ?? [], [analytics])
   const topProducts = useMemo(() => analytics?.topProducts ?? [], [analytics])
@@ -359,30 +389,48 @@ export default function Overview() {
             <div className="ad-card-title">Stok Menipis</div>
             <span className="ad-card-hint ad-num">{stockSummary.out} habis · {stockSummary.low} menipis</span>
           </div>
-          {loading ? (
+          {lsLoading ? (
             <DataTable columns={[{ label: 'VARIAN' }, { label: 'SISA' }, { label: 'AKSI', className: 'text-right' }]} empty={false}>
               <SkeletonRows rows={3} cols={3} />
             </DataTable>
-          ) : lowStock.length === 0 ? (
+          ) : lsTotal === 0 ? (
             <div className="p-8 text-center">
               <div className="text-sm font-medium">Stok aman</div>
               <div className="text-xs text-[#6e6e73] mt-1">Tidak ada varian di bawah ambang.</div>
             </div>
           ) : (
-            <DataTable columns={[{ label: 'VARIAN' }, { label: 'SISA' }, { label: 'AKSI', className: 'text-right' }]} empty={false}>
-              {lowStock.map((p) => (
-                <tr key={p.id}>
-                  <td>
-                    <div className="text-[13px] font-medium">{p.name}</div>
-                    <div className="text-[11px] text-[#6e6e73]">{p.product_name} · <CopyCell value={p.sku} className="ad-num" /></div>
-                  </td>
-                  <td><StatusChip tone={p.stock_count === 0 ? 'red' : 'amber'}>{p.stock_count}</StatusChip></td>
-                  <td className="text-right">
-                    <button onClick={() => navigate(`/admin/products?tab=stok&variant=${p.id}&import=1`)} className="ad-btn ad-btn-dark"><Plus width={14} height={14} strokeWidth={1.5} />Tambah</button>
-                  </td>
-                </tr>
-              ))}
-            </DataTable>
+            <>
+              <DataTable
+                columns={[{ label: 'VARIAN' }, { label: 'SISA', sortKey: 'sisa' }, { label: 'AKSI', className: 'text-right' }]}
+                empty={false}
+                sortKey="sisa"
+                sortDir={lsDir}
+                onSort={toggleLsSort}
+              >
+                {lowStock.map((p) => (
+                  <tr key={p.id}>
+                    <td>
+                      <div className="text-[13px] font-medium">{p.name}</div>
+                      <div className="text-[11px] text-[#6e6e73]">{p.product_name} · <CopyCell value={p.sku} className="ad-num" /></div>
+                    </td>
+                    <td><StatusChip tone={p.stock_count === 0 ? 'red' : 'amber'}>{p.stock_count}</StatusChip></td>
+                    <td className="text-right">
+                      <button onClick={() => navigate(`/admin/products?tab=stok&variant=${p.id}&import=1`)} className="ad-btn ad-btn-dark"><Plus width={14} height={14} strokeWidth={1.5} />Tambah</button>
+                    </td>
+                  </tr>
+                ))}
+              </DataTable>
+              {lsTotal > LS_LIMIT && (
+                <TablePagination
+                  total={lsTotal}
+                  limit={LS_LIMIT}
+                  offset={(lsPage - 1) * LS_LIMIT}
+                  onLimitChange={() => {}}
+                  onOffsetChange={(offset) => setLsPage(Math.floor(offset / LS_LIMIT) + 1)}
+                  unit="varian"
+                />
+              )}
+            </>
           )}
           <button onClick={() => navigate('/admin/products?tab=stok')} className="w-full px-4 py-2.5 text-center text-xs font-semibold text-[#6e6e73] hover:text-[#1d1d1f] border-t border-[#f1f1f4]">Kelola stok</button>
         </div>
