@@ -159,8 +159,9 @@ export const adminOrderRoutes = new Hono<AdminOrderEnv>()
       variantSnapshot: {
         name: variant[0].name,
         sku: variant[0].sku,
-        durationMonths: variant[0].duration_months,
-        accountType: variant[0].account_type,
+        duration_months: variant[0].duration_months,
+        duration_unit: variant[0].duration_unit,
+        account_type: variant[0].account_type,
         conditions: variant[0].conditions,
         baseName,
       },

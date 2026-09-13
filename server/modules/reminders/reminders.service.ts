@@ -120,10 +120,23 @@ async function resolveFacts(publicId: string): Promise<{ facts: OrderReminderFac
 
 export const remindersService = {
   // Called after a transition to PAID commits (admin approve, webhook
-  // claimPaid, manual order). Failures audit; state only flips on success.
+  // claimPaid, manual order). Uses resolveFacts so auto-scheduling benefits
+  // from the live-variant fallback, matching manual toggles. Skips audit
+  // the reason (no paid_at / no duration / expired) so ops sees why an
+  // order silently got no event. State only flips on success.
   async handlePaid(publicId: string) {
-    const order = await ordersService.getById(publicId)
-    const results = await dispatchReminder('order.paid', toFacts(order))
+    const { facts, reason } = await resolveFacts(publicId)
+    if (reason) {
+      await appendAudit({
+        action: 'reminder:schedule',
+        resourceType: 'order',
+        resourcePublicId: publicId,
+        snapshotText: `Penjadwalan otomatis dilewati untuk ${publicId}: ${reason}`,
+        actorType: 'system',
+      }).catch(() => {})
+      return []
+    }
+    const results = await dispatchReminder('order.paid', facts)
     if (results.some((r) => r.ok)) await writeState(publicId, 'scheduled')
     await auditDispatchResults('order.paid', publicId, results)
     return results
