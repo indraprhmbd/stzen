@@ -166,13 +166,43 @@ describe('gcal provider with stub fetch', () => {
     const p = new GcalProvider(stubFetch(calls), { calendarId: 'admin@gmail.com', remindDays: 3 })
     const res = await p.schedule(facts, new Date('2026-10-01T00:00:00.000Z'))
     assert.equal(res.ok, true)
-    assert.equal(res.externalId, 'evt-1')
+    assert.equal(res.externalId, 'admin@gmail.com=evt-1')
     const insert = calls.find((c) => c.url.includes('/events') && !c.url.includes('oauth2'))
     assert.ok(insert)
     const body = JSON.parse((insert!.init as RequestInit).body as string)
     assert.equal(body.summary, 'STZEN Netflix kadaluarsa')
     const auth = ((insert!.init as RequestInit).headers as Record<string, string>).Authorization
     assert.equal(auth, 'Bearer tok')
+  })
+
+  it('schedule() fans out one insert per admin calendar', async () => {
+    const calls: { url: string; init?: unknown }[] = []
+    const p = new GcalProvider(stubFetch(calls), { calendarIds: ['a@gmail.com', 'b@gmail.com'] })
+    const res = await p.schedule(facts, new Date('2026-10-01T00:00:00.000Z'))
+    assert.equal(res.ok, true)
+    const inserts = calls.filter((c) => (c.init as RequestInit)?.method === 'POST' && c.url.includes('/calendars/'))
+    assert.equal(inserts.length, 2)
+    assert.ok(inserts[0].url.includes(encodeURIComponent('a@gmail.com')))
+    assert.ok(inserts[1].url.includes(encodeURIComponent('b@gmail.com')))
+    // Token exchanged once for the whole fan-out, not per calendar.
+    assert.equal(calls.filter((c) => c.url.includes('oauth2.googleapis.com/token')).length, 1)
+    assert.ok(res.externalId?.includes('a@gmail.com=evt-1'))
+  })
+
+  it('schedule() reports partial failure but stays ok', async () => {
+    const calls: { url: string; init?: unknown }[] = []
+    const fetchImpl = (async (url: unknown, init?: unknown) => {
+      calls.push({ url: String(url), init })
+      const u = String(url)
+      if (u.includes('oauth2.googleapis.com/token')) return Response.json({ access_token: 'tok' })
+      if (u.includes(encodeURIComponent('gone@gmail.com'))) return new Response('gone', { status: 404 })
+      return Response.json({ id: 'evt-1' })
+    }) as typeof fetch
+    const p = new GcalProvider(fetchImpl, { calendarIds: ['ok@gmail.com', 'gone@gmail.com'] })
+    const res = await p.schedule(facts, new Date('2026-10-01T00:00:00.000Z'))
+    assert.equal(res.ok, true)
+    assert.ok(res.externalId?.includes('ok@gmail.com=evt-1'))
+    assert.ok(res.error?.includes('gone@gmail.com'))
   })
 
   it('cancel() lists by idempotency key then deletes', async () => {
@@ -182,6 +212,16 @@ describe('gcal provider with stub fetch', () => {
     assert.equal(res.ok, true)
     assert.ok(calls.some((c) => c.url.includes('privateExtendedProperty') && c.url.includes('stzenOrder%3DSTZ-1')))
     assert.ok(calls.some((c) => (c.init as RequestInit)?.method === 'DELETE'))
+  })
+
+  it('cancel() fans out across calendars', async () => {
+    const calls: { url: string; init?: unknown }[] = []
+    const p = new GcalProvider(stubFetch(calls), { calendarIds: ['a@gmail.com', 'b@gmail.com'] })
+    const res = await p.cancel('STZ-1')
+    assert.equal(res.ok, true)
+    const lists = calls.filter((c) => c.url.includes('/events?'))
+    assert.equal(lists.length, 2)
+    assert.equal(calls.filter((c) => (c.init as RequestInit)?.method === 'DELETE').length, 2)
   })
 
   it('overrides.enabled=false short-circuits isEnabled', async () => {

@@ -1,6 +1,7 @@
 // ─── Google Calendar provider ───────────────────────────────────────────
-// NotificationProvider #1: inserts an all-day expiry event into the admin's
-// personal calendar (shared with the service account as writer).
+// NotificationProvider #1: inserts an all-day expiry event into each
+// configured admin calendar (every address in ops.gcal_calendar_id must
+// share its calendar with the service account as writer).
 // Auth: service-account JWT bearer via jose (already a dependency) + raw
 // fetch. No googleapis lib: Node-only deps + 3MB Worker bundle cap.
 // Secrets: GCAL_SA_JSON (whole SA JSON). Non-secrets: ops.* settings.
@@ -138,8 +139,17 @@ async function providersCsv(): Promise<string[]> {
 export interface GcalConfigOverrides {
   /** Test seam: skip settings + secret store. */
   enabled?: boolean
+  /** Single address (legacy) or csv; normalized to a list. */
   calendarId?: string
+  calendarIds?: string[]
   remindDays?: number
+}
+
+function parseCalendarIds(raw: string): string[] {
+  return raw
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean)
 }
 
 export class GcalProvider implements NotificationProvider {
@@ -152,12 +162,13 @@ export class GcalProvider implements NotificationProvider {
     this.overrides = overrides
   }
 
-  private async resolveConfig(): Promise<{ calendarId: string; remindDays: number }> {
-    if (this.overrides.calendarId) {
-      return { calendarId: this.overrides.calendarId, remindDays: this.overrides.remindDays ?? 3 }
+  private async resolveConfig(): Promise<{ calendarIds: string[]; remindDays: number }> {
+    if (this.overrides.calendarId || this.overrides.calendarIds) {
+      const ids = this.overrides.calendarIds ?? parseCalendarIds(this.overrides.calendarId ?? '')
+      return { calendarIds: ids, remindDays: this.overrides.remindDays ?? 3 }
     }
     return {
-      calendarId: await getSetting('ops.gcal_calendar_id', ''),
+      calendarIds: parseCalendarIds(await getSetting('ops.gcal_calendar_id', '')),
       remindDays: await getIntSetting('ops.gcal_remind_days', 3, 0, 14),
     }
   }
@@ -167,8 +178,8 @@ export class GcalProvider implements NotificationProvider {
     const providers = await providersCsv()
     if (!providers.includes('gcal')) return false
     if (!loadServiceAccount()) return false
-    const { calendarId } = await this.resolveConfig()
-    return calendarId.length > 0
+    const { calendarIds } = await this.resolveConfig()
+    return calendarIds.length > 0
   }
 
   private async authHeaders(): Promise<Record<string, string>> {
@@ -179,54 +190,78 @@ export class GcalProvider implements NotificationProvider {
   }
 
   async schedule(facts: OrderReminderFacts, expiry: Date): Promise<NotifyResult> {
-    const { calendarId, remindDays } = await this.resolveConfig()
-    if (!calendarId) throw new Error('ops.gcal_calendar_id not set')
+    const { calendarIds, remindDays } = await this.resolveConfig()
+    if (calendarIds.length === 0) throw new Error('ops.gcal_calendar_id not set')
     const headers = await this.authHeaders()
-    const { signal, cleanup } = withTimeout()
-    try {
-      const res = await this.fetchImpl(
-        `${CALENDAR_API}/calendars/${encodeURIComponent(calendarId)}/events`,
-        { method: 'POST', headers, body: JSON.stringify(buildEventBody(facts, expiry, remindDays)), signal },
-      )
-      if (!res.ok) throw new Error(`events.insert ${res.status}`)
-      const data = (await res.json()) as { id?: string }
-      return { provider: this.name, event: 'order.paid', ok: true, externalId: data.id }
-    } finally {
-      cleanup()
+    const body = JSON.stringify(buildEventBody(facts, expiry, remindDays))
+    const ids: string[] = []
+    const failures: string[] = []
+    // Sequential fan-out: one insert per admin calendar. Token is cached so
+    // each calendar costs exactly 1 subrequest (3 admins = 3 calls).
+    for (const calendarId of calendarIds) {
+      const { signal, cleanup } = withTimeout()
+      try {
+        const res = await this.fetchImpl(
+          `${CALENDAR_API}/calendars/${encodeURIComponent(calendarId)}/events`,
+          { method: 'POST', headers, body, signal },
+        )
+        if (!res.ok) {
+          failures.push(`${calendarId}: events.insert ${res.status}`)
+          continue
+        }
+        const data = (await res.json()) as { id?: string }
+        if (data.id) ids.push(`${calendarId}=${data.id}`)
+      } finally {
+        cleanup()
+      }
     }
+    if (ids.length === 0) throw new Error(`events.insert failed: ${failures.join('; ')}`)
+    if (failures.length > 0) {
+      // Partial: event lives on some calendars. Report ok (state flips to
+      // scheduled) but surface which calendar failed for the audit trail.
+      return { provider: this.name, event: 'order.paid', ok: true, externalId: ids.join(','), error: `partial: ${failures.join('; ')}` }
+    }
+    return { provider: this.name, event: 'order.paid', ok: true, externalId: ids.join(',') }
   }
 
   async cancel(orderPublicId: string): Promise<NotifyResult> {
-    const { calendarId } = await this.resolveConfig()
-    if (!calendarId) throw new Error('ops.gcal_calendar_id not set')
+    const { calendarIds } = await this.resolveConfig()
+    if (calendarIds.length === 0) throw new Error('ops.gcal_calendar_id not set')
     const headers = await this.authHeaders()
     const q = new URLSearchParams({
       privateExtendedProperty: `stzenOrder=${orderPublicId}`,
       maxResults: '10',
       singleEvents: 'true',
     })
-    const { signal, cleanup } = withTimeout()
-    try {
-      const list = await this.fetchImpl(
-        `${CALENDAR_API}/calendars/${encodeURIComponent(calendarId)}/events?${q}`,
-        { headers, signal },
-      )
-      if (!list.ok) throw new Error(`events.list ${list.status}`)
-      const data = (await list.json()) as { items?: { id?: string }[] }
-      for (const item of data.items ?? []) {
-        if (!item.id) continue
-        const del = await this.fetchImpl(
-          `${CALENDAR_API}/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(item.id)}`,
-          { method: 'DELETE', headers, signal },
+    const failures: string[] = []
+    for (const calendarId of calendarIds) {
+      const { signal, cleanup } = withTimeout()
+      try {
+        const list = await this.fetchImpl(
+          `${CALENDAR_API}/calendars/${encodeURIComponent(calendarId)}/events?${q}`,
+          { headers, signal },
         )
-        if (!del.ok && del.status !== 404 && del.status !== 410) {
-          throw new Error(`events.delete ${del.status}`)
+        if (!list.ok) {
+          failures.push(`${calendarId}: events.list ${list.status}`)
+          continue
         }
+        const data = (await list.json()) as { items?: { id?: string }[] }
+        for (const item of data.items ?? []) {
+          if (!item.id) continue
+          const del = await this.fetchImpl(
+            `${CALENDAR_API}/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(item.id)}`,
+            { method: 'DELETE', headers, signal },
+          )
+          if (!del.ok && del.status !== 404 && del.status !== 410) {
+            failures.push(`${calendarId}: events.delete ${del.status}`)
+          }
+        }
+      } finally {
+        cleanup()
       }
-      return { provider: this.name, event: 'order.cancelled', ok: true }
-    } finally {
-      cleanup()
     }
+    if (failures.length > 0) throw new Error(`cancel failed: ${failures.join('; ')}`)
+    return { provider: this.name, event: 'order.cancelled', ok: true }
   }
 }
 

@@ -11,14 +11,18 @@ export async function auditDispatchResults(
   results: NotifyResult[],
   actorType: 'admin' | 'system' = 'system',
 ): Promise<void> {
-  const failures = results.filter((r) => !r.ok)
+  // Both hard failures (!ok) and partial successes (ok + error detail,
+  // e.g. multi-calendar fan-out where one admin calendar rejected) land in
+  // the audit trail. Never throws.
+  const failures = results.filter((r) => !r.ok || r.error)
   if (failures.length === 0) return
+  const hard = failures.some((r) => !r.ok)
   const detail = failures.map((r) => `${r.provider}: ${r.error ?? 'unknown'}`).join('; ')
   await appendAudit({
     action: event === 'order.paid' ? 'reminder:schedule' : 'reminder:cancel',
     resourceType: 'order',
     resourcePublicId: publicId,
-    snapshotText: `Pengingat ${event} gagal untuk order ${publicId}: ${detail}`,
+    snapshotText: `Pengingat ${event} ${hard ? 'gagal' : 'sebagian gagal'} untuk order ${publicId}: ${detail}`,
     actorType,
     diff: { event, failures: failures.map((r) => r.provider) },
   }).catch(() => {})
