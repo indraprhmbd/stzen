@@ -127,10 +127,12 @@ function shortJakartaDate(iso: string): string {
 // Google Calendar renders descriptions as plain text (no markdown), so
 // structure = stable "Label: value" lines. Kept short: GCal truncates
 // previews after ~2 lines in month view.
+// colorId 11 = Tomato: expiry is a deadline, red reads as one at a glance.
 export function buildEventBody(
   facts: OrderReminderFacts,
   expiry: Date,
   remindDays: number,
+  adminBaseUrl = '',
 ): Record<string, unknown> {
   const day = toISODate(expiry)
   const next = new Date(expiry.getTime() + 24 * 3600 * 1000)
@@ -147,9 +149,18 @@ export function buildEventBody(
   ]
     .filter((l) => l !== null)
     .join('\n')
+  const source =
+    adminBaseUrl && adminBaseUrl.startsWith('http')
+      ? {
+          title: 'STZEN Admin',
+          url: `${adminBaseUrl.replace(/\/$/, '')}/admin/orders?status=semua&q=${encodeURIComponent(facts.publicId)}`,
+        }
+      : undefined
   return {
     summary: `STZEN ${facts.productName} kadaluarsa`,
     description,
+    source,
+    colorId: '11',
     start: { date: day, timeZone: 'Asia/Jakarta' },
     end: { date: toISODate(next), timeZone: 'Asia/Jakarta' },
     extendedProperties: { private: { stzenOrder: facts.publicId } },
@@ -222,7 +233,7 @@ export class GcalProvider implements NotificationProvider {
     const { calendarIds, remindDays } = await this.resolveConfig()
     if (calendarIds.length === 0) throw new Error('ops.gcal_calendar_id not set')
     const headers = await this.authHeaders()
-    const body = JSON.stringify(buildEventBody(facts, expiry, remindDays))
+    const body = JSON.stringify(buildEventBody(facts, expiry, remindDays, getEnv('ADMIN_APP_BASE_URL')))
     const ids: string[] = []
     const failures: string[] = []
     // Sequential fan-out: one insert per admin calendar. Token is cached so

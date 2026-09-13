@@ -143,6 +143,17 @@ describe('gcal buildEventBody', () => {
     const reminders = body.reminders as { overrides: unknown[] }
     assert.equal(reminders.overrides.length, 1)
   })
+
+  it('colors the event tomato and links source to the admin order when base url set', () => {
+    const body = buildEventBody(facts, new Date('2026-10-01T00:00:00.000Z'), 3, 'https://dev.stzen.web.id')
+    assert.equal(body.colorId, '11')
+    assert.deepEqual(body.source, {
+      title: 'STZEN Admin',
+      url: 'https://dev.stzen.web.id/admin/orders?status=semua&q=STZ-1',
+    })
+    const noLink = buildEventBody(facts, new Date('2026-10-01T00:00:00.000Z'), 3)
+    assert.equal(noLink.source, undefined)
+  })
 })
 
 describe('gcal provider with stub fetch', () => {

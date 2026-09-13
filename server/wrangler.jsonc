@@ -27,6 +27,7 @@
     "ENV": "staging",
     "CORS_ALLOWED_ORIGINS": "http://localhost:5173,http://localhost:4173,https://collected-ankle-dynamic.ngrok-free.dev",
     "PAYMENT_APP_BASE_URL": "",
+    "ADMIN_APP_BASE_URL": "",
     "PAYMENT_ACTIVE_PROVIDER": "manual",
     "PAYMENT_SUMOPOD_METHOD_CODE": "QRIS",
     "PAYMENT_DUITKU_BASE_URL": "",
@@ -40,10 +41,11 @@
         "ENV": "production",
         "CORS_ALLOWED_ORIGINS": "https://stzen.web.id",
         "PAYMENT_APP_BASE_URL": "https://stzen.web.id",
+        "ADMIN_APP_BASE_URL": "https://stzen.web.id",
         "PAYMENT_ACTIVE_PROVIDER": "manual",
-    "PAYMENT_SUMOPOD_METHOD_CODE": "QRIS",
-    "PAYMENT_DUITKU_BASE_URL": "",
-    "NOTIFY_PROVIDERS": ""
+        "PAYMENT_SUMOPOD_METHOD_CODE": "QRIS",
+        "PAYMENT_DUITKU_BASE_URL": "",
+        "NOTIFY_PROVIDERS": ""
       },
       "routes": [{ "pattern": "api.stzen.web.id", "custom_domain": true }]
     },
@@ -54,10 +56,11 @@
         "ENV": "staging",
         "CORS_ALLOWED_ORIGINS": "http://localhost:5173,http://localhost:4173,https://dev.stzen.web.id",
         "PAYMENT_APP_BASE_URL": "https://dev.stzen.web.id",
+        "ADMIN_APP_BASE_URL": "https://dev.stzen.web.id",
         "PAYMENT_ACTIVE_PROVIDER": "sumopod",
-    "PAYMENT_SUMOPOD_METHOD_CODE": "QRIS",
-    "PAYMENT_DUITKU_BASE_URL": "",
-    "NOTIFY_PROVIDERS": "gcal"
+        "PAYMENT_SUMOPOD_METHOD_CODE": "QRIS",
+        "PAYMENT_DUITKU_BASE_URL": "",
+        "NOTIFY_PROVIDERS": "gcal"
       }
     }
   },
