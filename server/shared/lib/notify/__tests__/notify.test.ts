@@ -126,6 +126,12 @@ describe('gcal buildEventBody', () => {
     assert.ok((body.description as string).includes('STZ-1'))
   })
 
+  it('dates the event in WIB: 20 Sep 18:00 UTC is already 21 Sep in Jakarta', () => {
+    const body = buildEventBody(facts, new Date('2026-09-20T18:00:00.000Z'), 3)
+    assert.deepEqual(body.start, { date: '2026-09-21', timeZone: 'Asia/Jakarta' })
+    assert.deepEqual(body.end, { date: '2026-09-22', timeZone: 'Asia/Jakarta' })
+  })
+
   it('omits the T-days reminder when remindDays is 0', () => {
     const body = buildEventBody(facts, new Date('2026-10-01T00:00:00.000Z'), 0)
     const reminders = body.reminders as { overrides: unknown[] }

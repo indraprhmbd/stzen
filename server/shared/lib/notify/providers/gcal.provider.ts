@@ -9,6 +9,7 @@
 import { SignJWT, importPKCS8 } from 'jose'
 import { getEnv } from '../../runtime-env'
 import { getIntSetting, getSetting } from '../../settings'
+import { toJakartaDate } from '../expiry'
 import type {
   NotificationProvider,
   NotifyResult,
@@ -98,7 +99,7 @@ export function clearTokenCache(): void {
 }
 
 function toISODate(d: Date): string {
-  return d.toISOString().slice(0, 10)
+  return toJakartaDate(d)
 }
 
 // Pure payload builder: unit-tested without network.

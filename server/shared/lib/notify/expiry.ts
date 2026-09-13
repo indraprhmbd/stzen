@@ -32,3 +32,11 @@ export function computeExpiry(
   }
   return expiry
 }
+
+// Calendar date of an instant in the store's business timezone (WIB, fixed
+// UTC+7, no DST). All-day event dates and date-only displays must use this,
+// never a UTC slice: an instant at/after 17:00 UTC is the NEXT day in WIB.
+// en-CA locale formats as YYYY-MM-DD.
+export function toJakartaDate(d: Date): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta' }).format(d)
+}
