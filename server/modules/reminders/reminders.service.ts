@@ -40,26 +40,24 @@ function toFacts(order: {
 // Snapshots predate older orders (null even for subscription products),
 // so without fallback those orders could never get an expiry. Explicit
 // null only when neither source has a duration (lifetime products).
-async function resolveDuration(
-  snapshotValue: number | null,
-  snapshotUnit: string | null,
-  variantId: string | null,
-): Promise<{ value: number | null; unit: string | null; source: 'snapshot' | 'varian' | null }> {
-  if (snapshotValue != null && snapshotUnit != null) {
-    return { value: snapshotValue, unit: snapshotUnit, source: 'snapshot' }
+// Batched: one variant query for the whole page, never per-row (N+1).
+async function batchVariantDurations(
+  variantIds: (string | null)[],
+): Promise<Map<string, { value: number | null; unit: string | null }>> {
+  const ids = [...new Set(variantIds.filter((v): v is string => !!v))]
+  const map = new Map<string, { value: number | null; unit: string | null }>()
+  if (ids.length === 0) return map
+  const { data } = await supabaseAdmin
+    .from(PRODUCT_VARIANTS)
+    .select('id, duration_months, duration_unit')
+    .in('id', ids)
+  for (const v of (data ?? []) as any[]) {
+    map.set(v.id, {
+      value: v.duration_months ?? null,
+      unit: v.duration_unit ?? null,
+    })
   }
-  if (variantId) {
-    const { data: v } = await supabaseAdmin
-      .from(PRODUCT_VARIANTS)
-      .select('duration_months, duration_unit')
-      .eq('id', variantId)
-      .limit(1)
-    const live = v?.[0] as any
-    if (live?.duration_months != null && live?.duration_unit != null) {
-      return { value: live.duration_months, unit: live.duration_unit, source: 'varian' }
-    }
-  }
-  return { value: null, unit: null, source: null }
+  return map
 }
 
 export const remindersService = {
@@ -93,10 +91,28 @@ export const remindersService = {
       .limit(limit)
 
     if (error) throw new Error(error.message)
+    const list = (rows ?? []) as any[]
+    // One batched variant lookup for rows missing snapshots (2 queries
+    // total for the whole page, regardless of limit).
+    const liveMap = await batchVariantDurations(
+      list
+        .filter((r) => r.duration_snapshot == null || r.duration_snapshot_unit == null)
+        .map((r) => r.variant_id),
+    )
     const out: PreviewRow[] = []
-    for (const r of (rows ?? []) as any[]) {
-      const dur = await resolveDuration(r.duration_snapshot, r.duration_snapshot_unit, r.variant_id)
-      const expiry = computeExpiry(r.paid_at, dur.value, dur.unit)
+    for (const r of list) {
+      let value = r.duration_snapshot ?? null
+      let unit = r.duration_snapshot_unit ?? null
+      let source: 'snapshot' | 'varian' | null = value != null && unit != null ? 'snapshot' : null
+      if (source == null && r.variant_id) {
+        const live = liveMap.get(r.variant_id)
+        if (live?.value != null && live?.unit != null) {
+          value = live.value
+          unit = live.unit
+          source = 'varian'
+        }
+      }
+      const expiry = computeExpiry(r.paid_at, value, unit)
       const eligible = expiry != null && expiry.getTime() > Date.now()
       out.push({
         publicId: r.public_id,
@@ -104,15 +120,15 @@ export const remindersService = {
         status: r.status,
         paidAt: r.paid_at,
         expiry: expiry ? expiry.toISOString() : null,
-        durationSource: dur.source,
+        durationSource: source,
         eligible,
         reason: !r.paid_at
           ? 'tanpa paid_at'
-          : dur.source == null
+          : source == null
             ? 'tanpa durasi (snapshot + varian)'
             : expiry && expiry.getTime() <= Date.now()
               ? 'sudah kadaluarsa'
-              : dur.source === 'varian'
+              : source === 'varian'
                 ? 'siap dijadwalkan (durasi dari varian saat ini)'
                 : 'siap dijadwalkan',
       })
@@ -140,9 +156,12 @@ export const remindersService = {
           .eq('public_id', row.publicId)
           .limit(1)
         const vid = (data?.[0] as any)?.variant_id ?? null
-        const dur = await resolveDuration(null, null, vid)
-        value = dur.value
-        unit = dur.unit
+        const liveMap = await batchVariantDurations([vid])
+        const live = vid ? liveMap.get(vid) : undefined
+        if (live?.value != null && live?.unit != null) {
+          value = live.value
+          unit = live.unit
+        }
       }
       const res = await dispatchReminder(
         'order.paid',
