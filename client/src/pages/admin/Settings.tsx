@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { authedApiRequest } from '../../lib/api'
 import { useAdminQuery } from '../../hooks/useAdminQuery'
 import DangerZone from './DangerZone'
+import CalendarIdList from '../../components/admin/CalendarIdList'
 
 const LABELS: Record<string, { group: string; label: string; hint?: string; type?: 'text' | 'number'; min?: number; max?: number }> = {
   'store.name': { group: 'Toko', label: 'Nama toko' },
@@ -16,7 +17,7 @@ const LABELS: Record<string, { group: string; label: string; hint?: string; type
   'ops.vault_lock_minutes': { group: 'Operasional', label: 'Vault terkunci otomatis (menit)', hint: 'Masa berlaku token buka vault', type: 'number', min: 1, max: 60 },
   'ops.csv_limit': { group: 'Operasional', label: 'Batas ekspor CSV', hint: 'Maksimal baris per ekspor pesanan', type: 'number', min: 100, max: 5000 },
   'ops.notify_providers': { group: 'Operasional', label: 'Kanal pengingat', hint: 'Daftar dipisah koma, mis. gcal. Kosong = mati' },
-  'ops.gcal_calendar_id': { group: 'Operasional', label: 'ID Kalender Google', hint: 'Satu email per admin, pisah koma. Tiap kalender wajib dibagikan ke service account' },
+  'ops.gcal_calendar_id': { group: 'Operasional', label: 'ID Kalender Google', hint: 'Tambahkan ID tiap kalender (email admin atau xxx@group.calendar.google.com dari menu Integrate calendar). Tiap kalender wajib dibagikan ke service account dengan akses ubah event' },
   'ops.gcal_remind_days': { group: 'Operasional', label: 'Pengingat H- (hari)', hint: 'Popup pengingat sebelum kadaluarsa, 0 = hanya hari-H', type: 'number', min: 0, max: 14 },
 }
 
@@ -97,6 +98,17 @@ export default function Settings() {
           </div>
           {items.map((k) => {
             const meta = LABELS[k] ?? { group: 'Lainnya', label: k }
+            if (k === 'ops.gcal_calendar_id') {
+              return (
+                <label key={k} className="ad-label">
+                  {meta.label}
+                  <div className="mt-1.5">
+                    <CalendarIdList value={values[k] ?? ''} onChange={(csv) => setDraft({ ...values, [k]: csv })} />
+                  </div>
+                  {meta.hint && <span className="text-[11px] font-normal text-[#aeaeb2] mt-1 normal-case tracking-normal">{meta.hint}</span>}
+                </label>
+              )
+            }
             return (
               <label key={k} className="ad-label">
                 {meta.label}
