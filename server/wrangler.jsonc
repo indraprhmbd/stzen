@@ -15,7 +15,9 @@
   // Secrets live in the secret store (wrangler secret put --env ...), never here:
   // SUPABASE_SERVICE_ROLE_KEY, AES_SECRET_KEY, PAYMENT_SUMOPOD_API_KEY,
   // PAYMENT_SUMOPOD_WEBHOOK_SECRET, PAYMENT_SUMOPOD_WEBHOOK_TOKEN,
-  // PAYMENT_DUITKU_MERCHANT_CODE, PAYMENT_DUITKU_API_KEY
+  // PAYMENT_DUITKU_MERCHANT_CODE, PAYMENT_DUITKU_API_KEY, GCAL_SA_JSON
+  // (service-account JSON for reminder providers; required only when the
+  // env's NOTIFY_PROVIDERS lists the matching channel - see check-secrets).
   // Top-level vars serve `wrangler dev` only. NEVER bare `wrangler deploy`
   // (it would ship dev CORS + empty return URL under the prod name) - always
   // `npm run deploy` (pins --env production) or `--env staging`.
@@ -27,7 +29,8 @@
     "PAYMENT_APP_BASE_URL": "",
     "PAYMENT_ACTIVE_PROVIDER": "manual",
     "PAYMENT_SUMOPOD_METHOD_CODE": "QRIS",
-    "PAYMENT_DUITKU_BASE_URL": ""
+    "PAYMENT_DUITKU_BASE_URL": "",
+    "NOTIFY_PROVIDERS": ""
   },
   "env": {
     "production": {
@@ -39,7 +42,8 @@
         "PAYMENT_APP_BASE_URL": "https://stzen.web.id",
         "PAYMENT_ACTIVE_PROVIDER": "manual",
     "PAYMENT_SUMOPOD_METHOD_CODE": "QRIS",
-    "PAYMENT_DUITKU_BASE_URL": ""
+    "PAYMENT_DUITKU_BASE_URL": "",
+    "NOTIFY_PROVIDERS": ""
       },
       "routes": [{ "pattern": "api.stzen.web.id", "custom_domain": true }]
     },
@@ -52,7 +56,8 @@
         "PAYMENT_APP_BASE_URL": "https://dev.stzen.web.id",
         "PAYMENT_ACTIVE_PROVIDER": "sumopod",
     "PAYMENT_SUMOPOD_METHOD_CODE": "QRIS",
-    "PAYMENT_DUITKU_BASE_URL": ""
+    "PAYMENT_DUITKU_BASE_URL": "",
+    "NOTIFY_PROVIDERS": ""
       }
     }
   },

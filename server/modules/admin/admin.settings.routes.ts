@@ -31,12 +31,16 @@ const KNOWN_KEYS = [
   'ops.low_threshold',
   'ops.vault_lock_minutes',
   'ops.csv_limit',
+  'ops.notify_providers',
+  'ops.gcal_calendar_id',
+  'ops.gcal_remind_days',
 ] as const
 
 const INT_KEYS: Record<string, { min: number; max: number }> = {
   'ops.low_threshold': { min: 1, max: 100 },
   'ops.vault_lock_minutes': { min: 1, max: 60 },
   'ops.csv_limit': { min: 100, max: 5000 },
+  'ops.gcal_remind_days': { min: 0, max: 14 },
 }
 
 const SettingsUpdateSchema = z.object({

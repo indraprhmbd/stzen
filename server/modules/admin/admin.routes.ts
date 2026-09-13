@@ -10,6 +10,7 @@ import { adminVariantRoutes } from './admin.variants.routes'
 import { adminSettingsRoutes } from './admin.settings.routes'
 import { adminVaultRoutes } from './admin.vault.routes'
 import { routes as dangerRoutes } from '../danger'
+import { routes as reminderRoutes } from '../reminders'
 
 // ─── Admin Routes ───────────────────────────────────────────────────────────
 // Composes admin sub-routes. Single central guard: conceal=true returns 404
@@ -30,3 +31,4 @@ export const adminRoutes = new Hono()
   .route('/settings', adminSettingsRoutes)
   .route('/vault', adminVaultRoutes)
   .route('/danger', dangerRoutes)
+  .route('/reminders', reminderRoutes)

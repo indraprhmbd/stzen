@@ -1,0 +1,191 @@
+// ─── Notify port tests ──────────────────────────────────────────────────
+// Pure expiry math, dispatcher fan-out isolation, gcal payload mapping.
+// No network, no DB: provider tests stub fetch + inject config overrides.
+
+import { describe, it, beforeEach } from 'node:test'
+import assert from 'node:assert/strict'
+import { generateKeyPair, exportPKCS8 } from 'jose'
+import { computeExpiry } from '../expiry'
+import {
+  dispatchReminder,
+  registerProvider,
+} from '../notify.dispatcher'
+import type {
+  NotificationProvider,
+  NotifyResult,
+  OrderReminderFacts,
+} from '../notify.types'
+import { buildEventBody, clearTokenCache, GcalProvider } from '../providers/gcal.provider'
+
+const facts: OrderReminderFacts = {
+  publicId: 'STZ-1',
+  productName: 'Netflix',
+  variantName: 'N-001',
+  amount: '50000',
+  paidAt: '2026-09-01T00:00:00.000Z',
+  durationValue: 1,
+  durationUnit: 'month',
+}
+
+describe('computeExpiry', () => {
+  it('adds calendar months (Jan 31 + 1mo -> Mar 2/3, not Feb 31)', () => {
+    const e = computeExpiry('2026-01-31T00:00:00.000Z', 1, 'month')
+    assert.ok(e)
+    assert.equal(e!.getUTCFullYear(), 2026)
+    assert.equal(e!.getUTCMonth(), 2) // March: setMonth overflow, never NaN
+  })
+
+  it('handles day and week units', () => {
+    assert.equal(
+      computeExpiry('2026-09-01T00:00:00.000Z', 7, 'day')!.toISOString(),
+      '2026-09-08T00:00:00.000Z',
+    )
+    assert.equal(
+      computeExpiry('2026-09-01T00:00:00.000Z', 2, 'week')!.toISOString(),
+      '2026-09-15T00:00:00.000Z',
+    )
+  })
+
+  it('returns null for missing/invalid input', () => {
+    assert.equal(computeExpiry(null, 1, 'month'), null)
+    assert.equal(computeExpiry('2026-09-01T00:00:00.000Z', null, 'month'), null)
+    assert.equal(computeExpiry('2026-09-01T00:00:00.000Z', 1, null), null)
+    assert.equal(computeExpiry('2026-09-01T00:00:00.000Z', 0, 'month'), null)
+    assert.equal(computeExpiry('2026-09-01T00:00:00.000Z', 1, 'year'), null)
+    assert.equal(computeExpiry('not-a-date', 1, 'month'), null)
+  })
+})
+
+describe('dispatchReminder', () => {
+  function stub(name: string, opts: { enabled?: boolean; fail?: boolean } = {}): NotificationProvider & {
+    calls: string[]
+  } {
+    const calls: string[] = []
+    return {
+      calls,
+      name,
+      async isEnabled() {
+        return opts.enabled ?? true
+      },
+      async schedule(f, _e): Promise<NotifyResult> {
+        calls.push(`schedule:${f.publicId}`)
+        if (opts.fail) throw new Error(`${name} down`)
+        return { provider: name, event: 'order.paid', ok: true, externalId: `${name}-1` }
+      },
+      async cancel(id): Promise<NotifyResult> {
+        calls.push(`cancel:${id}`)
+        return { provider: name, event: 'order.cancelled', ok: true }
+      },
+    }
+  }
+
+  it('fans out to all enabled providers, skips disabled', async () => {
+    const a = stub('test-a')
+    const b = stub('test-b', { enabled: false })
+    registerProvider(a)
+    registerProvider(b)
+    const res = await dispatchReminder('order.paid', facts)
+    assert.ok(res.some((r) => r.provider === 'test-a' && r.ok))
+    assert.ok(!res.some((r) => r.provider === 'test-b'))
+    assert.deepEqual(a.calls, ['schedule:STZ-1'])
+  })
+
+  it('isolates provider failure, skips schedule when no expiry', async () => {
+    const bad = stub('test-bad', { fail: true })
+    registerProvider(bad)
+    const res = await dispatchReminder('order.paid', facts)
+    const row = res.find((r) => r.provider === 'test-bad')
+    assert.ok(row && !row.ok && row.error?.includes('down'))
+
+    const noExpiry = await dispatchReminder('order.paid', { ...facts, durationValue: null })
+    assert.ok(!noExpiry.some((r) => r.provider === 'test-bad'))
+    assert.equal(bad.calls.length, 1) // only the earlier failing schedule, no second call
+  })
+
+  it('routes order.cancelled to cancel()', async () => {
+    const c = stub('test-c')
+    registerProvider(c)
+    await dispatchReminder('order.cancelled', facts)
+    assert.ok(c.calls.includes('cancel:STZ-1'))
+  })
+})
+
+describe('gcal buildEventBody', () => {
+  it('builds an all-day event with idempotency key + reminders', () => {
+    const body = buildEventBody(facts, new Date('2026-10-01T00:00:00.000Z'), 3)
+    assert.equal(body.summary, 'STZEN Netflix kadaluarsa')
+    assert.deepEqual(body.start, { date: '2026-10-01', timeZone: 'Asia/Jakarta' })
+    assert.deepEqual(body.end, { date: '2026-10-02', timeZone: 'Asia/Jakarta' })
+    assert.deepEqual(body.extendedProperties, { private: { stzenOrder: 'STZ-1' } })
+    const reminders = body.reminders as { useDefault: boolean; overrides: { method: string; minutes: number }[] }
+    assert.equal(reminders.useDefault, false)
+    assert.deepEqual(reminders.overrides, [
+      { method: 'popup', minutes: 3 * 24 * 60 },
+      { method: 'popup', minutes: 12 * 60 },
+    ])
+    assert.ok((body.description as string).includes('STZ-1'))
+  })
+
+  it('omits the T-days reminder when remindDays is 0', () => {
+    const body = buildEventBody(facts, new Date('2026-10-01T00:00:00.000Z'), 0)
+    const reminders = body.reminders as { overrides: unknown[] }
+    assert.equal(reminders.overrides.length, 1)
+  })
+})
+
+describe('gcal provider with stub fetch', () => {
+  let saJson: string
+
+  beforeEach(async () => {
+    clearTokenCache()
+    const { privateKey } = await generateKeyPair('RS256', { extractable: true })
+    const pem = await exportPKCS8(privateKey)
+    saJson = JSON.stringify({ client_email: 'sa@test.iam.gserviceaccount.com', private_key: pem })
+    process.env.GCAL_SA_JSON = saJson
+  })
+
+  function stubFetch(calls: { url: string; init?: unknown }[]) {
+    return (async (url: unknown, init?: unknown) => {
+      calls.push({ url: String(url), init })
+      const u = String(url)
+      if (u.includes('oauth2.googleapis.com/token')) {
+        return Response.json({ access_token: 'tok', expires_in: 3600 })
+      }
+      if (u.includes('/events?')) {
+        return Response.json({ items: [{ id: 'evt-9' }] })
+      }
+      if ((init as RequestInit)?.method === 'DELETE') {
+        return new Response(null, { status: 204 })
+      }
+      return Response.json({ id: 'evt-1' })
+    }) as typeof fetch
+  }
+
+  it('schedule() exchanges token once then inserts', async () => {
+    const calls: { url: string; init?: unknown }[] = []
+    const p = new GcalProvider(stubFetch(calls), { calendarId: 'admin@gmail.com', remindDays: 3 })
+    const res = await p.schedule(facts, new Date('2026-10-01T00:00:00.000Z'))
+    assert.equal(res.ok, true)
+    assert.equal(res.externalId, 'evt-1')
+    const insert = calls.find((c) => c.url.includes('/events') && !c.url.includes('oauth2'))
+    assert.ok(insert)
+    const body = JSON.parse((insert!.init as RequestInit).body as string)
+    assert.equal(body.summary, 'STZEN Netflix kadaluarsa')
+    const auth = ((insert!.init as RequestInit).headers as Record<string, string>).Authorization
+    assert.equal(auth, 'Bearer tok')
+  })
+
+  it('cancel() lists by idempotency key then deletes', async () => {
+    const calls: { url: string; init?: unknown }[] = []
+    const p = new GcalProvider(stubFetch(calls), { calendarId: 'admin@gmail.com' })
+    const res = await p.cancel('STZ-1')
+    assert.equal(res.ok, true)
+    assert.ok(calls.some((c) => c.url.includes('privateExtendedProperty') && c.url.includes('stzenOrder%3DSTZ-1')))
+    assert.ok(calls.some((c) => (c.init as RequestInit)?.method === 'DELETE'))
+  })
+
+  it('overrides.enabled=false short-circuits isEnabled', async () => {
+    const p = new GcalProvider(stubFetch([]), { enabled: false })
+    assert.equal(await p.isEnabled(), false)
+  })
+})

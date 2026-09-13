@@ -8,6 +8,7 @@
 export interface SecretKeys {
   SUPABASE_SERVICE_ROLE_KEY?: string
   AES_SECRET_KEY?: string
+  GCAL_SA_JSON?: string
   PAYMENT_SUMOPOD_API_KEY?: string
   PAYMENT_SUMOPOD_WEBHOOK_SECRET?: string
   PAYMENT_SUMOPOD_WEBHOOK_TOKEN?: string

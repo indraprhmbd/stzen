@@ -20,6 +20,11 @@ export interface Order {
 export interface OrderWithProduct extends Order {
   productName: string
   productCategory: string
+  // Duration snapshots for expiry-aware consumers (reminders module).
+  // Null duration = no expiry (lifetime / non-subscription product).
+  durationValue: number | null
+  durationUnit: string | null
+  variantSku: string | null
 }
 
 // Internal-id-bearing shape used by the payments module (webhook lookups,

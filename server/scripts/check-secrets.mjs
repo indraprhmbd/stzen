@@ -43,6 +43,22 @@ const PROVIDER_SECRETS = {
   duitku: ['PAYMENT_DUITKU_MERCHANT_CODE', 'PAYMENT_DUITKU_API_KEY'],
 }
 
+// Reminder channels declare their secrets the same way: wrangler.jsonc
+// NOTIFY_PROVIDERS (csv per env) gates GCAL_SA_JSON. Runtime still needs
+// ops.notify_providers + ops.gcal_calendar_id set in Settings.
+const NOTIFY_SECRETS = {
+  gcal: ['GCAL_SA_JSON'],
+}
+
+function csvVar(fileText, env, varName) {
+  const keyRe = new RegExp(`"${env}"\\s*:\\s*\\{`)
+  const m = keyRe.exec(fileText)
+  if (!m) return []
+  const vm = new RegExp(`"${varName}"\\s*:\\s*"([^"]*)"`).exec(fileText.slice(m.index))
+  if (!vm) return []
+  return vm[1].split(',').map((s) => s.trim().toLowerCase()).filter(Boolean)
+}
+
 let fileText = ''
 try {
   fileText = readFileSync(new URL('../wrangler.jsonc', import.meta.url), 'utf8')
@@ -52,6 +68,12 @@ if (provider && PROVIDER_SECRETS[provider]) {
   REQUIRED.push(...PROVIDER_SECRETS[provider])
 }
 console.log(`[check-secrets] --env ${env} active provider: ${provider ?? 'unknown (default manual)'}`)
+
+const notifyChannels = csvVar(fileText, env, 'NOTIFY_PROVIDERS')
+for (const ch of notifyChannels) {
+  if (NOTIFY_SECRETS[ch]) REQUIRED.push(...NOTIFY_SECRETS[ch])
+}
+console.log(`[check-secrets] --env ${env} notify channels: ${notifyChannels.join(',') || 'none'}`)
 
 let raw
 try {

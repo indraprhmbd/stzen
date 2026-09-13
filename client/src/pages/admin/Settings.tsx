@@ -15,6 +15,9 @@ const LABELS: Record<string, { group: string; label: string; hint?: string; type
   'ops.low_threshold': { group: 'Operasional', label: 'Ambang stok menipis', hint: 'Varian di bawah jumlah ini masuk kartu Stok Menipis', type: 'number', min: 1, max: 100 },
   'ops.vault_lock_minutes': { group: 'Operasional', label: 'Vault terkunci otomatis (menit)', hint: 'Masa berlaku token buka vault', type: 'number', min: 1, max: 60 },
   'ops.csv_limit': { group: 'Operasional', label: 'Batas ekspor CSV', hint: 'Maksimal baris per ekspor pesanan', type: 'number', min: 100, max: 5000 },
+  'ops.notify_providers': { group: 'Operasional', label: 'Kanal pengingat', hint: 'Daftar dipisah koma, mis. gcal. Kosong = mati' },
+  'ops.gcal_calendar_id': { group: 'Operasional', label: 'ID Kalender Google', hint: 'Email kalender admin yang dibagikan ke service account' },
+  'ops.gcal_remind_days': { group: 'Operasional', label: 'Pengingat H- (hari)', hint: 'Popup pengingat sebelum kadaluarsa, 0 = hanya hari-H', type: 'number', min: 0, max: 14 },
 }
 
 const GROUP_ORDER = ['Toko', 'Pembayaran', 'Operasional']

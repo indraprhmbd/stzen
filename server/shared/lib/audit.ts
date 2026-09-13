@@ -7,6 +7,7 @@ export type AuditAction =
   | 'product:create' | 'product:update' | 'product:delete'
   | 'variant:create' | 'variant:update' | 'variant:delete'
   | 'settings:update'
+  | 'reminder:schedule' | 'reminder:cancel' | 'reminder:backfill'
   | 'danger:stale-reject' | 'danger:product-delete' | 'danger:variant-delete'
   | 'danger:export' | 'danger:purge'
 

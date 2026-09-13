@@ -5,6 +5,9 @@ import { NotFoundError, ConflictError, BadRequestError } from '../../shared/erro
 import { generatePublicId } from '../../shared/lib/publicId'
 import { allocateCredential, getStockCounts } from '../../shared/lib/db-helpers'
 import { importKeyFromBase64, encrypt } from '../../shared/lib/crypto'
+import { dispatchReminder } from '../../shared/lib/notify/notify.dispatcher'
+import { auditDispatchResults } from '../../shared/lib/notify/notify.audit'
+import type { OrderReminderFacts, ReminderEvent } from '../../shared/lib/notify/notify.types'
 import {
   VALID_TRANSITIONS,
   ACTION_TO_STATUS,
@@ -33,7 +36,28 @@ function mapOrderRow(r: any): OrderWithProduct {
     paidAt: paidAt ? paidAt.toISOString() : null,
     productName: r.variant_name_snapshot ?? r.base_name_snapshot ?? product?.name ?? 'Produk',
     productCategory: product?.category ?? '',
+    durationValue: r.duration_snapshot ?? null,
+    durationUnit: r.duration_snapshot_unit ?? null,
+    variantSku: r.variant_sku_snapshot ?? null,
   }
+}
+
+// Reminder fan-out after a committed state change. Shared dispatcher only:
+// orders never imports a provider or the reminders module (import rule 1).
+// Awaited with provider-side 5s timeouts; failures audit, never roll back
+// the transition. No-duration orders resolve to no expiry and are skipped.
+async function emitReminder(event: ReminderEvent, order: OrderWithProduct) {
+  const facts: OrderReminderFacts = {
+    publicId: order.id,
+    productName: order.productName,
+    variantName: order.variantSku,
+    amount: order.amount,
+    paidAt: order.paidAt,
+    durationValue: order.durationValue,
+    durationUnit: order.durationUnit,
+  }
+  const results = await dispatchReminder(event, facts)
+  await auditDispatchResults(event, order.id, results)
 }
 
 // 30s cache for statusCounts - runs full GROUP BY on orders table.
@@ -212,7 +236,12 @@ export const ordersService = {
       .single()
 
     if (error) throw new Error(error.message)
-    return mapOrderRow(updated)
+    const mapped = mapOrderRow(updated)
+    if (targetStatus === 'PAID') await emitReminder('order.paid', mapped)
+    if (targetStatus === 'REFUNDED' || targetStatus === 'REJECTED') {
+      await emitReminder('order.cancelled', mapped)
+    }
+    return mapped
   },
 
   async claimPaid(publicId: string) {
@@ -225,6 +254,10 @@ export const ordersService = {
       .single()
 
     if (error || !updated) return null
+    // Webhook paid path bypasses transitionStatus: emit here (one extra
+    // read; conditional update above guarantees PAID happened once).
+    const order = await this.getById(updated.public_id ?? publicId)
+    await emitReminder('order.paid', order)
     return { id: updated.public_id ?? publicId }
   },
 

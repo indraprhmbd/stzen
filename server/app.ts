@@ -13,6 +13,8 @@ import { routes as checkoutRoutes } from './modules/checkout'
 import { routes as adminRoutes } from './modules/admin'
 import { paymentsRoutes, webhooksRoutes } from './modules/payments'
 import { getSetting } from './shared/lib/settings'
+import { registerProvider } from './shared/lib/notify/notify.dispatcher'
+import { gcalProvider } from './shared/lib/notify/providers/gcal.provider'
 import { publicSettingsRoutes } from './modules/admin'
 import { getEnv, isProd } from './shared/lib/runtime-env'
 
@@ -23,6 +25,11 @@ import { getEnv, isProd } from './shared/lib/runtime-env'
 // are read through getEnv(), so c.env stays unused and AuthEnv suffices.
 
 export function createApp() {
+  // Provider registry is a module-level Map: re-registering on every
+  // createApp() call is idempotent and keeps composition in one place.
+  // Providers self-gate via isEnabled() (settings + secrets).
+  registerProvider(gcalProvider)
+
   const base = new Hono<AuthEnv>()
 
   // Global middleware
