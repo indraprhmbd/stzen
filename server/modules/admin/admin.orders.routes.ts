@@ -17,6 +17,9 @@ const ManualOrderSchema = z.object({
   customerEmail: z.string().email(),
   variantId: z.string().min(1),
   paymentRef: z.string().max(120).nullable().optional(),
+  // Optional override (deal price, rounding, promo). Raw digits; variant
+  // catalog price applies when omitted.
+  amount: z.string().regex(/^\d+$/, 'Harga integer').optional(),
 })
 
 type AdminOrderEnv = AuthEnv
@@ -114,7 +117,7 @@ export const adminOrderRoutes = new Hono<AdminOrderEnv>()
 
   .post('/manual', zValidator('json', ManualOrderSchema), async (c) => {
     const user = c.get('user')
-    const { customerEmail, variantId, paymentRef } = c.req.valid('json')
+    const { customerEmail, variantId, paymentRef, amount } = c.req.valid('json')
 
     const { data: profile, error } = await supabaseAdmin
       .from(PROFILES)
@@ -143,11 +146,13 @@ export const adminOrderRoutes = new Hono<AdminOrderEnv>()
       baseName = base?.[0]?.name ?? null
     }
 
+    const finalAmount = amount ?? String(variant[0].price)
+    const customPrice = amount !== undefined && amount !== String(variant[0].price)
     const order = await ordersService.create({
       userId: profile[0].id,
       productId: variant[0].product_id,
       variantId: variant[0].id,
-      amount: variant[0].price,
+      amount: finalAmount,
       variantSnapshot: {
         name: variant[0].name,
         sku: variant[0].sku,
@@ -173,7 +178,7 @@ export const adminOrderRoutes = new Hono<AdminOrderEnv>()
       resourceType: 'order',
       resourcePublicId: orderPublicId,
       resourceName: variant[0].name,
-      snapshotText: `Order ${orderPublicId} dibuat manual untuk ${customerEmail} oleh ${user.email ?? user.sub} ${new Date().toLocaleString('id-ID')}`,
+      snapshotText: `Order ${orderPublicId} dibuat manual untuk ${customerEmail} oleh ${user.email ?? user.sub}${customPrice ? ` (harga khusus Rp ${Number(finalAmount).toLocaleString('id-ID')})` : ''} ${new Date().toLocaleString('id-ID')}`,
       actorId: user.sub,
       actorEmail: user.email ?? null,
       actorType: 'admin',

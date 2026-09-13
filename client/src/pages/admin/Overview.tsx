@@ -60,7 +60,7 @@ export default function Overview() {
   const [range, setRange] = useState<'1d' | '7d' | '30d' | '90d'>('30d')
   // Low-stock widget owns its paging: full under-threshold set, 5 per page,
   // SISA sorted server-side (asc = most urgent first). Threshold itself is
-  // NOT sent — the server falls back to ops.low_threshold from Settings.
+  // NOT sent - the server falls back to ops.low_threshold from Settings.
   const [lsPage, setLsPage] = useState(1)
   const [lsDir, setLsDir] = useState<'asc' | 'desc'>('asc')
   const LS_LIMIT = 5

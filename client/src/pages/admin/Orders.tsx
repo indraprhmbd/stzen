@@ -13,6 +13,7 @@ import { Refresh, Plus, Search, Key, EditPencil, Trash, Notes } from 'iconoir-re
 import { SkeletonRows } from '../../components/admin/TableSkeleton'
 import { useTableSort } from '../../hooks/useTableSort'
 import TableSortMenu from '../../components/admin/TableSortMenu'
+import RupiahInput from '../../components/admin/RupiahInput'
 
 // Shared by DataTable headers (desktop) and TableSortMenu (mobile <sm).
 const orderColumns = [
@@ -87,7 +88,12 @@ export default function Orders() {
   const [manualVariants, setManualVariants] = useState<{ id: string; name: string; price: string | number }[]>([])
   const [mEmail, setMEmail] = useState('')
   const [mVariantId, setMVariantId] = useState('')
+  const [mSearch, setMSearch] = useState('')
   const [mPaymentRef, setMPaymentRef] = useState('')
+  const [mUseCustom, setMUseCustom] = useState(false)
+  const [mCustomPrice, setMCustomPrice] = useState('')
+  const [mStep, setMStep] = useState<1 | 2>(1)
+  const [mCreated, setMCreated] = useState<{ id: string; productName: string; amount: string; status: string; createdAt: string } | null>(null)
   const [mError, setMError] = useState<string | null>(null)
   const [mSaving, setMSaving] = useState(false)
   const [exportBusy, setExportBusy] = useState(false)
@@ -224,8 +230,31 @@ export default function Orders() {
     await handleAction(id, 'refund')
   }
 
+  // Manual-order derived state: selected variant, catalog vs final price,
+  // and the search-filtered picker list.
+  const mSelected = manualVariants.find((v) => v.id === mVariantId) ?? null
+  const mCatalogPrice = mSelected ? String(mSelected.price) : ''
+  const mFinalPrice = mUseCustom && mCustomPrice ? mCustomPrice : mCatalogPrice
+  const mFiltered = manualVariants.filter((v) =>
+    !mSearch || v.name.toLowerCase().includes(mSearch.toLowerCase())
+  )
+
+  function resetManualForm() {
+    setMEmail('')
+    setMVariantId('')
+    setMSearch('')
+    setMPaymentRef('')
+    setMUseCustom(false)
+    setMCustomPrice('')
+    setMError(null)
+    setMCreated(null)
+    setMStep(1)
+  }
+
   async function openManual() {
     setMError(null)
+    setMStep(1)
+    setMCreated(null)
     if (manualVariants.length === 0) {
       try {
         const res = await authedApiRequest((c) => c.api.v1.admin.variants.$get({ query: { compact: '1' } }))
@@ -268,22 +297,30 @@ export default function Orders() {
     }
   }
   async function submitManual(e: React.FormEvent) {
+    e.preventDefault()
     setMError(null)
     setMSaving(true)
     try {
+      // Custom amount only crosses the wire when the operator explicitly set
+      // a different price; otherwise the server uses the catalog price.
+      const customAmount = mUseCustom && mCustomPrice && mCustomPrice !== mCatalogPrice ? mCustomPrice : undefined
       const res = await authedApiRequest((c) =>
         c.api.v1.admin.orders.manual.$post({
-          json: { customerEmail: mEmail.trim(), variantId: mVariantId, paymentRef: mPaymentRef.trim() || null },
+          json: {
+            customerEmail: mEmail.trim(),
+            variantId: mVariantId,
+            paymentRef: mPaymentRef.trim() || null,
+            ...(customAmount ? { amount: customAmount } : {}),
+          },
         })
       )
       if (!res.ok) {
         const err = (await res.json().catch(() => ({}))) as { error?: string }
         throw new Error(err.error || 'Gagal membuat pesanan')
       }
-      ;(document.getElementById('manual_modal') as HTMLDialogElement | null)?.close()
-      setMEmail('')
-      setMVariantId('')
-      setMPaymentRef('')
+      const created = (await res.json()) as { id: string; productName: string; amount: string; status: string; createdAt: string }
+      setMCreated(created)
+      setMStep(2)
       await fetchOrders()
     } catch (err: unknown) {
       setMError(err instanceof Error ? err.message : 'Gagal membuat pesanan')
@@ -426,17 +463,106 @@ export default function Orders() {
 
       <dialog id="manual_modal" className="modal">
         <div className="modal-box ad-dialog max-w-md p-6">
-          <h3 className="font-semibold text-[17px] tracking-tight">Buat Pesanan Manual</h3>
-          <form onSubmit={submitManual} className="flex flex-col gap-4 mt-5">
-            <label className="ad-label">Email Pelanggan<input type="email" required value={mEmail} onChange={(e) => setMEmail(e.target.value)} placeholder="pelanggan@email.com" className="ad-input mt-1.5 normal-case" /></label>
-            <label className="ad-label">Varian<select value={mVariantId} onChange={(e) => setMVariantId(e.target.value)} required className="ad-input mt-1.5"><option value="">Pilih varian</option>{manualVariants.map((v) => <option key={v.id} value={v.id}>{v.name} - Rp {Number(v.price).toLocaleString('id-ID')}</option>)}</select></label>
-            <label className="ad-label">Ref Bayar (opsional)<input type="text" value={mPaymentRef} onChange={(e) => setMPaymentRef(e.target.value)} placeholder="tunai / transfer ..." className="ad-input mt-1.5 normal-case" /></label>
-            {mError && <p className="text-xs font-semibold text-red-600">{mError}</p>}
-            <div className="flex justify-end gap-2 mt-2">
-              <button type="button" onClick={() => (document.getElementById('manual_modal') as HTMLDialogElement | null)?.close()} className="ad-btn">Batal</button>
-              <button type="submit" disabled={mSaving} className="ad-btn ad-btn-dark">{mSaving ? 'Menyimpan...' : 'Buat Pesanan'}</button>
-            </div>
-          </form>
+          {mStep === 1 ? (
+            <>
+              <h3 className="font-semibold text-[17px] tracking-tight">Buat Pesanan Manual</h3>
+              <p className="text-xs text-[#6e6e73] mt-1">Pesanan tercatat PENDING - setujui dari antrean untuk alokasi stok.</p>
+              <form onSubmit={submitManual} className="flex flex-col gap-4 mt-5">
+                <label className="ad-label">Email Pelanggan
+                  <input type="email" required value={mEmail} onChange={(e) => setMEmail(e.target.value)} placeholder="pelanggan@email.com" className="ad-input mt-1.5 normal-case" />
+                  <span className="text-[11px] text-[#aeaeb2] mt-1 normal-case font-normal">Harus sudah terdaftar (punya akun).</span>
+                </label>
+                <div>
+                  <span className="ad-label">Varian</span>
+                  <div className="relative mt-1.5">
+                    <input
+                      type="text"
+                      value={mSelected ? `${mSelected.name} - Rp ${Number(mSelected.price).toLocaleString('id-ID')}` : mSearch}
+                      onChange={(e) => { setMVariantId(''); setMSearch(e.target.value) }}
+                      onFocus={() => { if (mSelected) { setMSearch(''); setMVariantId('') } }}
+                      placeholder="Ketik untuk cari varian..."
+                      className="ad-input normal-case pr-9"
+                    />
+                    <Search width={15} height={15} strokeWidth={1.5} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#aeaeb2] pointer-events-none" />
+                  </div>
+                  {!mSelected && (
+                    <div className="mt-1.5 max-h-44 overflow-y-auto rounded-[10px] border border-[#e8e8ed]">
+                      {mFiltered.length === 0 ? (
+                        <p className="text-xs text-[#aeaeb2] px-3 py-2.5">Tidak ada varian cocok.</p>
+                      ) : (
+                        mFiltered.slice(0, 30).map((v) => (
+                          <button
+                            type="button"
+                            key={v.id}
+                            onClick={() => { setMVariantId(v.id); setMSearch('') }}
+                            className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left hover:bg-[#f5f5f7] border-b border-[#f4f4f5] last:border-0"
+                          >
+                            <span className="text-[13px] font-medium truncate">{v.name}</span>
+                            <span className="ad-num text-xs font-semibold shrink-0">Rp {Number(v.price).toLocaleString('id-ID')}</span>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  )}
+                </div>
+                {mSelected && (
+                  <div className="rounded-[10px] border border-[#e8e8ed] bg-[#f5f5f7] px-3 py-2.5">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input type="checkbox" checked={mUseCustom} onChange={(e) => { setMUseCustom(e.target.checked); setMCustomPrice('') }} className="checkbox checkbox-sm" />
+                      <span className="text-xs font-semibold">Harga berbeda dari katalog</span>
+                    </label>
+                    {mUseCustom && (
+                      <div className="mt-2">
+                        <RupiahInput label="Harga final (Rp)" required value={mCustomPrice} onChange={setMCustomPrice} placeholder={mCatalogPrice} />
+                      </div>
+                    )}
+                  </div>
+                )}
+                <label className="ad-label">Ref Bayar (opsional)<input type="text" value={mPaymentRef} onChange={(e) => setMPaymentRef(e.target.value)} placeholder="tunai / transfer ..." className="ad-input mt-1.5 normal-case" /></label>
+                {mSelected && (
+                  <div className="ad-num text-[13px] border-t-2 border-dashed border-[#e8e8ed] pt-3 flex flex-col gap-1.5">
+                    <div className="text-[11px] font-bold tracking-wider text-[#aeaeb2]">PRATINJAU STRUK</div>
+                    <div className="flex justify-between gap-4"><span className="text-[#6e6e73]">Varian</span><span className="text-right font-medium normal-case">{mSelected.name}</span></div>
+                    <div className="flex justify-between gap-4"><span className="text-[#6e6e73]">Pelanggan</span><span className="text-right truncate normal-case">{mEmail || '-'}</span></div>
+                    {mUseCustom && mFinalPrice ? (
+                      <>
+                        <div className="flex justify-between"><span className="text-[#6e6e73]">Katalog</span><s className="text-[#aeaeb2]">Rp {Number(mCatalogPrice).toLocaleString('id-ID')}</s></div>
+                        <div className="flex justify-between"><span className="text-[#6e6e73]">Harga final</span><span className="font-semibold">Rp {Number(mFinalPrice).toLocaleString('id-ID')}</span></div>
+                      </>
+                    ) : (
+                      <div className="flex justify-between"><span className="text-[#6e6e73]">Harga</span><span className="font-semibold">Rp {Number(mCatalogPrice).toLocaleString('id-ID')}</span></div>
+                    )}
+                    <div className="flex justify-between"><span className="text-[#6e6e73]">Ref</span><span className="normal-case">{mPaymentRef || '-'}</span></div>
+                  </div>
+                )}
+                {mError && <p className="text-xs font-semibold text-red-600">{mError}</p>}
+                <div className="flex justify-end gap-2 mt-2">
+                  <button type="button" onClick={() => (document.getElementById('manual_modal') as HTMLDialogElement | null)?.close()} className="ad-btn">Batal</button>
+                  <button type="submit" disabled={mSaving || !mSelected || (mUseCustom && !mCustomPrice)} className="ad-btn ad-btn-dark">{mSaving ? 'Menyimpan...' : 'Buat Pesanan'}</button>
+                </div>
+              </form>
+            </>
+          ) : (
+            <>
+              <h3 className="font-semibold text-[17px] tracking-tight">Pesanan Dibuat</h3>
+              {mCreated && (
+                <div className="mt-4 text-sm ad-num flex flex-col gap-1.5">
+                  <div className="flex justify-between"><span className="text-[#6e6e73]">ID</span><span className="font-semibold">{mCreated.id.slice(0, 8).toUpperCase()}</span></div>
+                  <div className="flex justify-between"><span className="text-[#6e6e73]">Tanggal</span><span>{new Date(mCreated.createdAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}</span></div>
+                  <div className="flex justify-between gap-4"><span className="text-[#6e6e73]">Produk</span><span className="text-right font-medium normal-case">{mCreated.productName}</span></div>
+                  <div className="flex justify-between gap-4"><span className="text-[#6e6e73]">Pelanggan</span><span className="text-right truncate normal-case">{mEmail}</span></div>
+                  <div className="flex justify-between"><span className="text-[#6e6e73]">Jumlah</span><span className="font-semibold">Rp {Number(mCreated.amount).toLocaleString('id-ID')}</span></div>
+                  <div className="flex justify-between"><span className="text-[#6e6e73]">Status</span><StatusChip status={mCreated.status}>{mCreated.status}</StatusChip></div>
+                  <div className="flex justify-between"><span className="text-[#6e6e73]">Ref</span><span className="normal-case">{mPaymentRef || '-'}</span></div>
+                </div>
+              )}
+              {mError && <p className="text-xs font-semibold text-red-600 mt-3">{mError}</p>}
+              <div className="flex justify-end gap-2 mt-5">
+                <button type="button" onClick={() => { resetManualForm() }} className="ad-btn">Buat Lagi</button>
+                <button type="button" onClick={() => (document.getElementById('manual_modal') as HTMLDialogElement | null)?.close()} className="ad-btn ad-btn-dark">Selesai</button>
+              </div>
+            </>
+          )}
         </div>
         <form method="dialog" className="modal-backdrop"><button>close</button></form>
       </dialog>
