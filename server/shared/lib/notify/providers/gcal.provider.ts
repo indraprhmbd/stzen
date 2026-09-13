@@ -52,7 +52,7 @@ let cachedToken: { token: string; exp: number } | null = null
 
 async function getAccessToken(
   sa: ServiceAccountJson,
-  fetchImpl: typeof fetch = fetch,
+  fetchImpl: typeof fetch = (...a) => fetch(...a),
 ): Promise<string> {
   if (cachedToken && Date.now() < cachedToken.exp - 60_000) return cachedToken.token
 
@@ -157,7 +157,7 @@ export class GcalProvider implements NotificationProvider {
   private fetchImpl: typeof fetch
   private overrides: GcalConfigOverrides
 
-  constructor(fetchImpl: typeof fetch = fetch, overrides: GcalConfigOverrides = {}) {
+  constructor(fetchImpl: typeof fetch = (...a) => fetch(...a), overrides: GcalConfigOverrides = {}) {
     this.fetchImpl = fetchImpl
     this.overrides = overrides
   }
