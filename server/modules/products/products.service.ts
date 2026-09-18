@@ -270,6 +270,7 @@ export const productsService = {
         account_type,
         conditions,
         fulfillment_type,
+        requires_delivery_info,
         is_active,
         product_id,
         created_at,
