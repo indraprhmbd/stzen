@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { authedApiRequest } from '../../../lib/api'
 import DataTable from '../../../components/admin/DataTable'
 import StatusChip from '../../../components/admin/StatusChip'
-import { Copy, Download, Upload, Xmark } from 'iconoir-react'
+import { Copy, Download, Xmark } from 'iconoir-react'
 
 // ─── Reusable bulk-import dialog shell ──────────────────────────────────────
 // Generic flow (input -> template -> preview -> commit), schema-specific
@@ -137,6 +137,37 @@ export const varianBulkConfig: BulkImportConfig = {
     },
   ],
 }
+export const stokBulkConfig: BulkImportConfig = {
+  entity: 'stok',
+  title: 'Impor Stok',
+  subtitle: 'Satu baris CSV = satu kredensial untuk satu varian',
+  sampleFilename: 'template-stok.csv',
+  template: async () => {
+    const res = await authedApiRequest((c) => c.api.v1.admin.variants['bulk-stock'].template.$get())
+    if (!res.ok) throw new Error('Gagal memuat template')
+    return (await res.json()) as BulkTemplate
+  },
+  preview: async (csvText: string) => {
+    const res = await authedApiRequest((c) => c.api.v1.admin.variants['bulk-stock'].preview.$post({ json: { csvText } }))
+    const data = (await res.json()) as BulkPreview & { error?: string }
+    if (!res.ok) throw Object.assign(new Error(data.error || 'Pratinjau gagal'), { issues: data.issues ?? [] })
+    return data
+  },
+  commit: async (csvText: string, batchKey: string) => {
+    const res = await authedApiRequest((c) =>
+      c.api.v1.admin.variants['bulk-stock'].commit.$post({ json: { csvText, batchKey } })
+    )
+    const data = (await res.json()) as BulkCommitResult & { error?: string }
+    if (!res.ok) throw new Error(data.error || 'Impor gagal')
+    return data
+  },
+  decisionColumns: [
+    { label: 'BARIS', render: (d) => <span className="ad-num">{String(d.row)}</span> },
+    { label: 'VARIAN', render: (d) => <span className="text-[13px] font-medium">{String(d.variantName)}</span> },
+    { label: 'KREDENSIAL', render: (d) => <span className="text-xs ad-num text-[#6e6e73]">{String(d.masked)}</span> },
+  ],
+}
+
 export const basisBulkConfig: BulkImportConfig = {
   entity: 'basis',
   title: 'Impor Basis',
@@ -331,7 +362,7 @@ export default function BulkImportDialog({ config, open, onClose, onDone, notify
           <div className="flex items-center justify-between gap-2 mb-1.5">
             <div className="ad-label">2 · Tempel atau unggah CSV</div>
             <label className="ad-btn">
-              <Upload width={14} height={14} strokeWidth={1.5} /> Dari file
+              <Download width={14} height={14} strokeWidth={1.5} /> Dari file
               <input type="file" accept=".csv,.txt" className="hidden" onChange={handleFile} />
             </label>
           </div>

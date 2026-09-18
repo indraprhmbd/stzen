@@ -5,7 +5,7 @@ import CopyCell from '../../../components/admin/CopyCell'
 import StatusChip, { type ChipTone } from '../../../components/admin/StatusChip'
 import { SkeletonRows } from '../../../components/admin/TableSkeleton'
 import { useTableSort, sortByKey } from '../../../hooks/useTableSort'
-import { NavArrowDown, Plus, Expand, Collapse, EditPencil, Trash, Key, Upload } from 'iconoir-react'
+import { NavArrowDown, Plus, Expand, Collapse, EditPencil, Trash, Key, Download } from 'iconoir-react'
 import BulkImportDialog, { varianBulkConfig } from './BulkImportDialog'
 import type { Variant, VariantGroup } from '../types'
 
@@ -100,7 +100,7 @@ export default function VariantGroups({ groups, filteredCount, collapsedGroups, 
           {allCollapsed ? 'Buka semua' : 'Tutup semua'}
         </button>
         </span>
-        <button onClick={() => setShowImport(true)} className="ad-btn"><Upload width={15} height={15} strokeWidth={1.5} />Impor</button>
+        <button onClick={() => setShowImport(true)} className="ad-btn"><Download width={15} height={15} strokeWidth={1.5} />Impor</button>
         <button onClick={() => onCreateVariant()} className="ad-btn ad-btn-dark"><Plus width={15} height={15} strokeWidth={1.5} />Varian</button>
       </div>
       <BulkImportDialog config={varianBulkConfig} open={showImport} onClose={() => setShowImport(false)} onDone={onImported} notify={notify} />

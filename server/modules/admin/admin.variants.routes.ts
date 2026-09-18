@@ -7,6 +7,7 @@ import { generatePublicId } from '../../shared/lib/publicId'
 import { generateSku, composeVariantName } from '../../shared/lib/sku'
 import { BulkStockSchema, BulkImportPreviewSchema, BulkImportCommitSchema } from '../products/products.schema'
 import { varianBulkService } from '../products/products.service'
+import { stokBulkService } from '../vault/vault.service'
 import { vaultService } from '../vault/vault.service'
 import { appendAudit } from '../../shared/lib/audit'
 import { getStockCounts } from '../../shared/lib/db-helpers'
@@ -68,6 +69,29 @@ export const adminVariantRoutes = new Hono<VariantEnv>()
     } catch (e: unknown) {
       // Row-level validation failures ride the error object (global handler
       // only ships {error}); unwrap here so the dialog gets row+column detail.
+      if (e && typeof e === 'object' && 'issues' in e && (e as { status?: number }).status === 400) {
+        return c.json({ error: (e as unknown as Error).message, issues: (e as { issues: unknown }).issues }, 400)
+      }
+      throw e
+    }
+  })
+
+  .get('/bulk-stock/template', async (c) => {
+    return c.json(stokBulkService.template())
+  })
+
+  .post('/bulk-stock/preview', zValidator('json', BulkImportPreviewSchema), async (c) => {
+    const { csvText } = c.req.valid('json')
+    return c.json(await stokBulkService.preview(csvText))
+  })
+
+  .post('/bulk-stock/commit', zValidator('json', BulkImportCommitSchema), async (c) => {
+    const { csvText, batchKey } = c.req.valid('json')
+    const user = c.get('user')
+    try {
+      const result = await stokBulkService.commit(csvText, batchKey, { sub: user.sub, email: user.email })
+      return c.json(result, 201)
+    } catch (e: unknown) {
       if (e && typeof e === 'object' && 'issues' in e && (e as { status?: number }).status === 400) {
         return c.json({ error: (e as unknown as Error).message, issues: (e as { issues: unknown }).issues }, 400)
       }

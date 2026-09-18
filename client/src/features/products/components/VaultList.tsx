@@ -10,7 +10,8 @@ import { useVaultManager } from '../hooks/useVaultManager'
 import { useTableSort } from '../../../hooks/useTableSort'
 import { authedApiRequest } from '../../../lib/api'
 import type { Variant } from '../types'
-import { Lock, LockSlash, Refresh, Copy, EditPencil, Trash, Prohibition, Redo, Search, NavArrowLeft, NavArrowRight, Plus, ArrowUpRightSquare } from 'iconoir-react'
+import { Lock, LockSlash, Refresh, Copy, EditPencil, Trash, Prohibition, Redo, Search, NavArrowLeft, NavArrowRight, Plus, ArrowUpRightSquare, Download } from 'iconoir-react'
+import BulkImportDialog, { stokBulkConfig } from './BulkImportDialog'
 
 interface Props { variants: Variant[]; fetchedAt: number | null; initialVariantId?: string | null; onVariantSelected?: () => void; /** Prefill order search (orders deep-link: jump straight to that order's credential). */ initialOrderId?: string | null; /** Open import dialog on preselect (create flow). Deep-links only preselect. */ autoImport?: boolean }
 
@@ -40,6 +41,7 @@ export default function VaultList({ variants, fetchedAt, initialVariantId, onVar
   const [rotateFallbackVariantId, setRotateFallbackVariantId] = useState('')
   const [unlocking, setUnlocking] = useState(true)
   const [showImport, setShowImport] = useState(false)
+  const [showBulkImport, setShowBulkImport] = useState(false)
   const [importText, setImportText] = useState('')
   const [importLoading, setImportLoading] = useState(false)
 
@@ -160,6 +162,9 @@ export default function VaultList({ variants, fetchedAt, initialVariantId, onVar
                 <button onClick={() => setShowImport(true)} className="ad-btn ad-btn-dark"><Plus width={15} height={15} strokeWidth={1.5} />Tambah</button>
               </>
             )}
+            {/* Bulk CSV: refs travel in the file, so this stays visible
+                with no variant selected. Distinct from Tambah (single). */}
+            <button onClick={() => setShowBulkImport(true)} className="ad-btn"><Download width={15} height={15} strokeWidth={1.5} />Impor CSV</button>
           </div>
 
           {/* ── Status bar ──────────────────────────────────────── */}
@@ -344,6 +349,8 @@ export default function VaultList({ variants, fetchedAt, initialVariantId, onVar
               </div>
             </dialog>
           )}
+          {/* ── Bulk CSV import (multi-variant; refs travel in file) ── */}
+          <BulkImportDialog config={stokBulkConfig} open={showBulkImport} onClose={() => setShowBulkImport(false)} onDone={() => v.fetchList()} notify={v.showToast} />
         </>
       )}
 
