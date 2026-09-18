@@ -26,6 +26,7 @@ const VariantCreateSchema = z.object({
   accountType: z.string().nullable().optional(),
   conditions: z.string().nullable().optional(),
   fulfillmentType: z.enum(['vault', 'on_demand']).optional().default('vault'),
+  requiresDeliveryInfo: z.boolean().optional(),
   isActive: z.boolean().optional(),
 })
 
@@ -41,6 +42,7 @@ const VariantUpdateSchema = z.object({
   accountType: z.string().nullable().optional(),
   conditions: z.string().nullable().optional(),
   fulfillmentType: z.enum(['vault', 'on_demand']).optional(),
+  requiresDeliveryInfo: z.boolean().optional(),
   isActive: z.boolean().optional(),
 })
 
@@ -79,6 +81,7 @@ export const adminVariantRoutes = new Hono<VariantEnv>()
         account_type,
         conditions,
         fulfillment_type,
+        requires_delivery_info,
         is_active,
         product_id,
         created_at,
@@ -115,6 +118,7 @@ export const adminVariantRoutes = new Hono<VariantEnv>()
         accountType: v.account_type,
         conditions: v.conditions,
         fulfillmentType: v.fulfillment_type,
+        requiresDeliveryInfo: v.requires_delivery_info ?? false,
         isActive: v.is_active,
         baseName: product?.name,
         category: product?.category,
@@ -194,6 +198,7 @@ export const adminVariantRoutes = new Hono<VariantEnv>()
         account_type: data.accountType,
         conditions: data.conditions,
         fulfillment_type: data.fulfillmentType ?? 'vault',
+        requires_delivery_info: data.requiresDeliveryInfo ?? false,
         is_active: data.isActive ?? true,
       })
       .select()
@@ -287,6 +292,7 @@ export const adminVariantRoutes = new Hono<VariantEnv>()
       if (data.accountType !== undefined) updateData.account_type = data.accountType
       if (data.conditions !== undefined) updateData.conditions = data.conditions
       if (data.fulfillmentType !== undefined) updateData.fulfillment_type = data.fulfillmentType
+      if (data.requiresDeliveryInfo !== undefined) updateData.requires_delivery_info = data.requiresDeliveryInfo
       if (data.isActive !== undefined) updateData.is_active = data.isActive
       if (data.name !== undefined) updateData.name = data.name
       if (data.sku !== undefined) updateData.sku = data.sku

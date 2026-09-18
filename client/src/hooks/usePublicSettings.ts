@@ -7,9 +7,10 @@ export interface PublicSettings {
   whatsapp: string
   telegram: string
   email: string
+  paymentMethods: string[]
 }
 
-const EMPTY: PublicSettings = { storeName: '', announcement: '', whatsapp: '', telegram: '', email: '' }
+const EMPTY: PublicSettings = { storeName: '', announcement: '', whatsapp: '', telegram: '', email: '', paymentMethods: ['manual'] }
 const TTL_MS = 60 * 1000
 
 // Module-level cache shared across mounts: one fetch per minute max, with
@@ -24,7 +25,7 @@ async function load(): Promise<PublicSettings> {
     inflight = api.api.settings.public
       .$get()
       .then((r) => r.json() as Promise<Partial<PublicSettings>>)
-      .then((j) => ({ ...EMPTY, ...j }))
+      .then((j) => ({ ...EMPTY, ...j, paymentMethods: Array.isArray((j as any).paymentMethods) ? (j as any).paymentMethods : EMPTY.paymentMethods }))
       .catch(() => EMPTY)
       .finally(() => {
         inflight = null

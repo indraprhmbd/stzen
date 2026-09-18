@@ -8,6 +8,7 @@ interface Order {
   createdAt: string
   productName: string
   productCategory?: string
+  paymentProvider?: string | null
 }
 
 interface OrderCardProps {
@@ -16,6 +17,7 @@ interface OrderCardProps {
   onReport?: () => void
   onReceipt?: () => void
   onPay?: () => void
+  onContactWa?: () => void
   paying?: boolean
   onCancel?: () => void
 }
@@ -51,7 +53,7 @@ function getStatusConfig(status: Order['status']) {
   }
 }
 
-export default function OrderCard({ order, onViewCredentials, onReport, onReceipt, onPay, paying, onCancel }: OrderCardProps) {
+export default function OrderCard({ order, onViewCredentials, onReport, onReceipt, onPay, onContactWa, paying, onCancel }: OrderCardProps) {
   const brand = useBrand()
   const { t, lang } = useCopy()
   const statusConfig = getStatusConfig(order.status)
@@ -81,7 +83,15 @@ export default function OrderCard({ order, onViewCredentials, onReport, onReceip
           {formatIdDate(order.createdAt)} · #{order.id.slice(0, 8).toUpperCase()}
         </span>
         <div className="ml-auto flex shrink-0 gap-1.5">
-          {order.status === 'PENDING' && onPay && (
+          {order.status === 'PENDING' && order.paymentProvider === 'manual' && onContactWa && (
+            <button
+              className="bg-primary text-black border-2 border-black shadow-brutal-sm btn-brutal-interactive font-black uppercase text-[10px] px-2 py-1"
+              onClick={onContactWa}
+            >
+              {t.dashboard.contactWa}
+            </button>
+          )}
+          {order.status === 'PENDING' && order.paymentProvider !== 'manual' && onPay && (
             <button
               className="bg-primary text-black border-2 border-black shadow-brutal-sm btn-brutal-interactive font-black uppercase text-[10px] px-2 py-1 disabled:opacity-50"
               onClick={onPay}

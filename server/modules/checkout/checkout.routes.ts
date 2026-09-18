@@ -19,7 +19,7 @@ export const checkoutRoutes = new Hono<CheckoutEnv>()
   zValidator('json', CheckoutSchema),
   async (c) => {
     const user = c.get('user')
-    const { productId } = c.req.valid('json')
+    const { productId, paymentMethod, customerAccount, waNumber } = c.req.valid('json')
     // Double-click / retry with the same key returns the original order
     // instead of minting a duplicate PENDING row. Claim-first: the unique
     // index is the arbiter under concurrent retries. Loser re-reads the
@@ -36,7 +36,7 @@ export const checkoutRoutes = new Hono<CheckoutEnv>()
         throw new HTTPException(409, { message: 'Duplicate request in progress' })
       }
     }
-    const order = await checkoutService.createOrder(user.sub, productId)
+    const order = await checkoutService.createOrder(user.sub, productId, { paymentMethod, customerAccount, waNumber })
     await appendAudit({
       action: 'order:create',
       resourceType: 'order',

@@ -106,6 +106,7 @@ export const productVariants = pgTable(
     accountType: text('account_type'),
     conditions: text('conditions'),
     fulfillmentType: text('fulfillment_type').notNull().default('vault'),
+    requiresDeliveryInfo: boolean('requires_delivery_info').notNull().default(false),
     isActive: boolean('is_active').notNull().default(true),
     deletedAt: timestamp('deleted_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -160,6 +161,8 @@ export const orders = pgTable(
     status: orderStatusEnum('status').notNull().default('PENDING'),
     paymentRef: text('payment_ref'),
     paymentProvider: text('payment_provider'),
+    customerAccount: text('customer_account').notNull().default(''),
+    waNumber: text('wa_number').notNull().default(''),
     amount: integer('amount').notNull(),
     // snapshots for immutable history
     variantNameSnapshot: text('variant_name_snapshot'),

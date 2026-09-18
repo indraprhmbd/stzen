@@ -25,6 +25,7 @@ export interface Variant {
   accountType: string | null
   conditions: string | null
   fulfillmentType: string
+  requiresDeliveryInfo: boolean
   isActive: boolean
   stockCount: number
   productId: string | null

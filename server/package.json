@@ -14,7 +14,7 @@
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
-    "test": "tsx --test modules/auth/__tests__/safe-redirect.test.ts shared/lib/notify/__tests__/notify.test.ts"
+    "test": "tsx --test modules/auth/__tests__/safe-redirect.test.ts shared/lib/notify/__tests__/notify.test.ts shared/lib/__tests__/wa.test.ts"
   },
   "dependencies": {
     "@hono/zod-validator": "^0.9.0",

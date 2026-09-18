@@ -38,6 +38,8 @@ interface AdminOrder {
   amount: string
   paymentRef: string | null
   paymentProvider: string | null
+  customerAccount: string
+  waNumber: string
   fulfillmentType: string
   vaultAvailable: number | null
   status: 'PENDING' | 'PAID' | 'DELIVERED' | 'REJECTED' | 'REFUNDED'
@@ -451,6 +453,12 @@ export default function Orders() {
               <div className="flex justify-between"><span className="text-[#6e6e73]">Jumlah</span><span className="font-semibold">Rp {Number(receipt.amount).toLocaleString('id-ID')}</span></div>
               <div className="flex justify-between"><span className="text-[#6e6e73]">Status</span><span>{receipt.status}</span></div>
               <div className="flex justify-between"><span className="text-[#6e6e73]">Ref</span><span>{receipt.paymentRef ?? '-'}</span></div>
+              {(receipt.customerAccount || receipt.waNumber) && (
+                <>
+                  {receipt.customerAccount && <div className="flex justify-between gap-4"><span className="text-[#6e6e73]">Akun</span><span className="text-right font-medium break-all">{receipt.customerAccount}</span></div>}
+                  {receipt.waNumber && <div className="flex justify-between"><span className="text-[#6e6e73]">WA</span><span className="font-mono font-semibold">+{receipt.waNumber}</span></div>}
+                </>
+              )}
             </div>
           )}
           <div className="flex justify-end gap-2 mt-5">

@@ -20,6 +20,7 @@ interface Order {
   vaultItemId: string | null
   status: 'PENDING' | 'PAID' | 'DELIVERED' | 'REJECTED' | 'REFUNDED'
   paymentRef: string | null
+  paymentProvider: string | null
   amount: string
   createdAt: string
   paidAt: string | null
@@ -202,6 +203,16 @@ const { t } = useCopy()
     showToast(t.common.copiedToClipboard, 'success')
   }
 
+  function getManualConfirmUrl(order: Order) {
+    const number = (support.whatsapp || brand.support.whatsappNumber).replace(/[^\d]/g, '')
+    const text = encodeURIComponent(
+      t.products.waConfirmText
+        .replace('{id}', order.id.slice(0, 8).toUpperCase())
+        .replace('{product}', order.productName)
+    )
+    return `https://wa.me/${number}?text=${text}`
+  }
+
   function getWhatsAppUrl(order: Order) {
     const number = support.whatsapp || brand.support.whatsappNumber
     const text = encodeURIComponent(
@@ -306,7 +317,8 @@ const { t } = useCopy()
                     key={order.id}
                     order={order}
                     onViewCredentials={order.status === 'DELIVERED' ? () => handleViewCredentials(order.id) : undefined}
-                    onPay={order.status === 'PENDING' ? () => handlePay(order.id) : undefined}
+                    onPay={order.status === 'PENDING' && order.paymentProvider !== 'manual' ? () => handlePay(order.id) : undefined}
+                    onContactWa={order.status === 'PENDING' && order.paymentProvider === 'manual' ? () => window.open(getManualConfirmUrl(order), '_blank') : undefined}
                     paying={payingId === order.id}
                     onCancel={order.status === 'PENDING' ? () => handleCancel(order.id) : undefined}
                     onReport={() => window.open(getWhatsAppUrl(order), '_blank')}

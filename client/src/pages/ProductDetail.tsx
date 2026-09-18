@@ -5,6 +5,7 @@ import { initiatePayment, deleteOrder } from '../lib/pay'
 import { getCachedDetail } from '../lib/prefetch'
 import { useToast } from '../hooks/useToast'
 import ToastStack from '../components/Toast'
+import { usePublicSettings } from '../hooks/usePublicSettings'
 import Layout from '../components/Layout'
 import ProductCard from '../components/ProductCard'
 import { useBrand } from '../hooks/useBrand'
@@ -22,6 +23,7 @@ type Product = {
   stockCount: number
   fulfillmentType?: string
   isActive: boolean
+  requiresDeliveryInfo?: boolean
 }
 
 export default function ProductDetail() {
@@ -29,6 +31,17 @@ export default function ProductDetail() {
   const navigate = useNavigate()
   const brand = useBrand()
   const { t } = useCopy()
+  const settings = usePublicSettings()
+  // Server-gated rails: sumopod only when its key is configured (settings
+  // fall back to manual-only while loading). Manual always available.
+  const methods: ('manual' | 'sumopod')[] = settings.paymentMethods.includes('sumopod')
+    ? ['manual', 'sumopod']
+    : ['manual']
+  const [method, setMethod] = useState<'manual' | 'sumopod'>('manual')
+  const [account, setAccount] = useState('')
+  const [wa, setWa] = useState('')
+  const [formErr, setFormErr] = useState('')
+  const [placed, setPlaced] = useState<{ id: string; product: string } | null>(null)
   const [product, setProduct] = useState<Product | null>(() => (id ? getCachedDetail<Product>(id) : null))
   const [related, setRelated] = useState<Product[]>([])
   // Prefetched hit paints instantly - skip the skeleton, revalidate silently.
@@ -87,24 +100,54 @@ export default function ProductDetail() {
 
   function openBuyConfirm() {
     if (!product || purchasing || !inStock) return
+    // Fresh dialog state every open: default rail prefers automation, form
+    // cleared, previous manual receipt discarded.
+    setMethod(methods.includes('sumopod') ? 'sumopod' : 'manual')
+    setAccount('')
+    setWa('')
+    setFormErr('')
+    setPlaced(null)
     ;(document.getElementById('buy-confirm') as HTMLDialogElement | null)?.showModal()
   }
 
+  // Client mirror of the server contact rules (server re-validates
+  // fail-closed). Empty string = valid, set when blocking.
+  function validateContact(): string {
+    if (!product?.requiresDeliveryInfo) return ''
+    if (account.trim().length < 3 || account.trim().length > 120) return t.products.errAccount
+    const digits = wa.replace(/[^\d]/g, '').replace(/^0/, '62')
+    if (!/^62[89]\d{7,12}$/.test(digits)) return t.products.errWa
+    return ''
+  }
+
   function confirmBuy() {
-    ;(document.getElementById('buy-confirm') as HTMLDialogElement | null)?.close()
+    const err = validateContact()
+    if (err) {
+      setFormErr(err)
+      return
+    }
+    setFormErr('')
     void handleBuy()
   }
 
   async function handleBuy() {
     if (!product || purchasing) return
     setPurchasing(true)
-    // One key per buy-intent: double-clicks and network retries reuse it, so
-    // the server returns the original order instead of minting duplicates.
+    // From the click on, the whole dialog is frozen (inputs + rail + close):
+    // the method locks at order creation and retries reuse the idempotency
+    // key, so nothing the buyer does here can switch rails mid-flight.
     const idempotencyKey = crypto.randomUUID()
     let oid = ''
     try {
       const res = await authedApiRequest(
-        (c) => c.api.v1.checkout.$post({ json: { productId: product.id } }),
+        (c) => c.api.v1.checkout.$post({
+          json: {
+            productId: product.id,
+            paymentMethod: method,
+            customerAccount: account.trim(),
+            waNumber: wa.trim(),
+          },
+        }),
         { headers: { 'Idempotency-Key': idempotencyKey } }
       )
       if (!res.ok) {
@@ -114,9 +157,16 @@ export default function ProductDetail() {
       }
       const data = await res.json() as any
       oid = typeof data.orderId === 'string' ? data.orderId : data.orderId?.id ?? ''
+      if (method === 'manual') {
+        // No invoice to mint: the order sits PENDING for admin approval.
+        // Keep the dialog open on the WA-confirmation receipt.
+        setPlaced({ id: oid, product: product.name })
+        return
+      }
       // SumoPod-only: mint the invoice, then leave for the payment link.
       setMsg('Membuat pembayaran…')
       const checkoutUrl = await initiatePayment(oid)
+      ;(document.getElementById('buy-confirm') as HTMLDialogElement | null)?.close()
       if (checkoutUrl) {
         window.location.href = checkoutUrl
       } else {
@@ -362,6 +412,41 @@ export default function ProductDetail() {
             </h3>
           </div>
           <div className="p-5 flex flex-col gap-3">
+            {placed ? (
+              <>
+                <div className="bg-primary/20 border-2 border-black p-3 text-center">
+                  <p className="font-black text-sm uppercase text-neutral" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                    {t.products.manualPlaced}
+                  </p>
+                  <p className="font-mono text-xs font-bold text-neutral mt-1">
+                    #{placed.id.slice(0, 8).toUpperCase()}
+                  </p>
+                </div>
+                <div className="bg-white border-2 border-black p-2.5 text-xs font-bold text-neutral leading-relaxed">
+                  {t.products.manualPlacedNote}
+                </div>
+                <a
+                  href={`https://wa.me/${settings.whatsapp.replace(/[^\d]/g, '')}?text=${encodeURIComponent(
+                    t.products.waConfirmText.replace('{id}', placed.id.slice(0, 8).toUpperCase()).replace('{product}', placed.product)
+                  )}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="btn btn-primary border-2 border-black font-black text-xs uppercase py-2.5 btn-comic-interactive flex items-center justify-center"
+                >
+                  {t.products.waConfirm}
+                </a>
+                <button
+                  onClick={() => {
+                    ;(document.getElementById('buy-confirm') as HTMLDialogElement | null)?.close()
+                    navigate('/dashboard')
+                  }}
+                  className="w-full bg-white text-black font-black text-xs uppercase border-2 border-black py-2.5 hover:bg-black hover:text-white transition-colors"
+                >
+                  {t.payment.toDashboard}
+                </button>
+              </>
+            ) : (
+              <>
             <div className="border-2 border-dashed border-black/60 px-4 py-3 font-mono text-xs text-neutral">
               <div className="flex justify-between gap-3 py-1">
                 <span className="opacity-60">PRODUK</span>
@@ -386,12 +471,87 @@ export default function ProductDetail() {
                 <span className="font-black text-xl whitespace-nowrap">{brand.storefront.currencySymbol} {Number(product.price).toLocaleString('id-ID')}</span>
               </div>
             </div>
+            {methods.length > 1 && (
+              <div>
+                <p className="font-black text-[10px] uppercase tracking-widest text-neutral mb-1.5" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                  {t.products.methodTitle}
+                </p>
+                <div className="flex flex-col gap-1.5" role="radiogroup" aria-label={t.products.methodTitle}>
+                  {methods.includes('sumopod') && (
+                    <label className={`flex items-start gap-2 border-2 border-black p-2.5 text-xs ${method === 'sumopod' ? 'bg-primary/20' : 'bg-white'} ${purchasing ? 'opacity-60' : 'cursor-pointer'}`}>
+                      <input
+                        type="radio"
+                        name="pay-method"
+                        checked={method === 'sumopod'}
+                        disabled={purchasing}
+                        onChange={() => setMethod('sumopod')}
+                        className="radio radio-xs mt-0.5"
+                      />
+                      <span>
+                        <span className="font-black uppercase block">{t.products.methodAuto}</span>
+                        <span className="font-bold text-neutral/70">{t.products.methodAutoDesc}</span>
+                      </span>
+                    </label>
+                  )}
+                  <label className={`flex items-start gap-2 border-2 border-black p-2.5 text-xs ${method === 'manual' ? 'bg-primary/20' : 'bg-white'} ${purchasing ? 'opacity-60' : 'cursor-pointer'}`}>
+                    <input
+                      type="radio"
+                      name="pay-method"
+                      checked={method === 'manual'}
+                      disabled={purchasing}
+                      onChange={() => setMethod('manual')}
+                      className="radio radio-xs mt-0.5"
+                    />
+                    <span>
+                      <span className="font-black uppercase block">{t.products.methodManual}</span>
+                      <span className="font-bold text-neutral/70">{t.products.methodManualDesc}</span>
+                    </span>
+                  </label>
+                </div>
+              </div>
+            )}
+            {product.requiresDeliveryInfo && (
+              <div className="flex flex-col gap-2">
+                <label className="block">
+                  <span className="font-black text-[10px] uppercase tracking-widest text-neutral" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                    {t.products.accountLabel}
+                  </span>
+                  <input
+                    type="text"
+                    value={account}
+                    disabled={purchasing}
+                    onChange={(e) => setAccount(e.target.value)}
+                    placeholder={t.products.accountPlaceholder}
+                    maxLength={120}
+                    className="input input-bordered bg-white border-2 border-black font-bold text-xs w-full mt-1 rounded-sm disabled:opacity-60"
+                  />
+                </label>
+                <label className="block">
+                  <span className="font-black text-[10px] uppercase tracking-widest text-neutral" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                    {t.products.waLabel}
+                  </span>
+                  <input
+                    type="tel"
+                    inputMode="tel"
+                    value={wa}
+                    disabled={purchasing}
+                    onChange={(e) => setWa(e.target.value)}
+                    placeholder={t.products.waPlaceholder}
+                    maxLength={20}
+                    className="input input-bordered bg-white border-2 border-black font-mono font-bold text-xs w-full mt-1 rounded-sm disabled:opacity-60"
+                  />
+                </label>
+                {formErr && (
+                  <p className="text-[11px] font-bold text-error">{formErr}</p>
+                )}
+              </div>
+            )}
             <div className="bg-primary/20 border-2 border-black p-2.5 text-xs font-bold text-neutral leading-relaxed">
               {t.products.confirmNote}
             </div>
             <div className="flex gap-2">
               <form method="dialog" className="flex-1">
-                <button className="w-full bg-white text-black font-black text-xs uppercase border-2 border-black py-2.5 hover:bg-black hover:text-white transition-colors">
+                <button disabled={purchasing} className="w-full bg-white text-black font-black text-xs uppercase border-2 border-black py-2.5 hover:bg-black hover:text-white transition-colors disabled:opacity-50">
                   {t.products.confirmCancel}
                 </button>
               </form>
@@ -400,14 +560,16 @@ export default function ProductDetail() {
                 disabled={purchasing}
                 className="flex-1 btn btn-primary border-2 border-black font-black text-xs uppercase py-2.5 btn-comic-interactive disabled:opacity-50 flex items-center justify-center gap-2 leading-none"
               >
-                <span>{purchasing ? t.products.processing : t.products.confirmGo}</span>
-                {!purchasing && <img src="/QRIS_logo.svg" alt="QRIS" className="h-3 w-auto" />}
+                <span>{purchasing ? t.products.processing : (method === 'manual' ? t.products.confirmPlace : t.products.confirmGo)}</span>
+                {!purchasing && method === 'sumopod' && <img src="/QRIS_logo.svg" alt="QRIS" className="h-3 w-auto" />}
               </button>
             </div>
+              </>
+            )}
           </div>
         </div>
         <form method="dialog" className="modal-backdrop">
-          <button>close</button>
+          <button disabled={purchasing}>close</button>
         </form>
       </dialog>
       <ToastStack toasts={toasts} onDone={dismissToast} />

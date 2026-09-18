@@ -31,6 +31,8 @@ function mapOrderRow(r: any): OrderWithProduct {
     status: r.status,
     paymentRef: r.payment_ref,
     paymentProvider: r.payment_provider,
+    customerAccount: r.customer_account ?? '',
+    waNumber: r.wa_number ?? '',
     amount: String(r.amount),
     createdAt: createdAt.toISOString(),
     paidAt: paidAt ? paidAt.toISOString() : null,
@@ -178,7 +180,7 @@ export const ordersService = {
     return { ok: true }
   },
 
-  async create(data: { userId: string; productId?: string | null; variantId?: string; amount: string | number; variantSnapshot?: any }) {
+  async create(data: { userId: string; productId?: string | null; variantId?: string; amount: string | number; variantSnapshot?: any; paymentProvider?: string; customerAccount?: string; waNumber?: string }) {
     const publicId = generatePublicId()
     const amountInt = typeof data.amount === 'string' ? parseInt(data.amount, 10) : data.amount
     const vs: any = data.variantSnapshot
@@ -192,6 +194,9 @@ export const ordersService = {
         variant_id: (data as any).variantId ?? null,
         status: 'PENDING',
         amount: amountInt,
+        payment_provider: data.paymentProvider ?? null,
+        customer_account: data.customerAccount ?? '',
+        wa_number: data.waNumber ?? '',
         variant_name_snapshot: vs?.name ?? null,
         variant_sku_snapshot: vs?.sku ?? null,
         price_at_purchase: amountInt,

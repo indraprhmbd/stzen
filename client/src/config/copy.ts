@@ -10,13 +10,13 @@ export interface Copy {
   }
   hero: { title1: string; title2: string; tagline: string; cta: string; statusPill: string; searchPlaceholder: string; searchHint: string }
   marquee: string[]
-  products: { title: string; buy: string; buyNow: string; soldOut: string; inStock: string; onlyXLeft: string; outOfStock: string; sortNewest: string; sortPrice: string; sortStock: string; sortOutOfStock: string; viewGrid: string; viewList: string; verifiedBuyer: string; loginForMore: string; confirmTitle: string; confirmNote: string; confirmCancel: string; confirmGo: string; processing: string }
+  products: { title: string; buy: string; buyNow: string; soldOut: string; inStock: string; onlyXLeft: string; outOfStock: string; sortNewest: string; sortPrice: string; sortStock: string; sortOutOfStock: string; viewGrid: string; viewList: string; verifiedBuyer: string; loginForMore: string; confirmTitle: string; confirmNote: string; confirmCancel: string; confirmGo: string; confirmPlace: string; processing: string; methodTitle: string; methodAuto: string; methodAutoDesc: string; methodManual: string; methodManualDesc: string; accountLabel: string; accountPlaceholder: string; waLabel: string; waPlaceholder: string; errAccount: string; errWa: string; manualPlaced: string; manualPlacedNote: string; waConfirm: string; waConfirmText: string }
   howItWorks: { title: string; steps: { num: string; title: string; desc: string }[] }
   whyUs: { title: string; items: { title: string; desc: string }[] }
   testimonials: { title: string; items: { quote: string; name: string; product: string }[] }
   footer: { rights: string; howToOrder: string; paymentMethods: string; faq: string; myOrders: string }
   filter: { all: string }
-  dashboard: { title: string; subtitle: string; tabs: string[]; noOrders: string; selectOrder: string; payNow: string; cancelOrder: string; viewCredentials: string; receipt: string; reportIssue: string; cancelConfirm: string; paymentVerified: string; accountDelivered: string; paymentFailed: string; orderCancelled: string; loadMore: string }
+  dashboard: { title: string; subtitle: string; tabs: string[]; noOrders: string; selectOrder: string; payNow: string; contactWa: string; cancelOrder: string; viewCredentials: string; receipt: string; reportIssue: string; cancelConfirm: string; paymentVerified: string; accountDelivered: string; paymentFailed: string; orderCancelled: string; loadMore: string }
   profile: { title: string; guest: string; guestHint: string; language: string; quickLinks: string; signOutTitle: string; signOutDesc: string; cancel: string; confirmSignOut: string }
   payment: { waiting: string; paid: string; failed: string; cancelled: string; waitingHint: string; paidHint: string; deliveredHint: string; failedHint: string; toDashboard: string }
   common: { noProducts: string; copiedToClipboard: string }
@@ -73,7 +73,23 @@ const id: Copy = {
     confirmNote: 'Tanpa keranjang, pesanan langsung dibuat dan lanjut ke pembayaran. Pastikan produk dan harga sudah benar.',
     confirmCancel: 'BATAL',
     confirmGo: 'LANJUT BAYAR',
+    confirmPlace: 'TARUH PESANAN',
     processing: 'Memproses...',
+    methodTitle: 'METODE PEMBAYARAN',
+    methodAuto: 'QRIS Otomatis',
+    methodAutoDesc: 'Bayar sekarang via QRIS, akun langsung diproses.',
+    methodManual: 'Pesanan Manual',
+    methodManualDesc: 'Taruh pesanan, konfirmasi via WhatsApp ke admin.',
+    accountLabel: 'AKUN TUJUAN',
+    accountPlaceholder: 'Email / username untuk aktivasi',
+    waLabel: 'NOMOR WHATSAPP',
+    waPlaceholder: '08xxxxxxxxxx',
+    errAccount: 'Akun tujuan wajib diisi (3-120 karakter).',
+    errWa: 'Nomor WA tidak valid (format 08..).',
+    manualPlaced: 'PESANAN DITERIMA',
+    manualPlacedNote: 'Pesanan manual tercatat. Konfirmasi ke admin via WhatsApp agar segera diproses.',
+    waConfirm: 'KONFIRMASI VIA WA',
+    waConfirmText: 'Halo, konfirmasi pesanan manual {id} ({product}).',
   },
   howItWorks: {
     title: 'CARA KERJA',
@@ -107,7 +123,7 @@ const id: Copy = {
   },
   footer: { rights: 'Hak cipta dilindungi', howToOrder: 'Cara Pesan', paymentMethods: 'Metode Pembayaran', faq: 'FAQ', myOrders: 'Pesanan Saya' },
   filter: { all: 'Semua' },
-  dashboard: { title: 'PEMBELIAN AKTIF', subtitle: 'Lihat dan kelola pesanan kredensialmu', tabs: ['Semua', 'Menunggu', 'Dibayar', 'Dikirim', 'Ditolak', 'Refund'], noOrders: 'Belum ada pesanan', selectOrder: 'Pilih pesanan yang sudah dikirim untuk melihat kredensial', payNow: 'BAYAR', cancelOrder: 'BATAL', viewCredentials: 'KREDENSIAL', receipt: 'STRUK', reportIssue: 'LAPOR', cancelConfirm: 'Batalkan order ini? Order PENDING yang belum dibayar akan dihapus.', paymentVerified: 'Pembayaran terverifikasi', accountDelivered: 'Akun terkirim, cek kredensial', paymentFailed: 'Pembayaran gagal', orderCancelled: 'Order dibatalkan', loadMore: 'MUAT LEBIH BANYAK' },
+  dashboard: { title: 'PEMBELIAN AKTIF', subtitle: 'Lihat dan kelola pesanan kredensialmu', tabs: ['Semua', 'Menunggu', 'Dibayar', 'Dikirim', 'Ditolak', 'Refund'], noOrders: 'Belum ada pesanan', selectOrder: 'Pilih pesanan yang sudah dikirim untuk melihat kredensial', payNow: 'BAYAR', contactWa: 'HUBUNGI WA', cancelOrder: 'BATAL', viewCredentials: 'KREDENSIAL', receipt: 'STRUK', reportIssue: 'LAPOR', cancelConfirm: 'Batalkan order ini? Order PENDING yang belum dibayar akan dihapus.', paymentVerified: 'Pembayaran terverifikasi', accountDelivered: 'Akun terkirim, cek kredensial', paymentFailed: 'Pembayaran gagal', orderCancelled: 'Order dibatalkan', loadMore: 'MUAT LEBIH BANYAK' },
   payment: { waiting: 'Menunggu Pembayaran', paid: 'Pembayaran Berhasil', failed: 'Pembayaran Gagal', cancelled: 'Pembayaran Dibatalkan', waitingHint: 'Selesaikan QRIS di tab pembayaran, status terupdate otomatis…', paidHint: 'Lunas, akun sedang disiapkan, cek dashboard.', deliveredHint: 'Akun sudah terkirim, cek kredensial di dashboard.', failedHint: 'Order masih PENDING, ulangi pembayaran dari dashboard.', toDashboard: 'Ke Dashboard' },
   common: { noProducts: 'Belum ada produk tersedia', copiedToClipboard: 'Disalin ke clipboard!' },
   pagination: { showing: 'Menampilkan', of: 'dari' },
@@ -194,7 +210,23 @@ const en: Copy = {
     confirmNote: 'No cart, the order is created immediately and continues to payment. Make sure the product and price are correct.',
     confirmCancel: 'CANCEL',
     confirmGo: 'CONTINUE TO PAY',
+    confirmPlace: 'PLACE ORDER',
     processing: 'Processing...',
+    methodTitle: 'PAYMENT METHOD',
+    methodAuto: 'Automatic QRIS',
+    methodAutoDesc: 'Pay now via QRIS, account processed instantly.',
+    methodManual: 'Manual Order',
+    methodManualDesc: 'Place the order, confirm via WhatsApp to admin.',
+    accountLabel: 'TARGET ACCOUNT',
+    accountPlaceholder: 'Email / username for activation',
+    waLabel: 'WHATSAPP NUMBER',
+    waPlaceholder: '08xxxxxxxxxx',
+    errAccount: 'Target account is required (3-120 characters).',
+    errWa: 'Invalid WA number (08.. format).',
+    manualPlaced: 'ORDER RECEIVED',
+    manualPlacedNote: 'Manual order recorded. Confirm to admin via WhatsApp to get it processed.',
+    waConfirm: 'CONFIRM VIA WA',
+    waConfirmText: 'Hello, confirming manual order {id} ({product}).',
   },
   howItWorks: {
     title: 'HOW IT WORKS',
@@ -229,7 +261,7 @@ const en: Copy = {
   footer: { rights: 'All rights reserved', howToOrder: 'How to Order', paymentMethods: 'Payment Methods', faq: 'FAQ', myOrders: 'My Orders' },
   filter: { all: 'All' },
   profile: { title: 'ACCOUNT', guest: 'Not signed in', guestHint: 'Sign in to track orders and view credentials', language: 'LANGUAGE', quickLinks: 'SHORTCUTS', signOutTitle: 'SIGN OUT?', signOutDesc: 'You need to sign in again to track orders and view credentials.', cancel: 'CANCEL', confirmSignOut: 'YES, SIGN OUT' },
-  dashboard: { title: 'MY ACTIVE PURCHASES', subtitle: 'View and manage your credential orders', tabs: ['All', 'Pending', 'Paid', 'Delivered', 'Rejected', 'Refunded'], noOrders: 'No orders found', selectOrder: 'Select a delivered order to view credentials', payNow: 'PAY', cancelOrder: 'CANCEL', viewCredentials: 'CREDENTIALS', receipt: 'RECEIPT', reportIssue: 'REPORT', cancelConfirm: 'Cancel this order? Unpaid PENDING orders will be deleted.', paymentVerified: 'Payment verified', accountDelivered: 'Account delivered, check credentials', paymentFailed: 'Payment failed', orderCancelled: 'Order cancelled', loadMore: 'LOAD MORE' },
+  dashboard: { title: 'MY ACTIVE PURCHASES', subtitle: 'View and manage your credential orders', tabs: ['All', 'Pending', 'Paid', 'Delivered', 'Rejected', 'Refunded'], noOrders: 'No orders found', selectOrder: 'Select a delivered order to view credentials', payNow: 'PAY', contactWa: 'CONTACT WA', cancelOrder: 'CANCEL', viewCredentials: 'CREDENTIALS', receipt: 'RECEIPT', reportIssue: 'REPORT', cancelConfirm: 'Cancel this order? Unpaid PENDING orders will be deleted.', paymentVerified: 'Payment verified', accountDelivered: 'Account delivered, check credentials', paymentFailed: 'Payment failed', orderCancelled: 'Order cancelled', loadMore: 'LOAD MORE' },
   payment: { waiting: 'Waiting for Payment', paid: 'Payment Successful', failed: 'Payment Failed', cancelled: 'Payment Cancelled', waitingHint: 'Finish the QRIS in the payment tab, status updates automatically…', paidHint: 'Paid, account is being prepared, check dashboard.', deliveredHint: 'Account delivered, check credentials in dashboard.', failedHint: 'Order still PENDING, retry payment from dashboard.', toDashboard: 'To Dashboard' },
   common: { noProducts: 'No products available', copiedToClipboard: 'Copied to clipboard!' },
   pagination: { showing: 'Showing', of: 'of' },

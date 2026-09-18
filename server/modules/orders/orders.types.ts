@@ -12,6 +12,10 @@ export interface Order {
   status: OrderStatus
   paymentRef: string | null
   paymentProvider: string | null
+  // Buyer delivery contact (storefront checkout; '' when the variant did
+  // not require delivery info). Display-only for admin, never edited.
+  customerAccount: string
+  waNumber: string
   amount: string
   createdAt: string
   paidAt: string | null

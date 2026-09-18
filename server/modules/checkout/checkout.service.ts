@@ -1,14 +1,27 @@
 import { supabaseAdmin } from '../../shared/db'
+import { getEnv } from '../../shared/lib/runtime-env'
+import { normalizeWaNumber } from '../../shared/lib/wa'
 import { productsService } from '../products/products.service'
 import { ordersService } from '../orders/orders.service'
 import { getStockCount } from '../../shared/lib/db-helpers'
-import { NotFoundError, ConflictError } from '../../shared/errors/http'
+import { NotFoundError, ConflictError, BadRequestError } from '../../shared/errors/http'
 
 const PRODUCTS = 'products'
 const PRODUCT_VARIANTS = 'product_variants'
 
+export interface CheckoutInput {
+  paymentMethod: 'manual' | 'sumopod'
+  customerAccount?: string
+  waNumber?: string
+}
+
 export const checkoutService = {
-  async createOrder(userId: string, publicId: string) {
+  async createOrder(userId: string, publicId: string, input: CheckoutInput) {
+    const { paymentMethod } = input
+    // Fail closed: sumopod only when its key is configured. Manual always.
+    if (paymentMethod === 'sumopod' && !getEnv('PAYMENT_SUMOPOD_API_KEY')) {
+      throw new BadRequestError('Metode pembayaran tidak tersedia')
+    }
     let variant: any
     try {
       variant = await productsService.getById(publicId)
@@ -22,7 +35,7 @@ export const checkoutService = {
 
     const { data: internal, error } = await supabaseAdmin
       .from(PRODUCT_VARIANTS)
-      .select('id, product_id, fulfillment_type')
+      .select('id, product_id, fulfillment_type, requires_delivery_info')
       .eq('public_id', publicId)
       .limit(1)
 
@@ -52,12 +65,33 @@ export const checkoutService = {
       }
     }
 
+    // Delivery contact: required iff the variant's flag is on (read from the
+    // DB row above, never trusted from the client). Flag off: ignore and
+    // store blanks so unflagged variants keep the lean dialog.
+    let customerAccount = ''
+    let waNumber = ''
+    if (internal && internal.length > 0 && internal[0].requires_delivery_info) {
+      const account = (input.customerAccount ?? '').trim()
+      if (account.length < 3 || account.length > 120) {
+        throw new BadRequestError('Akun tujuan wajib diisi (3-120 karakter)')
+      }
+      const wa = normalizeWaNumber(input.waNumber ?? '')
+      if (!wa) {
+        throw new BadRequestError('Nomor WA tidak valid (format 08..)')
+      }
+      customerAccount = account
+      waNumber = wa
+    }
+
     const order = await ordersService.create({
       userId,
       productId: internalProductId,
       variantId: internal ? internalId : undefined,
       amount: variant.price,
       variantSnapshot: variant,
+      paymentProvider: paymentMethod,
+      customerAccount,
+      waNumber,
     })
 
     return {

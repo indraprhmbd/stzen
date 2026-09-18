@@ -42,7 +42,11 @@ export const paymentsService = {
       throw new ConflictError(`Cannot initiate payment for a ${order.status} order`)
     }
 
-    const providerName = getActiveProviderName()
+    // Method lock: the rail was chosen at checkout and stored on the order.
+    // Retries and dashboard BAYAR always reuse it, never the env default,
+    // so a buyer cannot switch methods after committing. Legacy/admin rows
+    // without a stored provider fall back to the active env provider.
+    const providerName = order.paymentProvider || getActiveProviderName()
     const provider = getProvider(providerName)
     const result = await provider.createInvoice({
       orderId: order.id,

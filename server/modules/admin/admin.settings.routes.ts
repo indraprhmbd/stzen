@@ -5,6 +5,7 @@ import { supabaseAdmin } from '../../shared/db'
 import { type AuthEnv } from '../../shared/middleware/auth'
 import { appendAudit } from '../../shared/lib/audit'
 import { getSetting, invalidateSettings } from '../../shared/lib/settings'
+import { getEnv } from '../../shared/lib/runtime-env'
 
 type SettingsEnv = AuthEnv
 
@@ -60,9 +61,16 @@ export const publicSettingsRoutes = new Hono()
       getSetting('support.email', ''),
     ])
 
+    // Storefront checkout rails. Manual always; sumopod only when its API
+    // key is configured. The dialog gates its method radio on this; the
+    // checkout service re-validates fail-closed.
+    const paymentMethods = getEnv('PAYMENT_SUMOPOD_API_KEY')
+      ? ['manual', 'sumopod']
+      : ['manual']
+
     c.header('Cache-Control', 'public, max-age=60, stale-while-revalidate=60')
     c.header('Cache-Tag', 'settings')
-    return c.json({ storeName, announcement, whatsapp, telegram, email })
+    return c.json({ storeName, announcement, whatsapp, telegram, email, paymentMethods })
   })
 
 export const adminSettingsRoutes = new Hono<SettingsEnv>()

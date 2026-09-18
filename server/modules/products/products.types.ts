@@ -18,6 +18,9 @@ export interface ProductWithStock extends Product {
   stockCount: number
   fulfillmentType?: string
   compareAtPrice?: number | null
+  // True when the storefront checkout must collect delivery contact
+  // (account + WA). Set per variant by admin; product-only rows are false.
+  requiresDeliveryInfo: boolean
 }
 
 export interface PaginatedProducts {
