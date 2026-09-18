@@ -1,6 +1,23 @@
 import { supabaseAdmin } from '../../shared/db'
-import { NotFoundError } from '../../shared/errors/http'
+import { NotFoundError, BadRequestError, ConflictError } from '../../shared/errors/http'
 import { getStockCount, getStockCounts } from '../../shared/lib/db-helpers'
+import { generatePublicId } from '../../shared/lib/publicId'
+import { appendAudit, claimIdempotencyKey, findAuditByIdempotencyKey, releaseIdempotencyKey } from '../../shared/lib/audit'
+import {
+  BULK_ROW_LIMIT,
+  BULK_TEXT_LIMIT,
+  BULK_ISSUE_CAP,
+  parseCsvText,
+  coerceInteger,
+  coerceBoolean,
+  checkSingleLine,
+  checkMaxLength,
+  bulkChecksum,
+  issuesToCsv,
+  type BulkColumn,
+  type BulkIssue,
+  type ParsedCsv,
+} from '../../shared/lib/csvBulk'
 import type { ProductWithStock, PaginatedProducts, PaginatedCatalog, CatalogCard, ProductQueryParams } from './products.types'
 
 function pickProductFields(variant: any): { category: string; description: string | null; overview: string | null; instructions: string | null; name: string } {
@@ -160,7 +177,7 @@ export const productsService = {
   },
 
   async listPaginated(params: ProductQueryParams): Promise<PaginatedCatalog> {
-    const { category, sort = 'newest', page = 1, limit = 24, search } = params
+    const { category, tags, sort = 'newest', page = 1, limit = 24, search } = params
     const offset = (page - 1) * limit
 
     // Lean card projection: only what ProductCard renders. description,
@@ -192,6 +209,12 @@ export const productsService = {
 
     if (category) {
       query = query.eq('products.category', category)
+    }
+    if (tags) {
+      // Badge column stores ';'-separated promo tokens: substring match on
+      // the single tapped token (same escaping as name search).
+      const like = `%${tags.replace(/[%_]/g, (c) => `\\${c}`)}%`
+      query = query.ilike('badge', like)
     }
     if (search) {
       const like = `%${search.replace(/[%_]/g, (c) => `\\${c}`)}%`
@@ -378,5 +401,224 @@ export const productsService = {
       ...r,
       stockCount: stockByVariant.get(r.id) ?? 0,
     }))
+  },
+
+  // ─── Bulk Import: Basis (create-only v1) ──────────────────────────────────
+  // One entity, one table, one INSERT statement: the whole batch lands or
+  // nothing does. Preview and commit share validateBasisRows; commit
+  // re-parses the same csvText, never trusts preview output.
+}
+
+export const BASIS_BULK_COLUMNS: BulkColumn[] = [
+  { header: 'name', label: 'Nama', required: true, aliases: ['nama'] },
+  { header: 'category', label: 'Kategori', required: true, aliases: ['kategori'] },
+  { header: 'overview', label: 'Ringkasan', aliases: ['ringkasan'] },
+  { header: 'badge', label: 'Badge' },
+  { header: 'price', label: 'Harga', aliases: ['harga'] },
+  { header: 'is_active', label: 'Aktif', aliases: ['aktif', 'isactive'] },
+]
+
+export interface BasisBulkRow {
+  row: number
+  name: string
+  category: string
+  overview: string | null
+  badge: string | null
+  price: number
+  isActive: boolean
+}
+
+export interface BasisBulkDecision extends BasisBulkRow {
+  action: 'create'
+}
+
+export function basisBulkTemplate() {
+  return {
+    entity: 'basis',
+    headers: BASIS_BULK_COLUMNS.map((c) => c.header),
+    headerLine: BASIS_BULK_COLUMNS.map((c) => c.header).join(','),
+    samples: [
+      { name: 'Netflix Premium', category: 'Streaming', overview: 'Akun premium 1 bulan', badge: 'TERLARIS', price: '45000', is_active: 'true' },
+      { name: 'Canva Pro', category: 'Desain', overview: '', badge: '', price: '10000', is_active: 'true' },
+    ],
+    notes: [
+      'Satu baris = satu induk baru. Kolom name dan category wajib.',
+      'overview maksimal 200 karakter satu baris; badge maksimal 50.',
+      'price angka bulat rupiah, kosong = 0. is_active true/false, 1/0, atau ya/tidak.',
+      'description dan instructions belum didukung: isi lewat dialog Edit setelah impor.',
+      `Maksimal ${BULK_ROW_LIMIT} baris dan 1MB per impor.`,
+    ],
+    limits: { rows: BULK_ROW_LIMIT, bytes: BULK_TEXT_LIMIT },
+  }
+}
+
+// Pure: no DB, no writes. Unit-tested directly; preview and commit share it.
+export function validateBasisRows(parsed: ParsedCsv): { valid: BasisBulkRow[]; issues: BulkIssue[] } {
+  const valid: BasisBulkRow[] = []
+  const issues: BulkIssue[] = []
+  const seen = new Map<string, number>()
+
+  for (const r of parsed.rows) {
+    const v = r.values
+    let ok = true
+    const fail = (column: string, code: string, message: string) => {
+      ok = false
+      issues.push({ row: r.row, column, code, message, severity: 'error' })
+    }
+    const check = (issue: BulkIssue | null) => {
+      if (!issue) return
+      if (issue.severity === 'error') ok = false
+      issues.push(issue)
+    }
+
+    const name = v.name ?? ''
+    if (name === '') fail('name', 'required', 'Nama wajib diisi')
+    check(name ? checkMaxLength(name, r.row, 'name', 'Nama', 200) : null)
+    check(name ? checkSingleLine(name, r.row, 'name', 'Nama') : null)
+
+    const category = v.category ?? ''
+    if (category === '') fail('category', 'required', 'Kategori wajib diisi')
+    check(category ? checkMaxLength(category, r.row, 'category', 'Kategori', 100) : null)
+    check(category ? checkSingleLine(category, r.row, 'category', 'Kategori') : null)
+
+    const overviewRaw = v.overview ?? ''
+    check(checkMaxLength(overviewRaw, r.row, 'overview', 'Ringkasan', 200))
+    check(overviewRaw ? checkSingleLine(overviewRaw, r.row, 'overview', 'Ringkasan') : null)
+
+    const badgeRaw = v.badge ?? ''
+    check(checkMaxLength(badgeRaw, r.row, 'badge', 'Badge', 50))
+    check(badgeRaw ? checkSingleLine(badgeRaw, r.row, 'badge', 'Badge') : null)
+
+    const price = coerceInteger(v.price ?? '', r.row, 'price', 'Harga')
+    check(price.issue)
+
+    const active = coerceBoolean(v.is_active ?? '', r.row, 'is_active', 'Aktif')
+    check(active.issue)
+
+    if (ok && name && category) {
+      const key = `${name.toLowerCase()}\0${category.toLowerCase()}`
+      const first = seen.get(key)
+      if (first !== undefined) {
+        issues.push({ row: r.row, column: 'name', code: 'dup_in_file', message: `Nama+kategori sama dengan baris ${first}, cek duplikat`, severity: 'warning' })
+      } else {
+        seen.set(key, r.row)
+      }
+    }
+
+    if (!ok) continue
+    valid.push({
+      row: r.row,
+      name,
+      category,
+      overview: overviewRaw === '' ? null : overviewRaw,
+      badge: badgeRaw === '' ? null : badgeRaw,
+      price: price.value ?? 0,
+      isActive: active.value ?? true,
+    })
+  }
+
+  return { valid, issues }
+}
+
+function basisBulkSummary(valid: BasisBulkRow[], issues: BulkIssue[], total: number, skipped: number, checksum: string) {
+  const errors = issues.filter((e) => e.severity === 'error')
+  const warnings = issues.filter((e) => e.severity === 'warning')
+  const badRows = new Set(errors.map((e) => e.row))
+  return {
+    entity: 'basis',
+    checksum,
+    total,
+    skipped,
+    valid: valid.length,
+    invalid: badRows.size,
+    warnings: warnings.length,
+    decisions: valid.map((d): BasisBulkDecision => ({ ...d, action: 'create' })),
+    issues: issues.slice(0, BULK_ISSUE_CAP),
+    issueTotal: issues.length,
+    errorCsv: issuesToCsv(issues),
+  }
+}
+
+async function runBasisBulkValidation(csvText: string) {
+  const parsed = parseCsvText(csvText, BASIS_BULK_COLUMNS)
+  const { valid, issues } = validateBasisRows(parsed)
+  return { parsed, summary: basisBulkSummary(valid, issues, parsed.rows.length, parsed.skipped, bulkChecksum(csvText)), valid, issues }
+}
+
+export const basisBulkService = {
+  template: basisBulkTemplate,
+
+  async preview(csvText: string) {
+    const { summary } = await runBasisBulkValidation(csvText)
+    return summary
+  },
+
+  async commit(csvText: string, batchKey: string, actor: { sub: string; email?: string | null }) {
+    const key = `bulk:basis:${batchKey}`
+    const prior = await findAuditByIdempotencyKey(key).catch(() => null)
+    if (prior) return { ...(prior as Record<string, unknown>), replay: true }
+
+    const claimed = await claimIdempotencyKey(key).catch(() => null)
+    if (claimed === false) {
+      throw new ConflictError('Impor ini sedang diproses, tunggu hasilnya dulu')
+    }
+
+    let valid: BasisBulkRow[]
+    let summary: ReturnType<typeof basisBulkSummary>
+    try {
+      const out = await runBasisBulkValidation(csvText)
+      valid = out.valid
+      summary = out.summary
+    } catch (e) {
+      await releaseIdempotencyKey(key).catch(() => {})
+      throw e
+    }
+    const blocking = summary.issues.some((e) => e.severity === 'error')
+    if (blocking) {
+      await releaseIdempotencyKey(key).catch(() => {})
+      const err = new BadRequestError(`Validasi gagal: ${summary.invalid} baris bermasalah, perbaiki dulu`) as BadRequestError & { issues?: BulkIssue[] }
+      err.issues = summary.issues
+      throw err
+    }
+
+    const rows = valid!.map((d) => ({
+      public_id: generatePublicId(),
+      name: d.name,
+      category: d.category,
+      overview: d.overview,
+      description: null,
+      badge: d.badge,
+      instructions: null,
+      price: d.price,
+      is_active: d.isActive,
+    }))
+    const { data: inserted, error } = await supabaseAdmin.from('products').insert(rows).select('public_id')
+    if (error) {
+      // Single-statement insert: failure lands zero rows, claim stays so a
+      // blind retry reports already-processed instead of duplicating.
+      if ((error as { code?: string }).code === '23505') {
+        throw new ConflictError('Bentrok ID unik saat impor, ulangi pratinjau lalu commit lagi')
+      }
+      throw new Error(error.message)
+    }
+
+    const result = {
+      entity: 'basis',
+      batchId: batchKey,
+      checksum: summary!.checksum,
+      total: summary!.total,
+      committed: inserted?.length ?? 0,
+    }
+    await appendAudit({
+      action: 'product:bulk-import',
+      resourceType: 'product',
+      snapshotText: `Impor basis ${result.committed}/${result.total} baris oleh ${actor.email ?? actor.sub}`,
+      actorId: actor.sub,
+      actorEmail: actor.email ?? null,
+      actorType: 'admin',
+      diff: result,
+      idempotencyKey: key,
+    }).catch(() => {})
+    return result
   },
 }

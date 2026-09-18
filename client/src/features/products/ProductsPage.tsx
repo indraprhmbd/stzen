@@ -183,6 +183,8 @@ export default function ProductsPage() {
           onCreate={productForm.openCreate}
           onEdit={productForm.openEdit}
           onDelete={askDeleteProduct}
+          onImported={fetchAll}
+          notify={showToast}
           loading={loading}
         />
       </div>

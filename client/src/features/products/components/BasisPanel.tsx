@@ -1,10 +1,11 @@
-﻿import { useMemo } from 'react'
+﻿import { useMemo, useState } from 'react'
 import DataTable from '../../../components/admin/DataTable'
 import TableSortMenu from '../../../components/admin/TableSortMenu'
 import StatusChip from '../../../components/admin/StatusChip'
 import { SkeletonRows } from '../../../components/admin/TableSkeleton'
 import { useTableSort, sortByKey } from '../../../hooks/useTableSort'
-import { Plus, EditPencil, Trash } from 'iconoir-react'
+import { Plus, EditPencil, Trash, Upload } from 'iconoir-react'
+import BulkImportDialog, { basisBulkConfig } from './BulkImportDialog'
 import type { Product, Variant } from '../types'
 
 interface Props {
@@ -13,6 +14,8 @@ interface Props {
   onCreate: () => void
   onEdit: (p: Product) => void
   onDelete: (p: Product) => void
+  onImported: () => void
+  notify: (msg: string, type: 'success' | 'error') => void
   loading?: boolean
 }
 
@@ -30,7 +33,8 @@ const basisColumns = [
   { label: 'AKSI', className: 'text-right' },
 ]
 
-export default function BasisPanel({ products, variants, onCreate, onEdit, onDelete, loading }: Props) {
+export default function BasisPanel({ products, variants, onCreate, onEdit, onDelete, onImported, notify, loading }: Props) {
+  const [showImport, setShowImport] = useState(false)
   const priceMap = useMemo(() => {
     const map = new Map<string, { min: number; max: number; avg: number; median: number; mode: number; count: number }>()
     for (const v of variants) {
@@ -121,9 +125,11 @@ export default function BasisPanel({ products, variants, onCreate, onEdit, onDel
       </div>
       <div className="ml-auto flex items-center gap-2">
         <TableSortMenu columns={basisColumns} sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+        <button onClick={() => setShowImport(true)} className="ad-btn shrink-0 max-sm:px-3"><Upload width={15} height={15} strokeWidth={1.5} />Impor</button>
         <button onClick={onCreate} className="ad-btn shrink-0 max-sm:px-3"><Plus width={15} height={15} strokeWidth={1.5} />Induk</button>
       </div>
     </div>
+    <BulkImportDialog config={basisBulkConfig} open={showImport} onClose={() => setShowImport(false)} onDone={onImported} notify={notify} />
     <div className="ad-card">
       <DataTable
         columns={basisColumns}

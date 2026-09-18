@@ -3,7 +3,7 @@ import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
 import { supabaseAdmin } from '../../shared/db'
 import { type AuthEnv } from '../../shared/middleware/auth'
-import { productsService } from '../products/products.service'
+import { productsService, basisBulkService } from '../products/products.service'
 import { vaultService } from '../vault/vault.service'
 import { generatePublicId } from '../../shared/lib/publicId'
 import { appendAudit } from '../../shared/lib/audit'
@@ -11,6 +11,8 @@ import {
   ProductCreateSchema,
   ProductUpdateSchema,
   BulkStockSchema,
+  BulkImportPreviewSchema,
+  BulkImportCommitSchema,
 } from '../products/products.schema'
 
 const PRODUCTS = 'products'
@@ -44,6 +46,31 @@ export const adminProductRoutes = new Hono<AdminProductEnv>()
     }))
 
     return c.json(productsWithStock)
+  })
+
+  .get('/bulk/template', async (c) => {
+    return c.json(basisBulkService.template())
+  })
+
+  .post('/bulk/preview', zValidator('json', BulkImportPreviewSchema), async (c) => {
+    const { csvText } = c.req.valid('json')
+    return c.json(await basisBulkService.preview(csvText))
+  })
+
+  .post('/bulk/commit', zValidator('json', BulkImportCommitSchema), async (c) => {
+    const { csvText, batchKey } = c.req.valid('json')
+    const user = c.get('user')
+    try {
+      const result = await basisBulkService.commit(csvText, batchKey, { sub: user.sub, email: user.email })
+      return c.json(result, 201)
+    } catch (e: unknown) {
+      // Row-level validation failures ride the error object (global handler
+      // only ships {error}); unwrap here so the dialog gets row+column detail.
+      if (e && typeof e === 'object' && 'issues' in e && (e as { status?: number }).status === 400) {
+        return c.json({ error: (e as unknown as Error).message, issues: (e as { issues: unknown }).issues }, 400)
+      }
+      throw e
+    }
   })
 
   .post('/', zValidator('json', ProductCreateSchema), async (c) => {

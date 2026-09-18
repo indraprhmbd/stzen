@@ -5,6 +5,7 @@ export type AuditAction =
   | 'stock:import'
   | 'vault:unlock' | 'vault:update' | 'vault:delete' | 'vault:revoke'
   | 'product:create' | 'product:update' | 'product:delete'
+  | 'product:bulk-import'
   | 'variant:create' | 'variant:update' | 'variant:delete'
   | 'settings:update'
   | 'reminder:schedule' | 'reminder:cancel' | 'reminder:backfill'
@@ -73,4 +74,13 @@ export async function claimIdempotencyKey(key: string): Promise<boolean> {
   if (!error) return true
   if ((error as any).code === '23505') return false
   throw new Error(error.message)
+}
+
+// Release a claim taken before any write happened (bulk pre-write failure:
+// validation errors, parse errors). NEVER call after a write may have
+// landed: post-write failures keep the claim so retries report
+// already-processed instead of duplicating rows.
+export async function releaseIdempotencyKey(key: string): Promise<void> {
+  const { error } = await supabaseAdmin.from('idempotency_claims').delete().eq('key', key)
+  if (error) throw new Error(error.message)
 }

@@ -33,10 +33,24 @@ export const BulkStockSchema = z.object({
 
 export const ProductQuerySchema = z.object({
   category: z.string().optional(),
+  tags: z.string().optional(),
   sort: z.string().optional(),
   page: z.string().optional(),
   limit: z.string().optional(),
   search: z.string().optional(),
+})
+
+// ─── Bulk Import Schemas ────────────────────────────────────────────────────
+// Shared shape for Basis/Varian/Stok bulk tabs: raw CSV text in, server
+// parses authoritatively on preview AND commit (preview output never trusted
+// for writes). 1MB text cap mirrors the parser limit.
+
+export const BulkImportPreviewSchema = z.object({
+  csvText: z.string().min(1, 'CSV kosong').max(1_048_576, 'CSV melebihi 1MB'),
+})
+
+export const BulkImportCommitSchema = BulkImportPreviewSchema.extend({
+  batchKey: z.string().uuid('batchKey harus UUID'),
 })
 
 // ─── Inferred Types ─────────────────────────────────────────────────────────
