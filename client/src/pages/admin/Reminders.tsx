@@ -8,6 +8,9 @@ import StatusChip from '../../components/admin/StatusChip'
 import SlideToggle from '../../components/admin/SlideToggle'
 import AdminToastStack from '../../components/admin/AdminToast'
 import { useToast } from '../../hooks/useToast'
+import { useRowSelection } from '../../hooks/useRowSelection'
+import { SelectableRow, SelectAllCheckbox } from '../../components/admin/RowSelection'
+import AdminBulkBar from '../../components/admin/AdminBulkBar'
 import { useAdminTableParams } from '../../hooks/useAdminTableParams'
 import TableSortMenu from '../../components/admin/TableSortMenu'
 import { Refresh, ArrowUpRight, Search } from 'iconoir-react'
@@ -31,7 +34,6 @@ interface PreviewRow {
 }
 
 const columns = [
-  { label: '', className: 'w-10' },
   { label: 'ORDER' },
   { label: 'PRODUK', sortKey: 'product' },
   { label: 'STATUS', className: 'hidden md:table-cell' },
@@ -65,7 +67,9 @@ export default function Reminders() {
     sortUrlKey: 'sort', defaultSortKey: 'paidAt', defaultSortDir: 'desc',
     filterKey: 'state', filters: ['all', 'none', 'scheduled'] as const, defaultFilter: 'all',
   })
-  const [selected, setSelected] = useState<string[]>([])
+  // Uniform bulk selection: checkbox column always visible, row-body clicks
+  // toggle only once armed (first checkbox). Clears on any view change.
+  const selection = useRowSelection()
   const [busyId, setBusyId] = useState<string | null>(null)
   const [bulkBusy, setBulkBusy] = useState(false)
   const { toasts, showToast, dismissToast } = useToast()
@@ -87,7 +91,7 @@ export default function Reminders() {
   const rows = data?.rows ?? []
   const total = data?.total ?? 0
 
-  useEffect(() => { setSelected([]) }, [stateFilter, committedQ, page, limit, sortKey, sortDir])
+  useEffect(() => { selection.clear() }, [stateFilter, committedQ, page, limit, sortKey, sortDir])
 
   async function flipRow(row: PreviewRow, turnOn: boolean) {
     if (busyId) return
@@ -111,11 +115,12 @@ export default function Reminders() {
   }
 
   async function bulk(action: 'schedule' | 'cancel') {
-    if (bulkBusy || selected.length === 0) return
+    const ids = selection.selected
+    if (bulkBusy || ids.length === 0) return
     setBulkBusy(true)
     try {
       const res = await authedApiRequest((c) =>
-        c.api.v1.admin.reminders.bulk.$post({ json: { action, ids: selected.slice(0, 20) } })
+        c.api.v1.admin.reminders.bulk.$post({ json: { action, ids: ids.slice(0, 20) } })
       )
       if (!res.ok) {
         const err = (await res.json().catch(() => ({}))) as { error?: string }
@@ -128,7 +133,7 @@ export default function Reminders() {
           : `Dibatalkan: ${out.scheduled} dari ${out.scanned}`,
         out.skipped > 0 ? 'error' : 'success',
       )
-      setSelected([])
+      selection.clear()
       await refetch()
     } catch (e: unknown) {
       showToast(e instanceof Error ? e.message : 'Gagal eksekusi massal', 'error')
@@ -138,10 +143,6 @@ export default function Reminders() {
   }
 
   const pageIds = rows.map((r) => r.publicId)
-  const allChecked = pageIds.length > 0 && pageIds.every((id) => selected.includes(id))
-  function togglePage() {
-    setSelected(allChecked ? selected.filter((id) => !pageIds.includes(id)) : [...new Set([...selected, ...pageIds])])
-  }
 
   if (error) return <div className="ad-card-flat p-8 text-center"><div className="text-sm font-semibold text-red-600">Gagal memuat</div><div className="text-xs text-[#6e6e73] mt-1">{error}</div><button onClick={refetch} className="ad-btn ad-btn-dark mt-4">Coba lagi</button></div>
 
@@ -182,18 +183,21 @@ export default function Reminders() {
         </div>
       </div>
 
-      {selected.length > 0 && (
-        <div className="ad-card p-3 flex flex-col sm:flex-row gap-2 sm:items-center">
-          <span className="text-[13px] font-semibold text-[#1d1d1f] sm:mr-auto">{selected.length} dipilih</span>
-          <button onClick={() => bulk('schedule')} disabled={bulkBusy} className="ad-btn ad-btn-dark w-full sm:w-auto">
-            {bulkBusy ? 'Memproses...' : `Jadwalkan (${selected.length})`}
-          </button>
-          <button onClick={() => bulk('cancel')} disabled={bulkBusy} className="ad-btn w-full sm:w-auto">
-            Batalkan
-          </button>
-          <button onClick={() => setSelected([])} className="ad-btn w-full sm:w-auto">Bersihkan</button>
-        </div>
-      )}
+      <AdminBulkBar
+        count={selection.count}
+        onClear={selection.clear}
+        headerCheckboxId="reminders-select-all"
+        actions={
+          <>
+            <button onClick={() => bulk('schedule')} disabled={bulkBusy} className="ad-btn ad-btn-dark w-full sm:w-auto">
+              {bulkBusy ? 'Memproses...' : `Jadwalkan (${selection.count})`}
+            </button>
+            <button onClick={() => bulk('cancel')} disabled={bulkBusy} className="ad-btn w-full sm:w-auto">
+              Batalkan
+            </button>
+          </>
+        }
+      />
 
       <AdminToastStack toasts={toasts} onDone={dismissToast} />
 
@@ -205,34 +209,26 @@ export default function Reminders() {
           sortKey={sortKey}
           sortDir={sortDir}
           onSort={toggleSort}
+          selectHeader={
+            <SelectAllCheckbox
+              id="reminders-select-all"
+              label="Pilih semua di halaman ini"
+              state={selection.headerState(pageIds)}
+              onToggle={() => selection.toggleAll(pageIds)}
+            />
+          }
         >
           {rows.map((r) => {
             const on = r.reminderState === 'scheduled'
             const rowBusy = busyId === r.publicId
-            const isSelected = selected.includes(r.publicId)
-            function toggleSelect() {
-              setSelected(isSelected ? selected.filter((id) => id !== r.publicId) : [...selected, r.publicId])
-            }
             return (
-              <tr
+              <SelectableRow
                 key={r.publicId}
-                onClick={(e) => {
-                  // Row-body select: ignore clicks on interactive children
-                  // (order link, checkbox, toggle) so they keep their own actions.
-                  if ((e.target as HTMLElement).closest('a,input,button,label')) return
-                  toggleSelect()
-                }}
-                className={`cursor-pointer ${isSelected ? 'bg-[#f5f5f7]' : ''}`}
+                id={r.publicId}
+                selection={selection}
+                pageIds={pageIds}
+                selectLabel={`Pilih ${r.publicId}`}
               >
-                <td>
-                  <input
-                    type="checkbox"
-                    aria-label={`Pilih ${r.publicId}`}
-                    className="checkbox checkbox-sm"
-                    checked={isSelected}
-                    onChange={toggleSelect}
-                  />
-                </td>
                 <td>
                   <Link
                     to={`/admin/orders?status=semua&q=${encodeURIComponent(r.publicId)}`}
@@ -263,7 +259,7 @@ export default function Reminders() {
                     />
                   </span>
                 </td>
-              </tr>
+              </SelectableRow>
             )
           })}
         </DataTable>

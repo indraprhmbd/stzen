@@ -21,6 +21,10 @@ interface DataTableProps {
   sortDir?: 'asc' | 'desc' | null
   /** Sort toggle callback (from useTableSort). */
   onSort?: (key: string) => void
+  /** Leading select-all checkbox cell. Prepends a w-10 <th>; pass the
+      SelectAllCheckbox from RowSelection.tsx. Empty label keeps the cell
+      out of the mobile labeled-card layout (no CSS change needed). */
+  selectHeader?: ReactNode
 }
 
 // Reusable admin table shell: headers + empty state + mobile data-labels.
@@ -51,7 +55,10 @@ function withMobileLabels(children: ReactNode, labels: string[]): ReactNode {
         const span = cellEl.props.colSpan ?? 1
         const label = labels[colIndex]
         colIndex += span
-        if (cellEl.props.colSpan) return cellEl
+        // Colspan group headers and empty-labeled cells (e.g. the select
+        // checkbox column) stay unlabeled: on mobile they fall into the
+        // plain full-width td:not([data-label]) rule.
+        if (cellEl.props.colSpan || !label) return cellEl
         return cloneElement(cellEl, { 'data-label': label } as Record<string, unknown>)
       })
       return cloneElement(tr, undefined, cells)
@@ -61,13 +68,16 @@ function withMobileLabels(children: ReactNode, labels: string[]): ReactNode {
   })
 }
 
-export default function DataTable({ columns, children, empty, emptyText = 'Belum ada data.', colSpan, sortKey, sortDir, onSort }: DataTableProps) {
-  const labels = columns.map((c) => c.label)
+export default function DataTable({ columns, children, empty, emptyText = 'Belum ada data.', colSpan, sortKey, sortDir, onSort, selectHeader }: DataTableProps) {
+  // The select column has no label: withMobileLabels() leaves its cells
+  // unstamped so every body cell still lines up with its column label.
+  const labels = selectHeader !== undefined ? ['', ...columns.map((c) => c.label)] : columns.map((c) => c.label)
   return (
     <div className="overflow-x-auto">
       <table className="admin-table ad-table table table-sm w-full">
         <thead>
           <tr>
+            {selectHeader !== undefined && <th className="w-10">{selectHeader}</th>}
             {columns.map((c) => {
               const isSortable = !!c.sortKey && !!onSort
               const isActive = isSortable && sortKey === c.sortKey
