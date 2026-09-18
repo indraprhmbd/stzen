@@ -95,7 +95,7 @@ export default function VariantDialog({ products, form: v, onSubmit, onImportNow
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <RupiahInput label="Harga (Rp)" required value={v.vPrice} onChange={v.setVPrice} placeholder="45000" />
+            <RupiahInput label="Harga (Rp)" required value={v.vPrice} onChange={v.setVPrice} placeholder="45000" hint={v.vPrice !== '' && Number(v.vPrice) < 10_000 ? 'Di bawah Rp10.000: QRIS otomatis nonaktif, hanya pesanan manual' : undefined} />
             <label className="ad-label">Badge<input type="text" value={v.vBadge} onChange={(e) => v.setVBadge(e.target.value)} placeholder="TERLARIS;PROMO" className="ad-input mt-1.5 normal-case" /><p className="text-[11px] text-[#aeaeb2] mt-1 normal-case font-normal">Pisahkan beberapa badge dengan ;</p></label>
           </div>
           <RupiahInput label="Harga Coret (opsional)" value={v.vCompareAt} onChange={v.setVCompareAt} placeholder="60000" hint="Tampil dicoret bila lebih besar dari harga" />

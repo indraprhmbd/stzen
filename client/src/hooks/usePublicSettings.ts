@@ -8,9 +8,14 @@ export interface PublicSettings {
   telegram: string
   email: string
   paymentMethods: string[]
+  sumopodMinAmount: number
+  sumopodFeePct: number
+  sumopodFeeFixed: number
 }
 
-const EMPTY: PublicSettings = { storeName: '', announcement: '', whatsapp: '', telegram: '', email: '', paymentMethods: ['manual'] }
+// Mirrors SUMOPOD_MIN_AMOUNT_IDR + fee constants (server/shared/lib/payments.ts) for
+// offline/first-paint before the settings fetch lands.
+const EMPTY: PublicSettings = { storeName: '', announcement: '', whatsapp: '', telegram: '', email: '', paymentMethods: ['manual'], sumopodMinAmount: 10_000, sumopodFeePct: 0.007, sumopodFeeFixed: 300 }
 const TTL_MS = 60 * 1000
 
 // Module-level cache shared across mounts: one fetch per minute max, with
@@ -25,7 +30,7 @@ async function load(): Promise<PublicSettings> {
     inflight = api.api.settings.public
       .$get()
       .then((r) => r.json() as Promise<Partial<PublicSettings>>)
-      .then((j) => ({ ...EMPTY, ...j, paymentMethods: Array.isArray((j as any).paymentMethods) ? (j as any).paymentMethods : EMPTY.paymentMethods }))
+      .then((j) => ({ ...EMPTY, ...j, paymentMethods: Array.isArray((j as any).paymentMethods) ? (j as any).paymentMethods : EMPTY.paymentMethods, sumopodMinAmount: typeof (j as any).sumopodMinAmount === 'number' ? (j as any).sumopodMinAmount : EMPTY.sumopodMinAmount, sumopodFeePct: typeof (j as any).sumopodFeePct === 'number' ? (j as any).sumopodFeePct : EMPTY.sumopodFeePct, sumopodFeeFixed: typeof (j as any).sumopodFeeFixed === 'number' ? (j as any).sumopodFeeFixed : EMPTY.sumopodFeeFixed }))
       .catch(() => EMPTY)
       .finally(() => {
         inflight = null

@@ -10,7 +10,7 @@ export interface Copy {
   }
   hero: { title1: string; title2: string; tagline: string; cta: string; statusPill: string; searchPlaceholder: string; searchHint: string }
   marquee: string[]
-  products: { title: string; buy: string; buyNow: string; soldOut: string; inStock: string; onlyXLeft: string; outOfStock: string; sortNewest: string; sortPrice: string; sortStock: string; sortOutOfStock: string; viewGrid: string; viewList: string; verifiedBuyer: string; loginForMore: string; confirmTitle: string; confirmNote: string; confirmCancel: string; confirmGo: string; confirmPlace: string; processing: string; methodTitle: string; methodAuto: string; methodAutoDesc: string; methodManual: string; methodManualDesc: string; accountLabel: string; accountPlaceholder: string; waLabel: string; waPlaceholder: string; errAccount: string; errWa: string; manualPlaced: string; manualPlacedNote: string; waConfirm: string; waConfirmText: string }
+  products: { title: string; buy: string; buyNow: string; soldOut: string; inStock: string; onlyXLeft: string; outOfStock: string; sortNewest: string; sortPrice: string; sortStock: string; sortOutOfStock: string; viewGrid: string; viewList: string; verifiedBuyer: string; loginForMore: string; confirmTitle: string; confirmNote: string; confirmCancel: string; confirmGo: string; confirmPlace: string; processing: string; methodTitle: string; methodAutoMin: string; methodManualHours: string; methodAuto: string; methodAutoDesc: string; methodManual: string; methodManualDesc: string; accountLabel: string; accountPlaceholder: string; waLabel: string; waPlaceholder: string; errAccount: string; errWa: string; manualPlaced: string; manualPlacedNote: string; waConfirm: string; waConfirmText: string; feeLabel: string; viewCategory: string; viewBadge: string; askAdmin: string; askAdminText: string }
   howItWorks: { title: string; steps: { num: string; title: string; desc: string }[] }
   whyUs: { title: string; items: { title: string; desc: string }[] }
   testimonials: { title: string; items: { quote: string; name: string; product: string }[] }
@@ -76,6 +76,8 @@ const id: Copy = {
     confirmPlace: 'TARUH PESANAN',
     processing: 'Memproses...',
     methodTitle: 'METODE PEMBAYARAN',
+    methodAutoMin: 'QRIS otomatis tersedia untuk harga Rp{min} ke atas. Di bawah itu hanya pesanan manual.',
+    methodManualHours: 'Admin aktif 08.00-20.00 WIB. Pesanan di luar jam itu tetap tercatat dan diproses jam aktif berikutnya.',
     methodAuto: 'QRIS Otomatis',
     methodAutoDesc: 'Bayar sekarang via QRIS, akun langsung diproses.',
     methodManual: 'Pesanan Manual',
@@ -90,6 +92,11 @@ const id: Copy = {
     manualPlacedNote: 'Pesanan manual tercatat. Konfirmasi ke admin via WhatsApp agar segera diproses.',
     waConfirm: 'KONFIRMASI VIA WA',
     waConfirmText: 'Halo, konfirmasi pesanan manual {id} ({product}).',
+    feeLabel: 'BIAYA LAYANAN',
+    viewCategory: 'Lihat produk kategori {category}',
+    viewBadge: 'Lihat produk berlabel {badge}',
+    askAdmin: 'Tanya Admin!',
+    askAdminText: 'Halo admin, saya mau tanya tentang {product}.',
   },
   howItWorks: {
     title: 'CARA KERJA',
@@ -213,6 +220,8 @@ const en: Copy = {
     confirmPlace: 'PLACE ORDER',
     processing: 'Processing...',
     methodTitle: 'PAYMENT METHOD',
+    methodAutoMin: 'Automatic QRIS is available for prices Rp{min} and up. Below that, manual orders only.',
+    methodManualHours: 'Admin is active 08:00-20:00 WIB. Orders outside these hours are still recorded and processed next active hours.',
     methodAuto: 'Automatic QRIS',
     methodAutoDesc: 'Pay now via QRIS, account processed instantly.',
     methodManual: 'Manual Order',
@@ -227,6 +236,11 @@ const en: Copy = {
     manualPlacedNote: 'Manual order recorded. Confirm to admin via WhatsApp to get it processed.',
     waConfirm: 'CONFIRM VIA WA',
     waConfirmText: 'Hello, confirming manual order {id} ({product}).',
+    feeLabel: 'SERVICE FEE',
+    viewCategory: 'Browse {category} products',
+    viewBadge: 'Browse products tagged {badge}',
+    askAdmin: 'Ask Admin!',
+    askAdminText: 'Hi admin, I want to ask about {product}.',
   },
   howItWorks: {
     title: 'HOW IT WORKS',

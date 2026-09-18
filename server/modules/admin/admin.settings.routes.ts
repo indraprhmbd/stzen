@@ -6,6 +6,7 @@ import { type AuthEnv } from '../../shared/middleware/auth'
 import { appendAudit } from '../../shared/lib/audit'
 import { getSetting, invalidateSettings } from '../../shared/lib/settings'
 import { getEnv } from '../../shared/lib/runtime-env'
+import { SUMOPOD_MIN_AMOUNT_IDR, SUMOPOD_FEE_PCT, SUMOPOD_FEE_FIXED_IDR } from '../../shared/lib/payments'
 
 type SettingsEnv = AuthEnv
 
@@ -63,14 +64,15 @@ export const publicSettingsRoutes = new Hono()
 
     // Storefront checkout rails. Manual always; sumopod only when its API
     // key is configured. The dialog gates its method radio on this; the
-    // checkout service re-validates fail-closed.
+    // checkout service re-validates fail-closed. sumopodMinAmount is the
+    // gateway floor (Rp) below which the dialog hides the automated rail.
     const paymentMethods = getEnv('PAYMENT_SUMOPOD_API_KEY')
       ? ['manual', 'sumopod']
       : ['manual']
 
     c.header('Cache-Control', 'public, max-age=60, stale-while-revalidate=60')
     c.header('Cache-Tag', 'settings')
-    return c.json({ storeName, announcement, whatsapp, telegram, email, paymentMethods })
+    return c.json({ storeName, announcement, whatsapp, telegram, email, paymentMethods, sumopodMinAmount: SUMOPOD_MIN_AMOUNT_IDR, sumopodFeePct: SUMOPOD_FEE_PCT, sumopodFeeFixed: SUMOPOD_FEE_FIXED_IDR })
   })
 
 export const adminSettingsRoutes = new Hono<SettingsEnv>()

@@ -12,12 +12,13 @@ export const productRoutes = new Hono()
   // for every consumer. listActive stays for /categories counts.
   .get('/', zValidator('query', ProductQuerySchema), async (c) => {
   const category = c.req.query('category') || undefined
+  const tags = c.req.query('tags') || undefined
   const sort = c.req.query('sort') || undefined
   const page = parseInt(c.req.query('page') || '1')
   const limit = parseInt(c.req.query('limit') || '24')
   const search = c.req.query('search') || undefined
 
-  const params: ProductQueryParams = { category, sort, page, limit, search }
+  const params: ProductQueryParams = { category, tags, sort, page, limit, search }
   const result = await productsService.listPaginated(params)
   // Public catalog: edge-cached (Workers Cache) + browser. Purged by tag on
   // admin writes; 60s TTL is the safety net for order-driven stock changes.

@@ -1,5 +1,6 @@
 import { supabaseAdmin } from '../../shared/db'
 import { getEnv } from '../../shared/lib/runtime-env'
+import { SUMOPOD_MIN_AMOUNT_IDR, qrisFee } from '../../shared/lib/payments'
 import { normalizeWaNumber } from '../../shared/lib/wa'
 import { productsService } from '../products/products.service'
 import { ordersService } from '../orders/orders.service'
@@ -31,6 +32,14 @@ export const checkoutService = {
 
     if (!variant.isActive) {
       throw new NotFoundError('Product not found or unavailable')
+    }
+
+    // SumoPod floor: gateway rejects invoices below Rp10.000. Enforced on
+    // the DB price, never the client payload. Manual orders have no floor.
+    // Fee passthrough (dashboard ON: 0.7%+300) is collected by the gateway
+    // on top of base — we invoice base, store base (revenue = net).
+    if (paymentMethod === 'sumopod' && Number(variant.price) < SUMOPOD_MIN_AMOUNT_IDR) {
+      throw new BadRequestError('QRIS otomatis minimal Rp10.000, gunakan pesanan manual')
     }
 
     const { data: internal, error } = await supabaseAdmin
@@ -94,10 +103,14 @@ export const checkoutService = {
       waNumber,
     })
 
+    // QRIS charge is base + fee (gateway adds it). Return computed total
+    // so the dashboard can show the breakdown without a second round-trip.
+    const fee = paymentMethod === 'sumopod' ? qrisFee(Number(variant.price)) : 0
     return {
       orderId: order.id,
       amount: order.amount,
       productName: variant.name,
+      ...(fee ? { fee, total: Number(variant.price) + fee } : {}),
     }
   },
 }

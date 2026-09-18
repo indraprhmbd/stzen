@@ -54,6 +54,7 @@ export default function ProductList() {
 
   // Read all state from URL
   const category = searchParams.get('category') || 'all'
+  const badge = searchParams.get('tags') || ''
   const sort = searchParams.get('sort') || 'newest'
   const page = parseInt(searchParams.get('page') || '1')
   const search = searchParams.get('search') || ''
@@ -63,6 +64,8 @@ export default function ProductList() {
   const [loading, setLoading] = useState(true)
   const [toastMsg, setToastMsg] = useState('')
   const [catData, setCatData] = useState<{ categories: string[]; counts: Record<string, number> }>({ categories: ['all'], counts: {} })
+  // Category pill deep-links land here mid-scroll: reset viewport on change.
+  const prevFilter = useRef(`${category}|${badge}`)
 
   // Fetch full category list once (independent of active filter)
   useEffect(() => {
@@ -79,8 +82,14 @@ export default function ProductList() {
   useEffect(() => {
     let cancelled = false
 
+    if (prevFilter.current !== `${category}|${badge}`) {
+      prevFilter.current = `${category}|${badge}`
+      window.scrollTo(0, 0)
+    }
+
     const query: Record<string, string> = {}
     if (category !== 'all') query.category = category
+    if (badge) query.tags = badge
     if (sort !== 'newest') query.sort = sort
     if (page > 1) query.page = String(page)
     if (search) query.search = search
@@ -113,7 +122,7 @@ export default function ProductList() {
     }).catch(() => { if (!cancelled) setLoading(false) })
 
     return () => { cancelled = true }
-  }, [category, sort, page, search, session])
+  }, [category, badge, sort, page, search, session])
 
   // Pre-warm page+1 while the pager is on screen (Pagination calls this once
   // per page via viewport observer). Guests get no pager - nothing to warm.
@@ -123,11 +132,12 @@ export default function ProductList() {
     if (page >= totalPages) return
     const query: Record<string, string> = {}
     if (category !== 'all') query.category = category
+    if (badge) query.tags = badge
     if (sort !== 'newest') query.sort = sort
     query.page = String(page + 1)
     if (search) query.search = search
     prefetchList(query)
-  }, [category, sort, page, search, session, result?.totalPages])
+  }, [category, badge, sort, page, search, session, result?.totalPages])
 
   // Ctrl+K shortcut
   useEffect(() => {
@@ -189,6 +199,18 @@ export default function ProductList() {
           <p className="text-xs font-bold text-neutral/60">
             {result.total} produk ditemukan
           </p>
+        )}
+        {/* Badge deep-link lands here: visible chip, AND-combines with the
+            category filter, one tap clears (updateParam drops empty keys). */}
+        {badge && (
+          <button
+            onClick={() => updateParam('tags', '')}
+            aria-label={`Hapus filter ${badge}`}
+            className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-neutral text-primary border-2 border-black text-[10px] font-black uppercase px-2.5 py-0.5 tracking-wide cursor-pointer hover:bg-black transition-colors"
+          >
+            {badge}
+            <span className="material-symbols-outlined text-xs leading-none">close</span>
+          </button>
         )}
       </section>
 

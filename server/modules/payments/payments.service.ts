@@ -3,6 +3,7 @@ import { ordersService } from '../orders/orders.service'
 import { allocateCredential } from '../../shared/lib/db-helpers'
 import { appendAudit, claimIdempotencyKey, findAuditByIdempotencyKey } from '../../shared/lib/audit'
 import { NotFoundError, ConflictError, BadRequestError } from '../../shared/errors/http'
+import { SUMOPOD_MIN_AMOUNT_IDR, isQrisAmountMatch } from '../../shared/lib/payments'
 import { manualProvider } from './providers/manual'
 import { duitkuProvider } from './providers/duitku'
 import { sumopodProvider } from './providers/sumopod'
@@ -47,6 +48,11 @@ export const paymentsService = {
     // so a buyer cannot switch methods after committing. Legacy/admin rows
     // without a stored provider fall back to the active env provider.
     const providerName = order.paymentProvider || getActiveProviderName()
+    // Second gate: createOrder enforces the floor, this covers legacy/admin
+    // rows that predate it. Fail-closed on the stored order amount.
+    if (providerName === 'sumopod' && Number(order.amount) < SUMOPOD_MIN_AMOUNT_IDR) {
+      throw new BadRequestError('QRIS otomatis minimal Rp10.000, gunakan pesanan manual')
+    }
     const provider = getProvider(providerName)
     const result = await provider.createInvoice({
       orderId: order.id,
@@ -88,12 +94,19 @@ export const paymentsService = {
     // Callback amount must match what the invoice was issued for - never
     // fulfill an underpaying (or cross-wired) gateway notification. Providers
     // whose contract always carries the amount fail closed on omission.
+    // SumoPod dashboard is ON for buyer-pays-fee (0.7%+300): accept either
+    // base or base+fee so we never 409 a legitimate QRIS callback.
     if (parsed.amount == null) {
       if (provider.amountRequired) {
         throw new ConflictError('Webhook callback is missing amount')
       }
-    } else if (Number(parsed.amount) !== Number(order.amount)) {
-      throw new ConflictError(`Amount mismatch: callback ${parsed.amount} vs order ${order.amount}`)
+    } else {
+      const base = Number(order.amount)
+      const cb = Number(parsed.amount)
+      const qrisOk = providerName === 'sumopod' && isQrisAmountMatch(base, cb)
+      if (cb !== base && !qrisOk) {
+        throw new ConflictError(`Amount mismatch: callback ${parsed.amount} vs order ${order.amount}`)
+      }
     }
 
     let result: Record<string, unknown>
