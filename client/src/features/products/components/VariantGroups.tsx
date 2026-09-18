@@ -1,11 +1,12 @@
-import { Fragment, useMemo } from 'react'
+import { Fragment, useMemo, useState } from 'react'
 import DataTable from '../../../components/admin/DataTable'
 import TableSortMenu from '../../../components/admin/TableSortMenu'
 import CopyCell from '../../../components/admin/CopyCell'
 import StatusChip, { type ChipTone } from '../../../components/admin/StatusChip'
 import { SkeletonRows } from '../../../components/admin/TableSkeleton'
 import { useTableSort, sortByKey } from '../../../hooks/useTableSort'
-import { NavArrowDown, Plus, Expand, Collapse, EditPencil, Trash, Key } from 'iconoir-react'
+import { NavArrowDown, Plus, Expand, Collapse, EditPencil, Trash, Key, Upload } from 'iconoir-react'
+import BulkImportDialog, { varianBulkConfig } from './BulkImportDialog'
 import type { Variant, VariantGroup } from '../types'
 
 function stockTone(v: { fulfillmentType: string; stockCount: number }): { tone: ChipTone; label: string } {
@@ -24,6 +25,8 @@ interface Props {
   onEditVariant: (v: Variant) => void
   onDeleteVariant: (v: Variant) => void
   onOpenVault?: (v: Variant) => void
+  onImported: () => void
+  notify: (msg: string, type: 'success' | 'error') => void
   loading?: boolean
 }
 
@@ -37,7 +40,8 @@ const variantColumns = [
   { label: 'AKSI', className: 'text-right' },
 ]
 
-export default function VariantGroups({ groups, filteredCount, collapsedGroups, setCollapsedGroups, onCreateVariant, onEditVariant, onDeleteVariant, onOpenVault, loading }: Props) {
+export default function VariantGroups({ groups, filteredCount, collapsedGroups, setCollapsedGroups, onCreateVariant, onEditVariant, onDeleteVariant, onOpenVault, onImported, notify, loading }: Props) {
+  const [showImport, setShowImport] = useState(false)
   // Sort state shared across groups and persisted in URL (?sort&sort_dir).
   // Variant keys sort items within each group in memory (groups keep
   // category order); the URL only carries the key so refresh/links keep it.
@@ -96,8 +100,10 @@ export default function VariantGroups({ groups, filteredCount, collapsedGroups, 
           {allCollapsed ? 'Buka semua' : 'Tutup semua'}
         </button>
         </span>
+        <button onClick={() => setShowImport(true)} className="ad-btn"><Upload width={15} height={15} strokeWidth={1.5} />Impor</button>
         <button onClick={() => onCreateVariant()} className="ad-btn ad-btn-dark"><Plus width={15} height={15} strokeWidth={1.5} />Varian</button>
       </div>
+      <BulkImportDialog config={varianBulkConfig} open={showImport} onClose={() => setShowImport(false)} onDone={onImported} notify={notify} />
       <DataTable
         columns={variantColumns}
         empty={!loading && filteredCount === 0}

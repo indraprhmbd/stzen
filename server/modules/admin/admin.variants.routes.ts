@@ -5,7 +5,8 @@ import { supabaseAdmin } from '../../shared/db'
 import { type AuthEnv } from '../../shared/middleware/auth'
 import { generatePublicId } from '../../shared/lib/publicId'
 import { generateSku, composeVariantName } from '../../shared/lib/sku'
-import { BulkStockSchema } from '../products/products.schema'
+import { BulkStockSchema, BulkImportPreviewSchema, BulkImportCommitSchema } from '../products/products.schema'
+import { varianBulkService } from '../products/products.service'
 import { vaultService } from '../vault/vault.service'
 import { appendAudit } from '../../shared/lib/audit'
 import { getStockCounts } from '../../shared/lib/db-helpers'
@@ -48,6 +49,31 @@ const VariantUpdateSchema = z.object({
 
 type VariantEnv = AuthEnv
 export const adminVariantRoutes = new Hono<VariantEnv>()
+
+  .get('/bulk/template', async (c) => {
+    return c.json(varianBulkService.template())
+  })
+
+  .post('/bulk/preview', zValidator('json', BulkImportPreviewSchema), async (c) => {
+    const { csvText } = c.req.valid('json')
+    return c.json(await varianBulkService.preview(csvText))
+  })
+
+  .post('/bulk/commit', zValidator('json', BulkImportCommitSchema), async (c) => {
+    const { csvText, batchKey } = c.req.valid('json')
+    const user = c.get('user')
+    try {
+      const result = await varianBulkService.commit(csvText, batchKey, { sub: user.sub, email: user.email })
+      return c.json(result, 201)
+    } catch (e: unknown) {
+      // Row-level validation failures ride the error object (global handler
+      // only ships {error}); unwrap here so the dialog gets row+column detail.
+      if (e && typeof e === 'object' && 'issues' in e && (e as { status?: number }).status === 400) {
+        return c.json({ error: (e as unknown as Error).message, issues: (e as { issues: unknown }).issues }, 400)
+      }
+      throw e
+    }
+  })
 
   .get('/', async (c) => {
     // ?compact=1: 4-column projection for dropdowns (manual-order picker).

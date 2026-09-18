@@ -2,6 +2,7 @@ import { supabaseAdmin } from '../../shared/db'
 import { NotFoundError, BadRequestError, ConflictError } from '../../shared/errors/http'
 import { getStockCount, getStockCounts } from '../../shared/lib/db-helpers'
 import { generatePublicId } from '../../shared/lib/publicId'
+import { generateSku, composeVariantName } from '../../shared/lib/sku'
 import { appendAudit, claimIdempotencyKey, findAuditByIdempotencyKey, releaseIdempotencyKey } from '../../shared/lib/audit'
 import {
   BULK_ROW_LIMIT,
@@ -407,6 +408,312 @@ export const productsService = {
   // One entity, one table, one INSERT statement: the whole batch lands or
   // nothing does. Preview and commit share validateBasisRows; commit
   // re-parses the same csvText, never trusts preview output.
+  // ─── Bulk Import: Varian (create-only v1) ───────────────────────────────
+  // Same claim/commit/audit pattern as Basis, plus a parent batch-resolve:
+  // basis public_ids resolve in ONE query; unknown parents become row errors.
+  // Name composes deterministically (composeVariantName) so preview shows the
+  // exact final name; SKU carries a random suffix, so preview shows a sample
+  // marked as such and commit mints the real one.
+}
+
+export const VARIAN_BULK_COLUMNS: BulkColumn[] = [
+  { header: 'basis', label: 'Induk', required: true, aliases: ['induk', 'parent', 'parent_id', 'basis_id'] },
+  { header: 'duration', label: 'Durasi', required: true, aliases: ['durasi'] },
+  { header: 'unit', label: 'Satuan', required: true, aliases: ['satuan'] },
+  { header: 'account_type', label: 'Tipe Akun', aliases: ['tipe_akun', 'tipe'] },
+  { header: 'price', label: 'Harga', required: true, aliases: ['harga'] },
+  { header: 'is_active', label: 'Aktif', aliases: ['aktif', 'isactive'] },
+  { header: 'requires_delivery_info', label: 'Minta Akun', aliases: ['delivery_info', 'minta_akun'] },
+]
+
+type VarianDurationUnit = 'day' | 'week' | 'month'
+
+const VARIAN_UNIT_ALIASES: Record<string, VarianDurationUnit> = {
+  hari: 'day', harian: 'day', day: 'day', days: 'day', d: 'day',
+  minggu: 'week', mingguan: 'week', mgg: 'week', week: 'week', weeks: 'week', w: 'week',
+  bulan: 'month', bulanan: 'month', bln: 'month', month: 'month', months: 'month', m: 'month',
+}
+
+const VARIAN_UNIT_LABEL: Record<VarianDurationUnit, string> = { day: 'Hari', week: 'Minggu', month: 'Bulan' }
+
+export interface VarianBulkRow {
+  row: number
+  basis: string
+  duration: number
+  unit: VarianDurationUnit
+  accountType: string | null
+  price: number
+  isActive: boolean
+  deliveryInfo: boolean
+}
+
+export interface VarianBulkDecision extends VarianBulkRow {
+  action: 'create'
+  basisName: string
+  name: string
+  skuSample: string
+  durationLabel: string
+}
+
+function coerceVarianUnit(raw: string, row: number): { value: VarianDurationUnit | null; issue: BulkIssue | null } {
+  const key = raw.trim().toLowerCase()
+  const value = VARIAN_UNIT_ALIASES[key] ?? null
+  if (value) return { value, issue: null }
+  return {
+    value: null,
+    issue: { row, column: 'unit', code: 'bad_unit', message: `Satuan tidak dikenal: isi hari, minggu, atau bulan`, severity: 'error' },
+  }
+}
+
+export function varianBulkTemplate() {
+  return {
+    entity: 'varian',
+    headers: VARIAN_BULK_COLUMNS.map((c) => c.header),
+    headerLine: VARIAN_BULK_COLUMNS.map((c) => c.header).join(','),
+    samples: [
+      { basis: 'TULIS_ID_INDUK', duration: '1', unit: 'bulan', account_type: 'Private', price: '45000', is_active: 'true', requires_delivery_info: 'false' },
+      { basis: 'TULIS_ID_INDUK', duration: '7', unit: 'hari', account_type: 'Sharing', price: '15000', is_active: 'true', requires_delivery_info: 'true' },
+    ],
+    notes: [
+      'Satu baris = satu varian baru di bawah induk basis (kolom basis = ID publik induk, lihat tab Basis).',
+      'duration angka + unit hari/minggu/bulan (boleh juga day/week/month). Nama varian digabung otomatis.',
+      'price angka bulat rupiah wajib, terima 0. account_type teks bebas.',
+      'SKU dibuat otomatis saat commit; pratinjau hanya menampilkan contoh.',
+      'compare_at_price, badge, conditions, description belum didukung: isi lewat dialog Edit setelah impor.',
+      `Maksimal ${BULK_ROW_LIMIT} baris dan 1MB per impor.`,
+    ],
+    limits: { rows: BULK_ROW_LIMIT, bytes: BULK_TEXT_LIMIT },
+  }
+}
+
+// Pure: no DB, no writes. Parent existence resolves in the service layer
+// (one batched query); preview and commit share both steps.
+export function validateVarianRows(parsed: ParsedCsv): { valid: VarianBulkRow[]; issues: BulkIssue[] } {
+  const valid: VarianBulkRow[] = []
+  const issues: BulkIssue[] = []
+  const seen = new Map<string, number>()
+
+  for (const r of parsed.rows) {
+    const v = r.values
+    let ok = true
+    const fail = (column: string, code: string, message: string) => {
+      ok = false
+      issues.push({ row: r.row, column, code, message, severity: 'error' })
+    }
+    const check = (issue: BulkIssue | null) => {
+      if (!issue) return
+      if (issue.severity === 'error') ok = false
+      issues.push(issue)
+    }
+
+    const basis = v.basis ?? ''
+    if (basis === '') fail('basis', 'required', 'ID induk wajib diisi')
+    check(basis ? checkSingleLine(basis, r.row, 'basis', 'Induk') : null)
+
+    const durationRaw = v.duration ?? ''
+    if (durationRaw === '') {
+      fail('duration', 'required', 'Durasi wajib diisi')
+    }
+    const duration = coerceInteger(durationRaw, r.row, 'duration', 'Durasi')
+    check(durationRaw ? duration.issue : null)
+
+    const unitRaw = v.unit ?? ''
+    if (unitRaw === '') {
+      fail('unit', 'required', 'Satuan wajib diisi')
+    }
+    const unit = coerceVarianUnit(unitRaw, r.row)
+    check(unitRaw ? unit.issue : null)
+
+    const accountRaw = v.account_type ?? ''
+    check(checkMaxLength(accountRaw, r.row, 'account_type', 'Tipe Akun', 100))
+    check(accountRaw ? checkSingleLine(accountRaw, r.row, 'account_type', 'Tipe Akun') : null)
+
+    const priceRaw = v.price ?? ''
+    if (priceRaw === '') {
+      fail('price', 'required', 'Harga wajib diisi')
+    }
+    const price = coerceInteger(priceRaw, r.row, 'price', 'Harga')
+    check(priceRaw ? price.issue : null)
+
+    const active = coerceBoolean(v.is_active ?? '', r.row, 'is_active', 'Aktif')
+    check(active.issue)
+
+    const delivery = coerceBoolean(v.requires_delivery_info ?? '', r.row, 'requires_delivery_info', 'Minta Akun')
+    check(delivery.issue)
+
+    if (ok && basis && duration.value != null && unit.value) {
+      const key = `${basis.toLowerCase()}\0${duration.value}\0${unit.value}\0${accountRaw.toLowerCase()}`
+      const first = seen.get(key)
+      if (first !== undefined) {
+        issues.push({ row: r.row, column: 'basis', code: 'dup_in_file', message: `Kombinasi induk+durasi+tipe sama dengan baris ${first}, cek duplikat`, severity: 'warning' })
+      } else {
+        seen.set(key, r.row)
+      }
+    }
+
+    if (!ok) continue
+    valid.push({
+      row: r.row,
+      basis,
+      duration: duration.value ?? 0,
+      unit: unit.value ?? 'month',
+      accountType: accountRaw === '' ? null : accountRaw,
+      price: price.value ?? 0,
+      isActive: active.value ?? true,
+      deliveryInfo: delivery.value ?? false,
+    })
+  }
+
+  return { valid, issues }
+}
+
+// DB step: resolve parent public_ids in one batched query. Unknown parents
+// become row errors; the returned map feeds name composition + decisions.
+async function resolveVarianParents(valid: VarianBulkRow[]): Promise<{ kept: VarianBulkRow[]; parents: Map<string, { id: number; name: string }>; issues: BulkIssue[] }> {
+  const issues: BulkIssue[] = []
+  const ids = [...new Set(valid.map((d) => d.basis))]
+  const { data, error } = await supabaseAdmin.from('products').select('id, public_id, name').in('public_id', ids)
+  if (error) throw new Error(error.message)
+  const parents = new Map((data || []).map((p: any) => [p.public_id as string, { id: p.id as number, name: p.name as string }]))
+  const kept: VarianBulkRow[] = []
+  for (const d of valid) {
+    if (!parents.has(d.basis)) {
+      issues.push({ row: d.row, column: 'basis', code: 'unknown_parent', message: `Induk ${d.basis} tidak ditemukan di tab Basis`, severity: 'error' })
+      continue
+    }
+    kept.push(d)
+  }
+  return { kept, parents, issues }
+}
+
+function varianBulkSummary(
+  valid: VarianBulkRow[],
+  parents: Map<string, { id: number; name: string }>,
+  issues: BulkIssue[],
+  total: number,
+  skipped: number,
+  checksum: string,
+) {
+  const errors = issues.filter((e) => e.severity === 'error')
+  const warnings = issues.filter((e) => e.severity === 'warning')
+  const badRows = new Set(errors.map((e) => e.row))
+  return {
+    entity: 'varian',
+    checksum,
+    total,
+    skipped,
+    valid: valid.length,
+    invalid: badRows.size,
+    warnings: warnings.length,
+    decisions: valid.map((d): VarianBulkDecision => {
+      const baseName = parents.get(d.basis)?.name ?? ''
+      return {
+        ...d,
+        action: 'create',
+        basisName: baseName,
+        name: composeVariantName(baseName, d.duration, d.unit, d.accountType, null),
+        skuSample: generateSku(baseName, d.duration, d.unit, d.accountType),
+        durationLabel: `${d.duration} ${VARIAN_UNIT_LABEL[d.unit]}`,
+      }
+    }),
+    issues: issues.slice(0, BULK_ISSUE_CAP),
+    issueTotal: issues.length,
+    errorCsv: issuesToCsv(issues),
+  }
+}
+
+async function runVarianBulkValidation(csvText: string) {
+  const parsed = parseCsvText(csvText, VARIAN_BULK_COLUMNS)
+  const { valid, issues } = validateVarianRows(parsed)
+  const { kept, parents, issues: parentIssues } = await resolveVarianParents(valid)
+  const all = [...issues, ...parentIssues]
+  return { parsed, summary: varianBulkSummary(kept, parents, all, parsed.rows.length, parsed.skipped, bulkChecksum(csvText)), valid: kept, parents, issues: all }
+}
+
+export const varianBulkService = {
+  template: varianBulkTemplate,
+
+  async preview(csvText: string) {
+    const { summary } = await runVarianBulkValidation(csvText)
+    return summary
+  },
+
+  async commit(csvText: string, batchKey: string, actor: { sub: string; email?: string | null }) {
+    const key = `bulk:varian:${batchKey}`
+    const prior = await findAuditByIdempotencyKey(key).catch(() => null)
+    if (prior) return { ...(prior as Record<string, unknown>), replay: true }
+
+    const claimed = await claimIdempotencyKey(key).catch(() => null)
+    if (claimed === false) {
+      throw new ConflictError('Impor ini sedang diproses, tunggu hasilnya dulu')
+    }
+
+    let valid: VarianBulkRow[]
+    let parents: Map<string, { id: number; name: string }>
+    let summary: Awaited<ReturnType<typeof runVarianBulkValidation>>['summary']
+    try {
+      const out = await runVarianBulkValidation(csvText)
+      valid = out.valid
+      parents = out.parents
+      summary = out.summary
+    } catch (e) {
+      await releaseIdempotencyKey(key).catch(() => {})
+      throw e
+    }
+    const blocking = summary!.issues.some((e) => e.severity === 'error')
+    if (blocking) {
+      await releaseIdempotencyKey(key).catch(() => {})
+      const err = new BadRequestError(`Validasi gagal: ${summary!.invalid} baris bermasalah, perbaiki dulu`) as BadRequestError & { issues?: BulkIssue[] }
+      err.issues = summary!.issues
+      throw err
+    }
+
+    const rows = valid!.map((d) => {
+      const baseName = parents!.get(d.basis)?.name ?? ''
+      return {
+        public_id: generatePublicId(),
+        product_id: parents!.get(d.basis)!.id,
+        sku: generateSku(baseName, d.duration, d.unit, d.accountType),
+        name: composeVariantName(baseName, d.duration, d.unit, d.accountType, null),
+        price: d.price,
+        compare_at_price: null,
+        duration_months: d.duration,
+        duration_unit: d.unit,
+        account_type: d.accountType,
+        fulfillment_type: 'vault',
+        requires_delivery_info: d.deliveryInfo,
+        is_active: d.isActive,
+      }
+    })
+    const { data: inserted, error } = await supabaseAdmin.from('product_variants').insert(rows).select('public_id')
+    if (error) {
+      // Single-statement insert: failure lands zero rows, claim stays so a
+      // blind retry reports already-processed instead of duplicating.
+      if ((error as { code?: string }).code === '23505') {
+        throw new ConflictError('Bentrok ID unik saat impor, ulangi pratinjau lalu commit lagi')
+      }
+      throw new Error(error.message)
+    }
+
+    const result = {
+      entity: 'varian',
+      batchId: batchKey,
+      checksum: summary!.checksum,
+      total: summary!.total,
+      committed: inserted?.length ?? 0,
+    }
+    await appendAudit({
+      action: 'product:bulk-import',
+      resourceType: 'variant',
+      snapshotText: `Impor varian ${result.committed}/${result.total} baris oleh ${actor.email ?? actor.sub}`,
+      actorId: actor.sub,
+      actorEmail: actor.email ?? null,
+      actorType: 'admin',
+      diff: result,
+      idempotencyKey: key,
+    }).catch(() => {})
+    return result
+  },
 }
 
 export const BASIS_BULK_COLUMNS: BulkColumn[] = [

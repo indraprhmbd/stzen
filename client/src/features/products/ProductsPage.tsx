@@ -170,6 +170,8 @@ export default function ProductsPage() {
           onEditVariant={variantForm.openEditVariant}
           onDeleteVariant={askDeleteVariant}
           onOpenVault={openVault}
+          onImported={fetchAll}
+          notify={showToast}
           loading={loading}
         />
       </div>

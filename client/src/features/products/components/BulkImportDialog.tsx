@@ -89,6 +89,54 @@ function download(filename: string, text: string, type: string) {
   URL.revokeObjectURL(url)
 }
 
+export const varianBulkConfig: BulkImportConfig = {
+  entity: 'varian',
+  title: 'Impor Varian',
+  subtitle: 'Satu baris CSV = satu varian baru di bawah induk',
+  sampleFilename: 'template-varian.csv',
+  template: async () => {
+    const res = await authedApiRequest((c) => c.api.v1.admin.variants.bulk.template.$get())
+    if (!res.ok) throw new Error('Gagal memuat template')
+    return (await res.json()) as BulkTemplate
+  },
+  preview: async (csvText: string) => {
+    const res = await authedApiRequest((c) => c.api.v1.admin.variants.bulk.preview.$post({ json: { csvText } }))
+    const data = (await res.json()) as BulkPreview & { error?: string }
+    if (!res.ok) throw Object.assign(new Error(data.error || 'Pratinjau gagal'), { issues: data.issues ?? [] })
+    return data
+  },
+  commit: async (csvText: string, batchKey: string) => {
+    const res = await authedApiRequest((c) =>
+      c.api.v1.admin.variants.bulk.commit.$post({ json: { csvText, batchKey } })
+    )
+    const data = (await res.json()) as BulkCommitResult & { error?: string }
+    if (!res.ok) throw new Error(data.error || 'Impor gagal')
+    return data
+  },
+  decisionColumns: [
+    { label: 'BARIS', render: (d) => <span className="ad-num">{String(d.row)}</span> },
+    {
+      label: 'NAMA',
+      render: (d) => (
+        <span>
+          <span className="text-[13px] font-medium">{String(d.name)}</span>
+          <br />
+          <span className="text-[11px] ad-num text-[#6e6e73]">SKU {String(d.skuSample)} (contoh)</span>
+        </span>
+      ),
+    },
+    { label: 'INDUK', render: (d) => <span className="text-xs text-[#6e6e73]">{String(d.basisName)}</span> },
+    { label: 'DURASI', render: (d) => <span className="text-[13px]">{String(d.durationLabel)}</span> },
+    {
+      label: 'HARGA',
+      render: (d) => <span className="text-[13px] ad-num font-semibold">Rp {Number(d.price).toLocaleString('id-ID')}</span>,
+    },
+    {
+      label: 'AKTIF',
+      render: (d) => <StatusChip tone={d.isActive ? 'green' : 'zinc'}>{d.isActive ? 'AKTIF' : 'NONAKTIF'}</StatusChip>,
+    },
+  ],
+}
 export const basisBulkConfig: BulkImportConfig = {
   entity: 'basis',
   title: 'Impor Basis',
