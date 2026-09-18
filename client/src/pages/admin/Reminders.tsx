@@ -8,7 +8,7 @@ import StatusChip from '../../components/admin/StatusChip'
 import SlideToggle from '../../components/admin/SlideToggle'
 import AdminToastStack from '../../components/admin/AdminToast'
 import { useToast } from '../../hooks/useToast'
-import { useTableSort } from '../../hooks/useTableSort'
+import { useAdminTableParams } from '../../hooks/useAdminTableParams'
 import TableSortMenu from '../../components/admin/TableSortMenu'
 import { Refresh, ArrowUpRight, Search } from 'iconoir-react'
 
@@ -54,21 +54,26 @@ function formatIdDate(iso: string | null) {
 }
 
 export default function Reminders() {
-  const [stateFilter, setStateFilter] = useState<'all' | 'none' | 'scheduled'>('all')
-  const [q, setQ] = useState('')
-  const [offset, setOffset] = useState(0)
-  const [limit, setLimit] = useState(10)
+  // Table state (filter/search/page/limit/sort) persists in URL via the
+  // shared contract; selection stays local and clears on view change.
+  const {
+    filter: stateFilter, setFilter: setStateFilter,
+    q, setQ, committedQ,
+    page, setPage, limit, setLimit, offset,
+    sortKey, sortDir, toggleSort,
+  } = useAdminTableParams({
+    sortUrlKey: 'sort', defaultSortKey: 'paidAt', defaultSortDir: 'desc',
+    filterKey: 'state', filters: ['all', 'none', 'scheduled'] as const, defaultFilter: 'all',
+  })
   const [selected, setSelected] = useState<string[]>([])
   const [busyId, setBusyId] = useState<string | null>(null)
   const [bulkBusy, setBulkBusy] = useState(false)
   const { toasts, showToast, dismissToast } = useToast()
 
-  const { sortKey, sortDir, toggleSort } = useTableSort([], { urlKey: 'sort', defaultKey: 'paidAt', defaultDir: 'desc' })
-
   const { data, loading, error, fetchedAt, refetch } = useAdminQuery(async () => {
     const params: Record<string, string> = { limit: String(limit), offset: String(offset) }
     if (stateFilter !== 'all') params.state = stateFilter
-    if (q) params.q = q
+    if (committedQ) params.q = committedQ
     if (sortKey) { params.sort = sortKey; params.sortDir = sortDir ?? 'desc' }
     const res = await authedApiRequest((c) =>
       c.api.v1.admin.reminders.preview.$get({ query: params })
@@ -78,11 +83,11 @@ export default function Reminders() {
       throw new Error(err.error || `Gagal (${res.status})`)
     }
     return (await res.json()) as { rows: PreviewRow[]; total: number }
-  }, [stateFilter, q, offset, limit, sortKey, sortDir])
+  }, [stateFilter, committedQ, offset, limit, sortKey, sortDir])
   const rows = data?.rows ?? []
   const total = data?.total ?? 0
 
-  useEffect(() => { setOffset(0); setSelected([]) }, [stateFilter, q, limit, sortKey, sortDir])
+  useEffect(() => { setSelected([]) }, [stateFilter, committedQ, page, limit, sortKey, sortDir])
 
   async function flipRow(row: PreviewRow, turnOn: boolean) {
     if (busyId) return
@@ -267,7 +272,7 @@ export default function Reminders() {
           limit={limit}
           offset={offset}
           onLimitChange={setLimit}
-          onOffsetChange={setOffset}
+          onOffsetChange={(o) => setPage(Math.floor(o / limit) + 1)}
         />
       </div>
     </div>
