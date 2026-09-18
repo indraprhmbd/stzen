@@ -5,7 +5,7 @@ import { initiatePayment, deleteOrder } from '../lib/pay'
 import { getCachedDetail } from '../lib/prefetch'
 import { useToast } from '../hooks/useToast'
 import ToastStack from '../components/Toast'
-import { usePublicSettings } from '../hooks/usePublicSettings'
+import { usePublicSettings, refreshPublicSettings } from '../hooks/usePublicSettings'
 import Layout from '../components/Layout'
 import ProductCard from '../components/ProductCard'
 import { useBrand } from '../hooks/useBrand'
@@ -34,9 +34,9 @@ export default function ProductDetail() {
   const settings = usePublicSettings()
   // Server-gated rails: sumopod only when its key is configured (settings
   // fall back to manual-only while loading). Manual always available.
-  const methods: ('manual' | 'sumopod')[] = settings.paymentMethods.includes('sumopod')
-    ? ['manual', 'sumopod']
-    : ['manual']
+  const [rails, setRails] = useState<('manual' | 'sumopod')[]>(() =>
+    settings.paymentMethods.includes('sumopod') ? ['manual', 'sumopod'] : ['manual']
+  )
   const [method, setMethod] = useState<'manual' | 'sumopod'>('manual')
   const [account, setAccount] = useState('')
   const [wa, setWa] = useState('')
@@ -98,11 +98,27 @@ export default function ProductDetail() {
     return () => observer.disconnect()
   }, [product])
 
-  function openBuyConfirm() {
+  async function openBuyConfirm() {
     if (!product || purchasing || !inStock) return
+    // Revalidate before the dialog paints: admin may have flipped
+    // requiresDeliveryInfo (or price/stock) after this page loaded, and the
+    // prefetch cache would otherwise serve the stale variant. Stale view
+    // still opens when the refresh fails.
+    try {
+      const res = await apiV1.products[':id'].$get({ param: { id: product.id } })
+      if (res.ok) setProduct(await res.json() as Product)
+    } catch { /* fall through with cached product */ }
+    // Rails revalidate alongside: operator key changes bypass the 60s
+    // settings cache so the method radio matches server availability.
+    let nextRails = rails
+    try {
+      const fresh = await refreshPublicSettings()
+      nextRails = fresh.paymentMethods.includes('sumopod') ? ['manual', 'sumopod'] : ['manual']
+      setRails(nextRails)
+    } catch { /* fall through with cached rails */ }
     // Fresh dialog state every open: default rail prefers automation, form
     // cleared, previous manual receipt discarded.
-    setMethod(methods.includes('sumopod') ? 'sumopod' : 'manual')
+    setMethod(nextRails.includes('sumopod') ? 'sumopod' : 'manual')
     setAccount('')
     setWa('')
     setFormErr('')
@@ -471,13 +487,13 @@ export default function ProductDetail() {
                 <span className="font-black text-xl whitespace-nowrap">{brand.storefront.currencySymbol} {Number(product.price).toLocaleString('id-ID')}</span>
               </div>
             </div>
-            {methods.length > 1 && (
+            {rails.length > 1 && (
               <div>
                 <p className="font-black text-[10px] uppercase tracking-widest text-neutral mb-1.5" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
                   {t.products.methodTitle}
                 </p>
                 <div className="flex flex-col gap-1.5" role="radiogroup" aria-label={t.products.methodTitle}>
-                  {methods.includes('sumopod') && (
+                  {rails.includes('sumopod') && (
                     <label className={`flex items-start gap-2 border-2 border-black p-2.5 text-xs ${method === 'sumopod' ? 'bg-primary/20' : 'bg-white'} ${purchasing ? 'opacity-60' : 'cursor-pointer'}`}>
                       <input
                         type="radio"

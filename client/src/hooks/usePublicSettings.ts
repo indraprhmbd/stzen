@@ -37,7 +37,6 @@ async function load(): Promise<PublicSettings> {
   }
   return inflight
 }
-
 export function usePublicSettings(): PublicSettings {
   const [data, setData] = useState<PublicSettings>(cached?.data ?? EMPTY)
 
@@ -52,4 +51,11 @@ export function usePublicSettings(): PublicSettings {
   }, [])
 
   return data
+}
+
+// Bypass the 60s cache: checkout revalidates rails on dialog open so an
+// operator key change reflects without waiting out the TTL.
+export async function refreshPublicSettings(): Promise<PublicSettings> {
+  cached = null
+  return load()
 }
