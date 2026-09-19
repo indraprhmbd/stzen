@@ -89,6 +89,30 @@ function download(filename: string, text: string, type: string) {
   URL.revokeObjectURL(url)
 }
 
+// Draft persistence: textarea survives tab switches + dialog reopen, one key
+// per entity. File content is already in csvText after read, so text alone
+// covers both paste and file paths. try/catch: private mode just skips.
+function draftKeyFor(entity: string) {
+  return `stzen:bulk-draft:${entity}`
+}
+
+function loadDraft(key: string): string {
+  try {
+    return localStorage.getItem(key) ?? ''
+  } catch {
+    return ''
+  }
+}
+
+function saveDraft(key: string, text: string) {
+  try {
+    if (text === '') localStorage.removeItem(key)
+    else localStorage.setItem(key, text)
+  } catch {
+    // Draft won't survive; import still works.
+  }
+}
+
 export const varianBulkConfig: BulkImportConfig = {
   entity: 'varian',
   title: 'Impor Varian',
@@ -218,10 +242,13 @@ export default function BulkImportDialog({ config, open, onClose, onDone, notify
   const [errorsOnly, setErrorsOnly] = useState(false)
 
   // Fresh state per open; template loads once from the server registry so
-  // copy/download can never drift from accepted columns.
+  // copy/download can never drift from accepted columns. Draft text is
+  // restored per entity; preview/result always start clean (cheap to re-run,
+  // never stale).
+  const draftKey = draftKeyFor(config.entity)
   useEffect(() => {
     if (!open) return
-    setCsvText('')
+    setCsvText(loadDraft(draftKey))
     setFileName('')
     setPreview(null)
     setResult(null)
@@ -233,6 +260,14 @@ export default function BulkImportDialog({ config, open, onClose, onDone, notify
       .catch(() => notify('Gagal memuat template', 'error'))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
+
+  // Debounced draft write; empty text removes the key.
+  useEffect(() => {
+    if (!open) return
+    const t = setTimeout(() => saveDraft(draftKey, csvText), 300)
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, csvText])
 
   if (!open) return null
 
@@ -312,6 +347,8 @@ export default function BulkImportDialog({ config, open, onClose, onDone, notify
     try {
       const r = await config.commit(csvText, crypto.randomUUID())
       setResult(r)
+      // Draft consumed: must not resurrect on reopen.
+      saveDraft(draftKey, '')
       notify(r.replay ? 'Impor sudah pernah diproses, tidak diduplikasi' : `${r.committed} baris diimpor`, 'success')
       onDone()
     } catch (e: unknown) {
@@ -319,6 +356,14 @@ export default function BulkImportDialog({ config, open, onClose, onDone, notify
     } finally {
       setCommitting(false)
     }
+  }
+
+  function clearDraft() {
+    setCsvText('')
+    setFileName('')
+    setPreview(null)
+    setResult(null)
+    saveDraft(draftKey, '')
   }
 
   const blockingErrors = preview?.issues.filter((e) => e.severity === 'error') ?? []
@@ -387,9 +432,17 @@ export default function BulkImportDialog({ config, open, onClose, onDone, notify
             rows={6}
             className="ad-input font-mono text-xs leading-relaxed"
           />
-          <button onClick={runPreview} disabled={previewLoading || csvText.trim() === ''} className="ad-btn ad-btn-dark mt-2">
-            {previewLoading ? 'Memeriksa...' : 'Pratinjau'}
-          </button>
+          <div className="flex items-center gap-2 mt-2">
+            <button onClick={runPreview} disabled={previewLoading || csvText.trim() === ''} className="ad-btn ad-btn-dark">
+              {previewLoading ? 'Memeriksa...' : 'Pratinjau'}
+            </button>
+            <button onClick={clearDraft} disabled={csvText === '' && !preview && !result} className="ad-btn">
+              Bersihkan
+            </button>
+            {csvText !== '' && (
+              <span className="text-[11px] text-[#aeaeb2] ml-1">Draft tersimpan otomatis di perangkat.</span>
+            )}
+          </div>
         </div>
 
         {/* ── 3. Preview ──────────────────────────────────────────── */}
