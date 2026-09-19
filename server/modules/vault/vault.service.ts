@@ -553,6 +553,7 @@ interface StokParent {
   publicId: string
   name: string
   fulfillmentType: string
+  productId: number
 }
 
 // DB step: resolve refs (public_id first, then SKU) in one batched query.
@@ -564,8 +565,8 @@ async function resolveStokVariants(valid: StokBulkRow[]): Promise<{ kept: StokBu
   // all-invalid file still returns row-level errors instead of a 500.
   if (refs.length === 0) return { kept: [], parents: new Map<string, StokParent>(), issues }
   const [{ data: byPublicRows, error: errPub }, { data: bySkuRows, error: errSku }] = await Promise.all([
-    supabaseAdmin.from(PRODUCT_VARIANTS).select('id, public_id, sku, name, fulfillment_type').in('public_id', refs),
-    supabaseAdmin.from(PRODUCT_VARIANTS).select('id, public_id, sku, name, fulfillment_type').in('sku', refs),
+    supabaseAdmin.from(PRODUCT_VARIANTS).select('id, public_id, sku, name, fulfillment_type, product_id').in('public_id', refs),
+    supabaseAdmin.from(PRODUCT_VARIANTS).select('id, public_id, sku, name, fulfillment_type, product_id').in('sku', refs),
   ])
   if (errPub) throw new Error(errPub.message)
   if (errSku) throw new Error(errSku.message)
@@ -585,7 +586,7 @@ async function resolveStokVariants(valid: StokBulkRow[]): Promise<{ kept: StokBu
       issues.push({ row: d.row, column: 'variant_ref', message: `Varian ${v.name} on demand, tidak butuh stok`, code: 'on_demand', severity: 'error' })
       continue
     }
-    parents.set(d.variantRef, { id: v.id, publicId: v.public_id, name: v.name, fulfillmentType: v.fulfillment_type })
+    parents.set(d.variantRef, { id: v.id, publicId: v.public_id, name: v.name, fulfillmentType: v.fulfillment_type, productId: v.product_id })
     kept.push(d)
   }
   return { kept, parents, issues }
@@ -681,7 +682,7 @@ export const stokBulkService = {
       const payload = await encrypt(cryptoKey, d.credential)
       encryptedItems.push({
         variant_id: parents!.get(d.variantRef)!.id,
-        product_id: null,
+        product_id: parents!.get(d.variantRef)!.productId,
         credential_payload: JSON.stringify(payload),
         status: 'AVAILABLE',
       })
