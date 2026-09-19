@@ -1,7 +1,7 @@
 export interface Copy {
   nav: { home: string; shop: string; myOrders: string; admin: string; profile: string }
-  auth: { 
-    signIn: string; signOut: string; signInWithGoogle: string; email: string; password: string; or: string; backToStore: string; 
+  auth: {
+    signIn: string; signOut: string; signInWithGoogle: string; email: string; password: string; or: string; backToStore: string;
     signUp: string; signUpTitle: string; signUpSubtitle: string; confirmPassword: string; noAccount: string; hasAccount: string;
     forgotPassword: string; forgotPasswordTitle: string; forgotPasswordSubtitle: string; backToLogin: string;
     updatePassword: string; updatePasswordTitle: string; updatePasswordSubtitle: string; newPassword: string; confirmNewPassword: string;
@@ -155,7 +155,7 @@ const id: Copy = {
       desc: 'Kami menerima berbagai metode pembayaran untuk kemudahanmu.',
       methods: [
         { name: 'SeaBank', detail: 'Transfer langsung ke rekening SeaBank. Proses cepat, bebas admin.', badge: 'INSTAN' },
-        { name: 'QRIS', detail: 'Scan kode QRIS via Pakasir. Support semua e-wallet dan mobile banking.', badge: 'UNIVERSAL' },
+        { name: 'QRIS', detail: 'Scan kode QRIS. Support semua e-wallet dan mobile banking.', badge: 'UNIVERSAL' },
         { name: 'Manual Transfer', detail: 'Transfer ke bank mana saja. Konfirmasi manual via WhatsApp.', badge: 'SEMUA BANK' },
       ],
     },
@@ -302,7 +302,7 @@ const en: Copy = {
       desc: 'We accept various payment methods for your convenience.',
       methods: [
         { name: 'SeaBank', detail: 'Direct transfer to SeaBank account. Fast process, zero fees.', badge: 'INSTANT' },
-        { name: 'QRIS', detail: 'Scan QRIS code via Pakasir. Supports all e-wallets and mobile banking.', badge: 'UNIVERSAL' },
+        { name: 'QRIS', detail: 'Scan QRIS code. Supports all e-wallets and mobile banking.', badge: 'UNIVERSAL' },
         { name: 'Manual Transfer', detail: 'Transfer to any bank. Manual confirmation via WhatsApp.', badge: 'ALL BANKS' },
       ],
     },
