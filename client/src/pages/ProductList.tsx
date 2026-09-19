@@ -54,7 +54,11 @@ export default function ProductList() {
 
   // Read all state from URL
   const category = searchParams.get('category') || 'all'
-  const badge = searchParams.get('tags') || ''
+  // Repeated ?tags= params, normalized to trigger-written form (UPPER).
+  const activeTags = searchParams.getAll('tags').map((t) => t.toUpperCase()).filter(Boolean)
+  // Stable string key: activeTags is a fresh array every render, so effects
+  // and memo keys below depend on this instead (else infinite refetch).
+  const activeTagKey = activeTags.join(',')
   const sort = searchParams.get('sort') || 'newest'
   const page = parseInt(searchParams.get('page') || '1')
   const search = searchParams.get('search') || ''
@@ -64,15 +68,22 @@ export default function ProductList() {
   const [loading, setLoading] = useState(true)
   const [toastMsg, setToastMsg] = useState('')
   const [catData, setCatData] = useState<{ categories: string[]; counts: Record<string, number> }>({ categories: ['all'], counts: {} })
+  const [tagData, setTagData] = useState<{ tags: string[]; counts: Record<string, number> }>({ tags: [], counts: {} })
   // Category pill deep-links land here mid-scroll: reset viewport on change.
-  const prevFilter = useRef(`${category}|${badge}`)
+  const prevFilter = useRef(`${category}|${activeTagKey}`)
 
-  // Fetch full category list once (independent of active filter)
+  // Fetch full category + tag lists once (independent of active filter)
   useEffect(() => {
     apiV1.products.categories.$get().then(async (res) => {
       if (res.ok) {
         const data = await res.json() as { categories: string[]; counts: Record<string, number> }
         setCatData({ categories: ['all', ...data.categories], counts: data.counts })
+      }
+    }).catch(() => {})
+    apiV1.products.tags.$get().then(async (res) => {
+      if (res.ok) {
+        const data = await res.json() as { tags: string[]; counts: Record<string, number> }
+        setTagData(data)
       }
     }).catch(() => {})
   }, [])
@@ -82,14 +93,14 @@ export default function ProductList() {
   useEffect(() => {
     let cancelled = false
 
-    if (prevFilter.current !== `${category}|${badge}`) {
-      prevFilter.current = `${category}|${badge}`
+    if (prevFilter.current !== `${category}|${activeTagKey}`) {
+      prevFilter.current = `${category}|${activeTagKey}`
       window.scrollTo(0, 0)
     }
 
-    const query: Record<string, string> = {}
+    const query: Record<string, string | string[]> = {}
     if (category !== 'all') query.category = category
-    if (badge) query.tags = badge
+    if (activeTags.length > 0) query.tags = activeTags
     if (sort !== 'newest') query.sort = sort
     if (page > 1) query.page = String(page)
     if (search) query.search = search
@@ -122,7 +133,7 @@ export default function ProductList() {
     }).catch(() => { if (!cancelled) setLoading(false) })
 
     return () => { cancelled = true }
-  }, [category, badge, sort, page, search, session])
+  }, [category, activeTagKey, sort, page, search, session])
 
   // Pre-warm page+1 while the pager is on screen (Pagination calls this once
   // per page via viewport observer). Guests get no pager - nothing to warm.
@@ -130,14 +141,14 @@ export default function ProductList() {
     if (!session) return
     const totalPages = result?.totalPages ?? 1
     if (page >= totalPages) return
-    const query: Record<string, string> = {}
+    const query: Record<string, string | string[]> = {}
     if (category !== 'all') query.category = category
-    if (badge) query.tags = badge
+    if (activeTags.length > 0) query.tags = activeTags
     if (sort !== 'newest') query.sort = sort
     query.page = String(page + 1)
     if (search) query.search = search
     prefetchList(query)
-  }, [category, badge, sort, page, search, session, result?.totalPages])
+  }, [category, activeTagKey, sort, page, search, session, result?.totalPages])
 
   // Ctrl+K shortcut
   useEffect(() => {
@@ -165,6 +176,33 @@ export default function ProductList() {
       // Reset page on filter change (except when changing page itself)
       if (key !== 'page') params.delete('page')
       return params
+      })
+    })
+  }
+
+  // Tag picker: toggles one repeated ?tags= value, keeps the rest.
+  function toggleTag(tag: string) {
+    startTransition(() => {
+      setSearchParams((prev) => {
+        const params = new URLSearchParams(prev)
+        const cur = params.getAll('tags').map((t) => t.toUpperCase())
+        params.delete('tags')
+        for (const t of cur.filter((t) => t !== tag)) params.append('tags', t)
+        if (!cur.includes(tag)) params.append('tags', tag)
+        params.delete('page')
+        return params
+      })
+    })
+  }
+
+  // Tag picker footer: drops every ?tags= value at once.
+  function clearTags() {
+    startTransition(() => {
+      setSearchParams((prev) => {
+        const params = new URLSearchParams(prev)
+        params.delete('tags')
+        params.delete('page')
+        return params
       })
     })
   }
@@ -200,18 +238,6 @@ export default function ProductList() {
             {result.total} produk ditemukan
           </p>
         )}
-        {/* Badge deep-link lands here: visible chip, AND-combines with the
-            category filter, one tap clears (updateParam drops empty keys). */}
-        {badge && (
-          <button
-            onClick={() => updateParam('tags', '')}
-            aria-label={`Hapus filter ${badge}`}
-            className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-neutral text-primary border-2 border-black text-[10px] font-black uppercase px-2.5 py-0.5 tracking-wide cursor-pointer hover:bg-black transition-colors"
-          >
-            {badge}
-            <span className="material-symbols-outlined text-xs leading-none">close</span>
-          </button>
-        )}
       </section>
 
       {/* ═══ FILTER BAR (sticky) ═══ */}
@@ -227,6 +253,11 @@ export default function ProductList() {
         searchQuery={search}
         onSearchChange={(q) => updateParam('search', q)}
         searchRef={searchRef}
+        availableTags={tagData.tags}
+        tagCounts={tagData.counts}
+        activeTags={activeTags}
+        onToggleTag={toggleTag}
+        onClearTags={clearTags}
       />
 
       {/* ═══ PRODUCT GRID ═══ */}

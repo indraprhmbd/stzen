@@ -43,7 +43,7 @@ export function getCachedDetail<T>(id: string): T | null {
 const LIST_TTL_MS = 30_000
 const listCache = new Map<string, { at: number; data: unknown }>()
 
-export function listKey(query: Record<string, string>): string {
+export function listKey(query: Record<string, string | string[]>): string {
   return Object.keys(query)
     .sort()
     .map((k) => `${k}=${query[k]}`)
@@ -60,7 +60,7 @@ export function setCachedList(key: string, data: unknown): void {
   listCache.set(key, { at: Date.now(), data })
 }
 
-export function prefetchList(query: Record<string, string>): void {
+export function prefetchList(query: Record<string, string | string[]>): void {
   const key = listKey(query)
   if (getCachedList(key)) return
   apiV1.products

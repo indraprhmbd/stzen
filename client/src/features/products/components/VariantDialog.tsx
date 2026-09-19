@@ -99,13 +99,13 @@ export default function VariantDialog({ products, form: v, onSubmit, onImportNow
           </div>
           <div className="grid grid-cols-2 gap-3">
             <RupiahInput label="Harga (Rp)" required value={v.vPrice} onChange={v.setVPrice} placeholder="45000" hint={v.vPrice !== '' && Number(v.vPrice) < 10_000 ? 'Di bawah Rp10.000: QRIS otomatis nonaktif, hanya pesanan manual' : undefined} />
-            <div>
-              <label className="ad-label">Tags<input type="text" value={v.vBadge} onChange={(e) => v.setVBadge(e.target.value)} maxLength={50} placeholder={baseTags || 'TERLARIS;PROMO'} className="ad-input mt-1.5 normal-case" /></label>
-              <p className="text-[11px] text-[#aeaeb2] mt-1 normal-case font-normal">Pisahkan beberapa tags dengan ;</p>
-              <div className="flex items-center justify-between mt-1">
-                <span className="text-[11px] text-[#aeaeb2]">{modeCaption[tagsMode]}</span>
-                {tagsMode === 'custom' && <button type="button" onClick={() => v.setVBadge('')} className={clearBtn}>Ikuti induk</button>}
-              </div>
+          </div>
+          <div>
+            <label className="ad-label">Tags<input type="text" value={v.vBadge} onChange={(e) => v.setVBadge(e.target.value)} maxLength={50} placeholder={baseTags || 'TERLARIS;PROMO'} className="ad-input mt-1.5 normal-case" /></label>
+            <p className="text-[11px] text-[#aeaeb2] mt-1 normal-case font-normal">Pisahkan beberapa tags dengan ;</p>
+            <div className="flex items-center justify-between mt-1">
+              <span className="text-[11px] text-[#aeaeb2]">{modeCaption[tagsMode]}</span>
+              {tagsMode === 'custom' && <button type="button" onClick={() => v.setVBadge('')} className={clearBtn}>Ikuti induk</button>}
             </div>
           </div>
           <RupiahInput label="Harga Coret (opsional)" value={v.vCompareAt} onChange={v.setVCompareAt} placeholder="60000" hint="Tampil dicoret bila lebih besar dari harga" />

@@ -56,7 +56,7 @@ export interface PaginatedCatalog {
 
 export interface ProductQueryParams {
   category?: string
-  tags?: string
+  tags?: string[]
   sort?: string
   page?: number
   limit?: number

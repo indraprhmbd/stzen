@@ -10,7 +10,7 @@ export interface Copy {
   }
   hero: { title1: string; title2: string; tagline: string; cta: string; statusPill: string; searchPlaceholder: string; searchHint: string }
   marquee: string[]
-  products: { title: string; buy: string; buyNow: string; soldOut: string; inStock: string; onlyXLeft: string; outOfStock: string; sortNewest: string; sortPrice: string; sortStock: string; sortOutOfStock: string; viewGrid: string; viewList: string; verifiedBuyer: string; loginForMore: string; confirmTitle: string; confirmNote: string; confirmCancel: string; confirmGo: string; confirmPlace: string; processing: string; methodTitle: string; methodAutoMin: string; methodManualHours: string; methodAuto: string; methodAutoDesc: string; methodManual: string; methodManualDesc: string; accountLabel: string; accountPlaceholder: string; waLabel: string; waPlaceholder: string; errAccount: string; errWa: string; manualPlaced: string; manualPlacedNote: string; waConfirm: string; waConfirmText: string; feeLabel: string; viewCategory: string; viewBadge: string; askAdmin: string; askAdminText: string }
+  products: { title: string; buy: string; buyNow: string; soldOut: string; inStock: string; onlyXLeft: string; outOfStock: string; sortNewest: string; sortPrice: string; sortStock: string; sortOutOfStock: string; viewGrid: string; viewList: string; verifiedBuyer: string; loginForMore: string; confirmTitle: string; confirmNote: string; confirmCancel: string; confirmGo: string; confirmPlace: string; processing: string; methodTitle: string; methodAutoMin: string; methodManualHours: string; methodAuto: string; methodAutoDesc: string; methodManual: string; methodManualDesc: string; accountLabel: string; accountPlaceholder: string; waLabel: string; waPlaceholder: string; errAccount: string; errWa: string; termsAgree: string; termsShow: string; errTerms: string; manualPlaced: string; manualPlacedNote: string; waConfirm: string; waConfirmText: string; feeLabel: string; viewCategory: string; viewBadge: string; askAdmin: string; askAdminText: string }
   howItWorks: { title: string; steps: { num: string; title: string; desc: string }[] }
   whyUs: { title: string; items: { title: string; desc: string }[] }
   testimonials: { title: string; items: { quote: string; name: string; product: string }[] }
@@ -88,6 +88,9 @@ const id: Copy = {
     waPlaceholder: '08xxxxxxxxxx',
     errAccount: 'Akun tujuan wajib diisi (3-120 karakter).',
     errWa: 'Nomor WA tidak valid (format 08..).',
+    termsAgree: 'Saya menyetujui Syarat & Ketentuan di atas.',
+    termsShow: 'Lihat Syarat & Ketentuan',
+    errTerms: 'Centang persetujuan Syarat & Ketentuan dulu.',
     manualPlaced: 'PESANAN DITERIMA',
     manualPlacedNote: 'Pesanan manual tercatat. Konfirmasi ke admin via WhatsApp agar segera diproses.',
     waConfirm: 'KONFIRMASI VIA WA',
@@ -232,6 +235,9 @@ const en: Copy = {
     waPlaceholder: '08xxxxxxxxxx',
     errAccount: 'Target account is required (3-120 characters).',
     errWa: 'Invalid WA number (08.. format).',
+    termsAgree: 'I agree to the Terms & Conditions above.',
+    termsShow: 'View Terms & Conditions',
+    errTerms: 'Please accept the Terms & Conditions first.',
     manualPlaced: 'ORDER RECEIVED',
     manualPlacedNote: 'Manual order recorded. Confirm to admin via WhatsApp to get it processed.',
     waConfirm: 'CONFIRM VIA WA',

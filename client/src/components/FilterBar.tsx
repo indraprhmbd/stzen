@@ -13,6 +13,11 @@ interface FilterBarProps {
   searchQuery: string
   onSearchChange: (q: string) => void
   searchRef: RefObject<HTMLInputElement | null>
+  availableTags?: string[]
+  tagCounts?: Record<string, number>
+  activeTags?: string[]
+  onToggleTag?: (tag: string) => void
+  onClearTags?: () => void
 }
 
 // Category-based colors
@@ -35,7 +40,7 @@ function getCategoryColor(category: string, index: number) {
   return fallbackColors[index % fallbackColors.length]
 }
 
-export default function FilterBar({ categories, active, onChange, counts = {}, sort, onSortChange, view, onViewChange, searchQuery, onSearchChange, searchRef }: FilterBarProps) {
+export default function FilterBar({ categories, active, onChange, counts = {}, sort, onSortChange, view, onViewChange, searchQuery, onSearchChange, searchRef, availableTags = [], tagCounts = {}, activeTags = [], onToggleTag, onClearTags }: FilterBarProps) {
   const { t } = useCopy()
 
   // Debounced search: typing updates the local draft instantly, the URL (and
@@ -59,6 +64,77 @@ export default function FilterBar({ categories, active, onChange, counts = {}, s
     timer.current = setTimeout(() => onSearchChange(clean), 300)
   }
 
+  // Tag picker: one compact button + checkbox popup (from the /tags
+  // endpoint, GIN-backed server filter, no manual typing). Hidden entirely
+  // when no tags exist. Popup stays open across toggles (focus never leaves
+  // the dropdown), so multi-select is tap-tap-tap.
+  function tagFilterDropdown() {
+    if (availableTags.length === 0 || !onToggleTag) return null
+    const n = activeTags.length
+    return (
+      <div className="dropdown shrink-0">
+        <div
+          tabIndex={0}
+          role="button"
+          aria-label="Filter tags"
+          className={`
+            border-2 border-black font-black uppercase tracking-wide px-1.5 py-1
+            inline-flex items-center gap-1 cursor-pointer transition-all
+            ${n > 0
+              ? 'bg-neutral text-primary shadow-comic translate-x-[1px] translate-y-[1px]'
+              : 'bg-surface-container text-on-surface shadow-comic-sm'
+            }
+          `}
+          style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+        >
+          <span className="material-symbols-outlined text-xs leading-none">filter_alt</span>
+          {n > 0 && (
+            <span className="font-mono text-[8px] bg-primary-container text-black rounded-full px-1.5 leading-none py-0.5">{n}</span>
+          )}
+        </div>
+        <div
+          tabIndex={0}
+          className="dropdown-content bg-surface-container border-2 border-black shadow-comic z-50 p-1.5 w-52 max-w-[calc(100vw-2rem)] max-h-64 overflow-y-auto mt-1"
+        >
+          {availableTags.map((tag) => {
+            const isActive = activeTags.includes(tag)
+            const count = tagCounts[tag]
+            return (
+              <button
+                key={tag}
+                onClick={() => onToggleTag(tag)}
+                aria-pressed={isActive}
+                className="flex w-full items-center gap-2 px-2 py-1.5 hover:bg-surface-container-high transition-colors"
+              >
+                <span className={`material-symbols-outlined text-sm leading-none ${isActive ? 'text-secondary' : 'text-on-surface/40'}`}>
+                  {isActive ? 'check_box' : 'check_box_outline_blank'}
+                </span>
+                <span
+                  className="flex-1 text-left font-black uppercase text-[10px] tracking-wide text-on-surface"
+                  style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                >
+                  {tag}
+                </span>
+                {count !== undefined && count > 0 && (
+                  <span className="font-mono text-[9px] text-on-surface/50">{count}</span>
+                )}
+              </button>
+            )
+          })}
+          {n > 0 && onClearTags && (
+            <button
+              onClick={onClearTags}
+              className="w-full mt-1 border-t-2 border-black/10 px-2 pt-1.5 pb-0.5 font-black uppercase text-[9px] tracking-wide text-on-surface/60 hover:text-on-surface text-left"
+              style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+            >
+              Hapus semua
+            </button>
+          )}
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="sticky top-16 z-40 -mx-4 px-4 py-2 mb-4">
       {/* Mobile: 2 rows */}
@@ -79,6 +155,7 @@ export default function FilterBar({ categories, active, onChange, counts = {}, s
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
             />
           </div>
+          {tagFilterDropdown()}
           <select
             className="bg-surface-container border-comic font-black text-[10px] uppercase px-1.5 py-1.5 shadow-comic-sm text-on-surface cursor-pointer shrink-0"
             style={{ fontFamily: "'Space Grotesk', sans-serif" }}
@@ -157,6 +234,7 @@ export default function FilterBar({ categories, active, onChange, counts = {}, s
             Ctrl+K
           </span>
         </div>
+        {tagFilterDropdown()}
 
         {/* Category pills */}
         <div className="flex flex-wrap gap-2 flex-1">

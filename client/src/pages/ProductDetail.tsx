@@ -7,9 +7,11 @@ import { useToast } from '../hooks/useToast'
 import ToastStack from '../components/Toast'
 import { usePublicSettings, refreshPublicSettings } from '../hooks/usePublicSettings'
 import Layout from '../components/Layout'
+import SkeletonDetail from '../components/SkeletonDetail'
 import ProductCard from '../components/ProductCard'
 import { useBrand } from '../hooks/useBrand'
 import { useCopy } from '../hooks/useCopy'
+import { useAuth } from '../hooks/useAuth'
 
 // Lazy: description sits below related products, parser never costs paint.
 const Markdown = lazy(() => import('../components/Markdown'))
@@ -43,6 +45,7 @@ export default function ProductDetail() {
   const navigate = useNavigate()
   const brand = useBrand()
   const { t } = useCopy()
+  const { session } = useAuth()
   const settings = usePublicSettings()
   // Server-gated rails: sumopod only when its key is configured AND the
   // variant price clears the gateway floor (settings fall back to
@@ -55,6 +58,7 @@ export default function ProductDetail() {
   const [method, setMethod] = useState<'manual' | 'sumopod'>('manual')
   const [account, setAccount] = useState('')
   const [wa, setWa] = useState('')
+  const [agreed, setAgreed] = useState(false)
   const [formErr, setFormErr] = useState('')
   const [placed, setPlaced] = useState<{ id: string; product: string } | null>(null)
   const [product, setProduct] = useState<Product | null>(() => (id ? getCachedDetail<Product>(id) : null))
@@ -129,43 +133,56 @@ export default function ProductDetail() {
 
   async function openBuyConfirm() {
     if (!product || purchasing || !inStock) return
-    // Revalidate before the dialog paints: admin may have flipped
-    // requiresDeliveryInfo (or price/stock) after this page loaded, and the
-    // prefetch cache would otherwise serve the stale variant. Stale view
-    // still opens when the refresh fails.
-    let livePrice: number | null = Number(product.price)
-    try {
-      const res = await apiV1.products[':id'].$get({ param: { id: product.id } })
-      if (res.ok) {
-        const fresh = await res.json() as Product
-        setProduct(fresh)
-        livePrice = Number(fresh.price)
-      }
-    } catch { /* fall through with cached product */ }
-    // Rails revalidate alongside: operator key changes bypass the 60s
-    // settings cache so the method radio matches server availability.
-    // Price floor applies here too: below the gateway minimum the dialog
-    // is manual-only (server rejects sumopod fail-closed regardless).
-    let nextRails = buildRails(settings.paymentMethods, livePrice, minAmount)
-    try {
-      const fresh = await refreshPublicSettings()
-      setMinAmount(fresh.sumopodMinAmount)
-      nextRails = buildRails(fresh.paymentMethods, livePrice, fresh.sumopodMinAmount)
-      setRails(nextRails)
-    } catch { setRails(nextRails) }
+    // Guests skip the dialog entirely: checkout is authed, and opening the
+    // form first would discard everything at the login redirect.
+    if (!session) {
+      navigate('/login')
+      return
+    }
+    // Paint instantly from cache: the two revalidations below used to block
+    // the dialog on slow mobile networks. Server re-validates everything
+    // fail-closed at order time, so a stale-open self-corrects on confirm.
+    const cachedRails = buildRails(settings.paymentMethods, Number(product.price), minAmount)
+    setRails(cachedRails)
     // Fresh dialog state every open: default rail prefers automation, form
     // cleared, previous manual receipt discarded.
-    setMethod(nextRails.includes('sumopod') ? 'sumopod' : 'manual')
+    setMethod(cachedRails.includes('sumopod') ? 'sumopod' : 'manual')
     setAccount('')
     setWa('')
+    setAgreed(false)
     setFormErr('')
     setPlaced(null)
     ;(document.getElementById('buy-confirm') as HTMLDialogElement | null)?.showModal()
+    // Fresh viewport every open: the box keeps scroll position across
+    // opens, so reset to top alongside the form state above.
+    document.querySelector('#buy-confirm .modal-box')?.scrollTo({ top: 0 })
+    // showModal() focuses the first field (Chrome), popping the mobile
+    // keyboard on open. Drop focus: user taps the field they want.
+    if (document.activeElement instanceof HTMLElement) document.activeElement.blur()
+    // Background revalidate: admin may have flipped requiresDeliveryInfo
+    // (or price/stock/rails) after this page loaded. Silent overwrite keeps
+    // the open dialog honest without blocking the tap.
+    const pid = product.id
+    try {
+      const res = await apiV1.products[':id'].$get({ param: { id: pid } })
+      if (!res.ok) return
+      const fresh = await res.json() as Product
+      setProduct(fresh)
+      const liveRails = buildRails(settings.paymentMethods, Number(fresh.price), minAmount)
+      try {
+        const freshSettings = await refreshPublicSettings()
+        setMinAmount(freshSettings.sumopodMinAmount)
+        const rails = buildRails(freshSettings.paymentMethods, Number(fresh.price), freshSettings.sumopodMinAmount)
+        setRails(rails)
+        setMethod((m) => (rails.includes(m) ? m : rails.includes('sumopod') ? 'sumopod' : 'manual'))
+      } catch { setRails(liveRails) }
+    } catch { /* keep cached paint */ }
   }
 
-  // Client mirror of the server contact rules (server re-validates
+  // Client mirror of the server contact + consent rules (server re-validates
   // fail-closed). Empty string = valid, set when blocking.
   function validateContact(): string {
+    if (settings.termsBody.trim() && !agreed) return t.products.errTerms
     if (!product?.requiresDeliveryInfo) return ''
     if (account.trim().length < 3 || account.trim().length > 120) return t.products.errAccount
     const digits = wa.replace(/[^\d]/g, '').replace(/^0/, '62')
@@ -199,6 +216,7 @@ export default function ProductDetail() {
             paymentMethod: method,
             customerAccount: account.trim(),
             waNumber: wa.trim(),
+            ...(settings.termsBody.trim() ? { termsAcceptedAt: new Date().toISOString() } : {}),
           },
         }),
         { headers: { 'Idempotency-Key': idempotencyKey } }
@@ -239,7 +257,7 @@ export default function ProductDetail() {
     } finally { setPurchasing(false) }
   }
 
-  if (loading) return <Layout><div className="flex justify-center py-16"><span className="loading loading-spinner loading-lg" /></div></Layout>
+  if (loading) return <Layout><SkeletonDetail /></Layout>
   if (!product) return <Layout><div className="text-center py-16"><p>Produk tidak ditemukan</p><Link to="/products" className="btn btn-sm mt-4">Kembali</Link></div></Layout>
 
   const isOnDemand = product.fulfillmentType === 'on_demand'
@@ -492,7 +510,7 @@ export default function ProductDetail() {
       )}
       {/* ═══ BUY CONFIRM MODAL (receipt style) ═══ */}
       <dialog id="buy-confirm" className="modal">
-        <div className="modal-box bg-white border-comic shadow-comic rounded-sm p-0 max-w-md">
+        <div className="modal-box bg-white border-comic shadow-comic rounded-sm p-0 max-w-md w-[calc(100vw-2rem)] max-h-[calc(100dvh-2rem)] overflow-y-auto">
           <div className="bg-neutral border-b-[3px] border-black px-5 py-3 text-center">
             <h3 className="font-black text-sm uppercase text-primary tracking-widest" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
               {t.products.confirmTitle}
@@ -608,6 +626,7 @@ export default function ProductDetail() {
                 <label className="block">
                   <span className="font-black text-[10px] uppercase tracking-widest text-neutral" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
                     {t.products.accountLabel}
+                    <span className="text-error" aria-hidden="true"> *</span>
                   </span>
                   <input
                     type="text"
@@ -616,12 +635,17 @@ export default function ProductDetail() {
                     onChange={(e) => setAccount(e.target.value)}
                     placeholder={t.products.accountPlaceholder}
                     maxLength={120}
+                    autoComplete="off"
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    spellCheck={false}
                     className="input input-bordered bg-white border-2 border-black font-bold text-xs w-full mt-1 rounded-sm disabled:opacity-60"
                   />
                 </label>
                 <label className="block">
                   <span className="font-black text-[10px] uppercase tracking-widest text-neutral" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
                     {t.products.waLabel}
+                    <span className="text-error" aria-hidden="true"> *</span>
                   </span>
                   <input
                     type="tel"
@@ -631,6 +655,10 @@ export default function ProductDetail() {
                     onChange={(e) => setWa(e.target.value)}
                     placeholder={t.products.waPlaceholder}
                     maxLength={20}
+                    autoComplete="tel"
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    spellCheck={false}
                     className="input input-bordered bg-white border-2 border-black font-mono font-bold text-xs w-full mt-1 rounded-sm disabled:opacity-60"
                   />
                 </label>
@@ -642,6 +670,31 @@ export default function ProductDetail() {
             <div className="bg-primary/20 border-2 border-black p-2.5 text-xs font-bold text-neutral leading-relaxed">
               {t.products.confirmNote}
             </div>
+            {/* S&K consent: checkbox + collapsible admin-configured text.
+                CTA stays clickable so the error path (not silence) teaches
+                the requirement; server re-validates fail-closed. */}
+            {settings.termsBody.trim() && (
+              <div className="bg-white border-2 border-black p-2.5 flex flex-col gap-2">
+                <details>
+                  <summary className="text-[11px] font-black uppercase tracking-wide text-neutral cursor-pointer underline underline-offset-2">
+                    {t.products.termsShow}
+                  </summary>
+                  <div className="mt-1.5 max-h-40 overflow-y-auto text-[11px] font-bold text-neutral/80 leading-relaxed whitespace-pre-wrap">
+                    {settings.termsBody}
+                  </div>
+                </details>
+                <label className="flex items-start gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={agreed}
+                    disabled={purchasing}
+                    onChange={(e) => setAgreed(e.target.checked)}
+                    className="checkbox checkbox-xs rounded-sm mt-0.5 border-2 border-black bg-white"
+                  />
+                  <span className="text-[11px] font-bold text-neutral leading-snug">{t.products.termsAgree}</span>
+                </label>
+              </div>
+            )}
             {/* Manual consent: admin hours. Shown whenever the manual rail
                 is the chosen/defaulted method, single-rail or radio. */}
             {method === 'manual' && (
@@ -658,7 +711,7 @@ export default function ProductDetail() {
               </form>
               <button
                 onClick={confirmBuy}
-                disabled={purchasing}
+                disabled={purchasing || validateContact() !== ''}
                 className="flex-1 btn btn-primary border-2 border-black font-black text-xs uppercase py-2.5 btn-comic-interactive disabled:opacity-50 flex items-center justify-center gap-2 leading-none"
               >
                 <span>{purchasing ? t.products.processing : (method === 'manual' ? t.products.confirmPlace : t.products.confirmGo)}</span>

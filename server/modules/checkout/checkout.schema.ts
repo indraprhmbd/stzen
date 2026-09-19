@@ -14,6 +14,10 @@ export const CheckoutSchema = z
     // flag); ignored otherwise. WA is normalized server-side.
     customerAccount: z.string().max(120).optional(),
     waNumber: z.string().max(32).optional(),
+    // S&K consent timestamp (client ISO string). Service requires it >=
+    // checkout.terms_updated_at whenever terms exist; stale or missing
+    // consent fails closed.
+    termsAcceptedAt: z.string().datetime({ offset: true }).optional(),
   })
   // Fail closed on injected fields (price, amount, discount). Only productId
   // is read; anything else is a tamper probe, not a client version skew.

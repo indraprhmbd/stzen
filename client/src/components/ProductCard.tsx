@@ -87,15 +87,15 @@ export default function ProductCard({ product, index = 0, onBuy, view = 'grid' }
             {product.name}
           </h3>
           {/* Pills */}
-          <div className="flex flex-wrap gap-1 mb-1">
-            <span className="w-fit rounded-full border border-black text-black text-[8px] uppercase px-2 py-0.5 tracking-wide">
+          <div className="flex flex-wrap items-center gap-1 mt-1 mb-1 max-h-9 overflow-hidden">
+            <span className="w-fit rounded-full border border-black text-black text-[7px] uppercase px-1.5 py-px tracking-wide">
               {product.category}
             </span>
-            <span className="w-fit rounded-full border border-black text-black text-[8px] uppercase px-2 py-0.5 tracking-wide">
+            <span className="w-fit rounded-full border border-black text-black text-[7px] uppercase px-1.5 py-px tracking-wide">
               {statusLabel}
             </span>
             {badgeList(product.badge).map((b) => (
-              <span key={b} className="w-fit rounded-full border border-black text-black text-[8px] uppercase px-2 py-0.5 tracking-wide">
+              <span key={b} className="w-fit rounded-full border border-black text-black text-[7px] uppercase px-1.5 py-px tracking-wide">
                 {b}
               </span>
             ))}
@@ -150,27 +150,23 @@ export default function ProductCard({ product, index = 0, onBuy, view = 'grid' }
       onTouchStart={warmDetail}
     >
         <div className="flex items-center gap-4 p-3">
-          <div className="flex flex-col items-center gap-1 shrink-0">
-            <span className="rounded-full border border-black text-black text-[7px] uppercase px-2 py-0.5 tracking-wide">
-              {product.category}
-            </span>
-            <span className="rounded-full border border-black text-black text-[7px] uppercase px-2 py-0.5 tracking-wide">
-              {statusLabel}
-            </span>
-          </div>
           <div className="flex-1 min-w-0">
             <h3 className="font-extrabold text-xs uppercase tracking-tight text-on-surface leading-tight line-clamp-3" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
               {product.name}
             </h3>
-            {badgeList(product.badge).length > 0 && (
-              <div className="flex flex-wrap gap-1 mt-1">
-                {badgeList(product.badge).map((b) => (
-                  <span key={b} className="w-fit rounded-full border border-black text-black text-[8px] uppercase px-2 py-0.5 tracking-wide">
-                    {b}
-                  </span>
-                ))}
-              </div>
-            )}
+            <div className="flex flex-wrap items-center gap-1 mt-1.5 max-h-9 overflow-hidden">
+              <span className="w-fit rounded-full border border-black text-black text-[7px] uppercase px-1.5 py-px tracking-wide">
+                {product.category}
+              </span>
+              <span className="w-fit rounded-full border border-black text-black text-[7px] uppercase px-1.5 py-px tracking-wide">
+                {statusLabel}
+              </span>
+              {badgeList(product.badge).map((b) => (
+                <span key={b} className="w-fit rounded-full border border-black text-black text-[7px] uppercase px-1.5 py-px tracking-wide">
+                  {b}
+                </span>
+              ))}
+            </div>
             {product.overview && (
               <p className="text-[9px] font-semibold text-on-surface-variant line-clamp-1 mt-0.5" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
                 {product.overview}
@@ -226,15 +222,15 @@ export default function ProductCard({ product, index = 0, onBuy, view = 'grid' }
         <h3 className="font-black uppercase tracking-tight text-neutral mb-1 leading-tight text-sm" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
           {product.name}
         </h3>
-        <div className="flex flex-wrap gap-1 mb-2">
-          <span className="w-fit rounded-full border border-black text-black text-[10px] uppercase px-2 py-0.5 tracking-wide">
+        <div className="flex flex-wrap items-center gap-1 mt-1 mb-2 max-h-9 overflow-hidden">
+          <span className="w-fit rounded-full border border-black text-black text-[7px] uppercase px-1.5 py-px tracking-wide">
             {product.category}
           </span>
-          <span className="w-fit rounded-full border border-black text-black text-[10px] uppercase px-2 py-0.5 tracking-wide">
+          <span className="w-fit rounded-full border border-black text-black text-[7px] uppercase px-1.5 py-px tracking-wide">
             {statusLabel}
           </span>
           {badgeList(product.badge).map((b) => (
-            <span key={b} className="w-fit rounded-full border border-black text-black text-[8px] uppercase px-2 py-0.5 tracking-wide">
+            <span key={b} className="w-fit rounded-full border border-black text-black text-[7px] uppercase px-1.5 py-px tracking-wide">
               {b}
             </span>
           ))}

@@ -90,6 +90,19 @@ function mapProductRow(row: any, stockCount: number): ProductWithStock {
   }
 }
 
+// ─── Tag tokens ─────────────────────────────────────────────────────────────
+// Normalizes ?tags= values to the trigger-written form (UPPER, trimmed,
+// quote-stripped): matches tags text[] exactly, cap 10 to bound the OR list.
+export function parseTagTokens(input: string[]): string[] {
+  const seen = new Set<string>()
+  for (const raw of input) {
+    const t = raw.trim().toUpperCase().replace(/"/g, '')
+    if (t) seen.add(t)
+    if (seen.size >= 10) break
+  }
+  return [...seen]
+}
+
 export const productsService = {
   async listActive(category?: string): Promise<ProductWithStock[]> {
     const { data: variants, error } = await supabaseAdmin
@@ -179,8 +192,42 @@ export const productsService = {
     }
   },
 
+  // Distinct tag tokens over sellable variants with counts, most-used first.
+  // Reads the denormalized effective column (own, else inherited), so no
+  // parent join is needed. Powers the FilterBar picker.
+  async getTagCounts(): Promise<{ tags: string[]; counts: Record<string, number> }> {
+    const { data: variants, error } = await supabaseAdmin
+      .from('product_variants')
+      .select(`
+        id,
+        tags_effective,
+        fulfillment_type
+      `)
+      .eq('is_active', true)
+
+    if (error) throw new Error(error.message)
+
+    const variantIds = (variants || []).map((v: any) => v.id)
+    const stockByVariant = await getStockCounts(variantIds)
+
+    const tagMap = new Map<string, number>()
+    for (const variant of variants || []) {
+      const isSellable = variant.fulfillment_type === 'on_demand' || (stockByVariant.get(variant.id) ?? 0) > 0
+      if (!isSellable) continue
+      const effective: string[] = Array.isArray(variant.tags_effective) ? variant.tags_effective : []
+      for (const t of effective) tagMap.set(t, (tagMap.get(t) || 0) + 1)
+    }
+
+    const sorted = [...tagMap.entries()].sort((a, b) => b[1] - a[1])
+    return {
+      tags: sorted.map(([t]) => t),
+      counts: Object.fromEntries(sorted),
+    }
+  },
+
   async listPaginated(params: ProductQueryParams): Promise<PaginatedCatalog> {
     const { category, tags, sort = 'newest', page = 1, limit = 24, search } = params
+    const tokens = parseTagTokens(Array.isArray(tags) ? tags : tags ? [tags] : [])
     const offset = (page - 1) * limit
 
     // Lean card projection: only what ProductCard renders. description,
@@ -214,12 +261,10 @@ export const productsService = {
     if (category) {
       query = query.eq('products.category', category)
     }
-    if (tags) {
-      // Badge column stores ';'-separated promo tokens: substring match on
-      // the single tapped token (same escaping as name search). Effective
-      // tags may be inherited, so match the parent column too.
-      const like = `%${tags.replace(/[%_]/g, (c) => `\\${c}`)}%`
-      query = query.or(`badge.ilike.${like},products.badge.ilike.${like}`)
+    if (tokens.length > 0) {
+      // Single-column overlap (&&) on the trigger-maintained effective
+      // tokens (own, else inherited): GIN-indexed, no cross-table or().
+      query = query.overlaps('tags_effective', tokens)
     }
     if (search) {
       const like = `%${search.replace(/[%_]/g, (c) => `\\${c}`)}%`

@@ -1,5 +1,6 @@
 import { supabaseAdmin } from '../../shared/db'
 import { getEnv } from '../../shared/lib/runtime-env'
+import { getSetting } from '../../shared/lib/settings'
 import { SUMOPOD_MIN_AMOUNT_IDR, qrisFee } from '../../shared/lib/payments'
 import { normalizeWaNumber } from '../../shared/lib/wa'
 import { productsService } from '../products/products.service'
@@ -14,6 +15,7 @@ export interface CheckoutInput {
   paymentMethod: 'manual' | 'sumopod'
   customerAccount?: string
   waNumber?: string
+  termsAcceptedAt?: string
 }
 
 export const checkoutService = {
@@ -32,6 +34,18 @@ export const checkoutService = {
 
     if (!variant.isActive) {
       throw new NotFoundError('Product not found or unavailable')
+    }
+
+    // S&K consent: enforced only when terms exist (empty body = skip).
+    // Consent must postdate the last admin edit, else the buyer agreed to
+    // text they never saw. Timestamps compare as epoch millis.
+    const termsBody = await getSetting('checkout.terms_body', '')
+    if (termsBody.trim()) {
+      const accepted = Date.parse(input.termsAcceptedAt ?? '')
+      const updated = Date.parse(await getSetting('checkout.terms_updated_at', ''))
+      if (!Number.isFinite(accepted) || !Number.isFinite(updated) || accepted < updated) {
+        throw new BadRequestError('S&K berubah, setujui ulang sebelum memesan')
+      }
     }
 
     // SumoPod floor: gateway rejects invoices below Rp10.000. Enforced on

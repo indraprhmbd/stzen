@@ -12,7 +12,9 @@ export const productRoutes = new Hono()
   // for every consumer. listActive stays for /categories counts.
   .get('/', zValidator('query', ProductQuerySchema), async (c) => {
   const category = c.req.query('category') || undefined
-  const tags = c.req.query('tags') || undefined
+  // Repeated ?tags= params (card tap lands one, picker appends many).
+  // queries(key) returns the value array itself, not a keyed object.
+  const tags = c.req.queries('tags') ?? []
   const sort = c.req.query('sort') || undefined
   const page = parseInt(c.req.query('page') || '1')
   const limit = parseInt(c.req.query('limit') || '24')
@@ -32,6 +34,13 @@ export const productRoutes = new Hono()
   c.header('Cache-Control', 'public, max-age=60')
   c.header('Cache-Tag', 'catalog')
   return c.json(await productsService.getCategoryCounts())
+})
+
+// GET /tags - Distinct tag tokens with counts (aggregate only, no rows)
+  .get('/tags', async (c) => {
+  c.header('Cache-Control', 'public, max-age=300')
+  c.header('Cache-Tag', 'catalog')
+  return c.json(await productsService.getTagCounts())
 })
 
 // GET /:id - Single product detail

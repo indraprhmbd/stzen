@@ -33,7 +33,8 @@ export const BulkStockSchema = z.object({
 
 export const ProductQuerySchema = z.object({
   category: z.string().optional(),
-  tags: z.string().optional(),
+  // Single ?tags=X (card tap) or repeated ?tags=A&tags=B (picker).
+  tags: z.union([z.string(), z.array(z.string())]).optional(),
   sort: z.string().optional(),
   page: z.string().optional(),
   limit: z.string().optional(),

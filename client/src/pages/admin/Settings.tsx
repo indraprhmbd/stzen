@@ -4,7 +4,7 @@ import { useAdminQuery } from '../../hooks/useAdminQuery'
 import DangerZone from './DangerZone'
 import CalendarIdList from '../../components/admin/CalendarIdList'
 
-const LABELS: Record<string, { group: string; label: string; hint?: string; type?: 'text' | 'number'; min?: number; max?: number }> = {
+const LABELS: Record<string, { group: string; label: string; hint?: string; type?: 'text' | 'number' | 'textarea'; min?: number; max?: number }> = {
   'store.name': { group: 'Toko', label: 'Nama toko' },
   'store.announcement': { group: 'Toko', label: 'Pengumuman', hint: 'Kosongkan untuk menyembunyikan banner katalog' },
   'support.whatsapp': { group: 'Bantuan', label: 'WhatsApp' },
@@ -13,6 +13,7 @@ const LABELS: Record<string, { group: string; label: string; hint?: string; type
   'payment.bank_name': { group: 'Pembayaran', label: 'Bank' },
   'payment.account_number': { group: 'Pembayaran', label: 'No. Rekening' },
   'payment.account_name': { group: 'Pembayaran', label: 'Nama Rekening' },
+  'checkout.terms_body': { group: 'Checkout', label: 'Syarat & Ketentuan', hint: 'Teks S&K di dialog checkout. Menyimpan otomatis memperbarui stempel versi: persetujuan lama hangus. Kosongkan untuk menonaktifkan checkbox.', type: 'textarea' },
   'ops.low_threshold': { group: 'Operasional', label: 'Ambang stok menipis', hint: 'Varian di bawah jumlah ini masuk kartu Stok Menipis', type: 'number', min: 1, max: 100 },
   'ops.vault_lock_minutes': { group: 'Operasional', label: 'Vault terkunci otomatis (menit)', hint: 'Masa berlaku token buka vault', type: 'number', min: 1, max: 60 },
   'ops.csv_limit': { group: 'Operasional', label: 'Batas ekspor CSV', hint: 'Maksimal baris per ekspor pesanan', type: 'number', min: 100, max: 5000 },
@@ -21,7 +22,7 @@ const LABELS: Record<string, { group: string; label: string; hint?: string; type
   'ops.gcal_remind_days': { group: 'Operasional', label: 'Pengingat H- (hari)', hint: 'Popup pengingat sebelum kadaluarsa, 0 = hanya hari-H', type: 'number', min: 0, max: 14 },
 }
 
-const GROUP_ORDER = ['Toko', 'Pembayaran', 'Operasional']
+const GROUP_ORDER = ['Toko', 'Pembayaran', 'Checkout', 'Operasional']
 
 export default function Settings() {
   const { data, loading, error, fetchedAt, refetch } = useAdminQuery(async () => {
@@ -105,6 +106,21 @@ export default function Settings() {
                   <div className="mt-1.5">
                     <CalendarIdList value={values[k] ?? ''} onChange={(csv) => setDraft({ ...values, [k]: csv })} />
                   </div>
+                  {meta.hint && <span className="text-[11px] font-normal text-[#aeaeb2] mt-1 normal-case tracking-normal">{meta.hint}</span>}
+                </label>
+              )
+            }
+            if (meta.type === 'textarea') {
+              return (
+                <label key={k} className="ad-label">
+                  {meta.label}
+                  <textarea
+                    rows={10}
+                    maxLength={10_000}
+                    value={values[k] ?? ''}
+                    onChange={(e) => setDraft({ ...values, [k]: e.target.value })}
+                    className="ad-input mt-1.5 normal-case font-mono text-xs leading-relaxed"
+                  />
                   {meta.hint && <span className="text-[11px] font-normal text-[#aeaeb2] mt-1 normal-case tracking-normal">{meta.hint}</span>}
                 </label>
               )

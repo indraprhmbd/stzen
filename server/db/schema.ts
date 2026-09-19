@@ -70,6 +70,7 @@ export const products = pgTable(
     category: text('category').notNull(),
     price: integer('price').notNull(),
     badge: text('badge'),
+    tags: text('tags').array().notNull().default([]),
     instructions: text('instructions'),
     isActive: boolean('is_active').notNull().default(true),
     createdAt: timestamp('created_at', { withTimezone: true })
@@ -101,6 +102,8 @@ export const productVariants = pgTable(
     price: integer('price').notNull(),
     compareAtPrice: integer('compare_at_price'),
     badge: text('badge'),
+    tags: text('tags').array().notNull().default([]),
+    tagsEffective: text('tags_effective').array().notNull().default([]),
     durationMonths: integer('duration_months'),
     durationUnit: durationUnitEnum('duration_unit').notNull().default('month'),
     accountType: text('account_type'),

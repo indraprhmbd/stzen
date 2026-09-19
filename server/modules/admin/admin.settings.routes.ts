@@ -19,6 +19,8 @@ const PUBLIC_KEYS = [
   'support.whatsapp',
   'support.telegram',
   'support.email',
+  'checkout.terms_body',
+  'checkout.terms_updated_at',
 ] as const
 
 const KNOWN_KEYS = [
@@ -30,6 +32,7 @@ const KNOWN_KEYS = [
   'payment.bank_name',
   'payment.account_number',
   'payment.account_name',
+  'checkout.terms_body',
   'ops.low_threshold',
   'ops.vault_lock_minutes',
   'ops.csv_limit',
@@ -46,7 +49,9 @@ const INT_KEYS: Record<string, { min: number; max: number }> = {
 }
 
 const SettingsUpdateSchema = z.object({
-  values: z.record(z.string(), z.string().max(500)),
+  // 10k ceiling: terms body is the only long value (per-key check below
+  // keeps everything else at 500).
+  values: z.record(z.string(), z.string().max(10_000)),
 })
 
 export const publicSettingsRoutes = new Hono()
@@ -54,12 +59,14 @@ export const publicSettingsRoutes = new Hono()
     // Reads go through the 60s server cache (shared/lib/settings.ts),
     // invalidated on admin PUT. Edge + browser caching via Cache-Control
     // below: payload is allowlisted public data, no user content.
-    const [storeName, announcement, whatsapp, telegram, email] = await Promise.all([
+    const [storeName, announcement, whatsapp, telegram, email, termsBody, termsUpdatedAt] = await Promise.all([
       getSetting('store.name', ''),
       getSetting('store.announcement', ''),
       getSetting('support.whatsapp', ''),
       getSetting('support.telegram', ''),
       getSetting('support.email', ''),
+      getSetting('checkout.terms_body', ''),
+      getSetting('checkout.terms_updated_at', ''),
     ])
 
     // Storefront checkout rails. Manual always; sumopod only when its API
@@ -72,7 +79,7 @@ export const publicSettingsRoutes = new Hono()
 
     c.header('Cache-Control', 'public, max-age=60, stale-while-revalidate=60')
     c.header('Cache-Tag', 'settings')
-    return c.json({ storeName, announcement, whatsapp, telegram, email, paymentMethods, sumopodMinAmount: SUMOPOD_MIN_AMOUNT_IDR, sumopodFeePct: SUMOPOD_FEE_PCT, sumopodFeeFixed: SUMOPOD_FEE_FIXED_IDR })
+    return c.json({ storeName, announcement, whatsapp, telegram, email, termsBody, termsUpdatedAt, paymentMethods, sumopodMinAmount: SUMOPOD_MIN_AMOUNT_IDR, sumopodFeePct: SUMOPOD_FEE_PCT, sumopodFeeFixed: SUMOPOD_FEE_FIXED_IDR })
   })
 
 export const adminSettingsRoutes = new Hono<SettingsEnv>()
@@ -96,7 +103,9 @@ export const adminSettingsRoutes = new Hono<SettingsEnv>()
     const user = c.get('user')
     const { values } = c.req.valid('json')
     const allowed = new Set<string>(KNOWN_KEYS as unknown as string[])
-    const entries = Object.entries(values).filter(([k]) => allowed.has(k))
+    // terms_updated_at is server-stamped on body edits, never written
+    // directly (blocks backdating consent).
+    const entries = Object.entries(values).filter(([k]) => allowed.has(k) && k !== 'checkout.terms_updated_at')
 
     for (const [k, v] of entries) {
       const rule = INT_KEYS[k]
@@ -106,10 +115,23 @@ export const adminSettingsRoutes = new Hono<SettingsEnv>()
           return c.json({ error: `${k} must be an integer ${rule.min}-${rule.max}` }, 400)
         }
       }
+      if (k !== 'checkout.terms_body' && v.length > 500) {
+        return c.json({ error: `${k} melebihi 500 karakter` }, 400)
+      }
 
       const { error } = await supabaseAdmin
         .from('settings')
         .upsert({ key: k, value: v, updated_at: new Date().toISOString() })
+
+      if (error) throw new Error(error.message)
+    }
+
+    // Body edit bumps the version stamp: in-flight consents go stale and
+    // the service rejects them fail-closed.
+    if (entries.some(([k]) => k === 'checkout.terms_body')) {
+      const { error } = await supabaseAdmin
+        .from('settings')
+        .upsert({ key: 'checkout.terms_updated_at', value: new Date().toISOString(), updated_at: new Date().toISOString() })
 
       if (error) throw new Error(error.message)
     }
