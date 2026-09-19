@@ -3,7 +3,8 @@
 -- to migrations: RLS policies live in dashboard, see audit doc).
 -- Fails with EXCEPTION on first mismatch, prints NOTICE per check otherwise.
 -- Expected posture (AGENTS.md):
---   profiles:               RLS on, authenticated SELECT/UPDATE own row
+--   profiles:               RLS on, authenticated SELECT own row only
+--                           (0010 dropped UPDATE own - role is display-only)
 --   products,               RLS on, anon+authenticated SELECT active rows only
 --   product_variants:
 --   orders:                 RLS on, authenticated SELECT/INSERT own rows

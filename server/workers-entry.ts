@@ -15,4 +15,14 @@ export default {
     if (!app) app = createApp()
     return app.fetch(request)
   },
+
+  // Keepalive: Supabase pauses the database after 7 days of inactivity
+  // (free tier, 10-30s cold start after). One cheap anon SELECT per day
+  // via cron trigger (wrangler.jsonc) keeps it warm.
+  async scheduled(_event: ScheduledController, env: WorkerEnv, ctx: ExecutionContext) {
+    const url = `${env.SUPABASE_URL}/rest/v1/products?select=id&limit=1`
+    await ctx.waitUntil(
+      fetch(url, { headers: { apikey: env.SUPABASE_ANON_KEY ?? '' } })
+    )
+  },
 }

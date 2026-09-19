@@ -47,7 +47,9 @@
         "PAYMENT_DUITKU_BASE_URL": "",
         "NOTIFY_PROVIDERS": ""
       },
-      "routes": [{ "pattern": "api.stzen.web.id", "custom_domain": true }]
+      "routes": [{ "pattern": "api.stzen.web.id", "custom_domain": true }],
+      // Supabase keepalive: 1 request/day keeps the free-tier DB unpaused.
+      "triggers": { "crons": ["13 2 * * *"] }
     },
     "staging": {
       "vars": {
@@ -61,7 +63,8 @@
         "PAYMENT_SUMOPOD_METHOD_CODE": "QRIS",
         "PAYMENT_DUITKU_BASE_URL": "",
         "NOTIFY_PROVIDERS": "gcal"
-      }
+      },
+      "triggers": { "crons": ["13 2 * * *"] }
     }
   },
   "observability": {

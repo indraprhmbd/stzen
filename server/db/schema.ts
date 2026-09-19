@@ -8,6 +8,7 @@ import {
   pgEnum,
   index,
 } from 'drizzle-orm/pg-core'
+import { sql } from 'drizzle-orm'
 
 // ─── Enums ──────────────────────────────────────────────────────────────────
 
@@ -84,6 +85,8 @@ export const products = pgTable(
     index('products_category_idx').on(table.category),
     index('products_is_active_idx').on(table.isActive),
     index('products_public_id_idx').on(table.publicId),
+    // 0019: tag filter uses GIN overlap on the denormalized tokens array
+    index('idx_products_tags_gin').using('gin', table.tags),
   ]
 )
 
@@ -120,6 +123,13 @@ export const productVariants = pgTable(
     index('product_variants_public_id_idx').on(table.publicId),
     index('product_variants_sku_idx').on(table.sku),
     index('product_variants_fulfillment_type_idx').on(table.fulfillmentType),
+    // 0019/0020: tag tokens + effective (parent-inherited) GIN
+    index('idx_variants_tags_gin').using('gin', table.tags),
+    index('idx_variants_tags_effective_gin').using('gin', table.tagsEffective),
+    // 0022: public catalog always filters is_active = true per product
+    index('product_variants_is_active_idx')
+      .on(table.productId)
+      .where(sql`is_active = true`),
   ]
 )
 
@@ -143,6 +153,16 @@ export const vaultItems = pgTable(
     index('vault_items_product_id_idx').on(table.productId),
     index('vault_items_variant_id_idx').on(table.variantId),
     index('vault_items_status_idx').on(table.status),
+    // 0022: allocation FOR UPDATE SKIP LOCKED (variant+status, FIFO by created_at)
+    index('vault_items_variant_status_created_idx').on(
+      table.variantId,
+      table.status,
+      table.createdAt
+    ),
+    // 0022: low-stock counters scan only AVAILABLE rows
+    index('vault_items_available_variant_idx')
+      .on(table.variantId)
+      .where(sql`status = 'AVAILABLE'`),
   ]
 )
 
@@ -180,6 +200,8 @@ export const orders = pgTable(
       .notNull()
       .defaultNow(),
     paidAt: timestamp('paid_at', { withTimezone: true }),
+    // 0014: writer-owned mirror of Google Calendar reminder truth
+    reminderState: text('reminder_state').notNull().default('none'),
   },
   (table) => [
     index('orders_user_id_idx').on(table.userId),
@@ -188,5 +210,16 @@ export const orders = pgTable(
     index('orders_public_id_idx').on(table.publicId),
     index('orders_variant_id_idx').on(table.variantId),
     index('orders_payment_provider_idx').on(table.paymentProvider),
+    // FK lookups (joins from products/vault_items; 0022)
+    index('orders_product_id_idx').on(table.productId),
+    index('orders_vault_item_id_idx').on(table.vaultItemId),
+    // 0022: dashboard/analytics + reminder_preview RPC patterns
+    index('orders_status_created_idx').on(table.status, table.createdAt),
+    index('orders_status_reminder_paid_idx').on(
+      table.status,
+      table.reminderState,
+      table.paidAt
+    ),
+    index('orders_created_at_idx').on(table.createdAt),
   ]
 )
