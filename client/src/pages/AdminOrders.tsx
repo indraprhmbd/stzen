@@ -33,7 +33,6 @@ export default function AdminOrders() {
 
   const fetchOrders = useCallback(async (status?: string) => {
     try {
-      const query = status && status !== 'ALL' ? `?status=${status}` : ''
       const data = await authedApiRequest((c) =>
         c.api.v1.admin.orders.$get({ query: { status: status !== 'ALL' ? status : undefined } } as any)
       )

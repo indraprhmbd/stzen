@@ -66,12 +66,13 @@ export default function BasisPanel({ products, variants, onCreate, onEdit, onDel
     for (const [pid, s] of map) {
       const prices = (byProduct.get(pid) ?? []).sort((a, b) => a - b)
       const mid = Math.floor(prices.length / 2)
-      s.median = prices.length % 2 ? prices[mid] : Math.round((prices[mid - 1] + prices[mid]) / 2)
+      const midv = prices[mid]!
+      s.median = prices.length % 2 ? midv : Math.round(((prices[mid - 1] ?? midv) + midv) / 2)
       const freq = new Map<number, number>()
       for (const p of prices) freq.set(p, (freq.get(p) ?? 0) + 1)
       let maxFreq = 0
       for (const [, f] of freq) { if (f > maxFreq) maxFreq = f }
-      s.mode = prices.find((p) => freq.get(p) === maxFreq) ?? prices[0]
+      s.mode = prices.find((p) => freq.get(p) === maxFreq) ?? prices[0]!
     }
     return map
   }, [variants])

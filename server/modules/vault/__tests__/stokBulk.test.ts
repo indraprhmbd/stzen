@@ -37,7 +37,7 @@ describe('validateStokRows', () => {
     const { valid, issues } = run('variant_ref,credential\nA,u:p\nA,u:p')
     assert.equal(valid.length, 2)
     assert.equal(issues.length, 1)
-    assert.equal(issues[0].code, 'dup_in_file')
+    assert.equal(issues[0]!.code, 'dup_in_file')
   })
 })
 

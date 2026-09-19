@@ -51,7 +51,7 @@ export function useRowSelection(): RowSelection {
         const b = pageIds.indexOf(id)
         if (a !== -1 && b !== -1) {
           const [from, to] = a < b ? [a, b] : [b, a]
-          for (let i = from; i <= to; i++) next[pageIds[i]] = true
+          for (let i = from; i <= to; i++) next[pageIds[i]!] = true
           return next
         }
       }

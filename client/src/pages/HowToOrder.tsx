@@ -33,7 +33,7 @@ export default function HowToOrder() {
             { bg: 'bg-accent', text: 'text-neutral', num: 'bg-neutral text-primary' },
             { bg: 'bg-neutral', text: 'text-primary', num: 'bg-primary text-neutral' },
           ]
-          const cfg = accents[i % accents.length]
+          const cfg = accents[i % accents.length]!
           return (
             <div
               key={step.num}

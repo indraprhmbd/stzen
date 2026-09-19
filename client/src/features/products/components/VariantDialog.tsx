@@ -13,7 +13,7 @@ interface Props {
   onImportNow?: (variantId: string) => void
 }
 
-export default function VariantDialog({ products, form: v, onSubmit, onImportNow }: Props) {
+export default function VariantDialog({ products, form: v, onImportNow }: Props) {
   const [createdVariantId, setCreatedVariantId] = useState<string | null>(null)
   const base = products.find((p) => p.id === v.vProductId)
   const baseOverview = base?.overview ?? ''

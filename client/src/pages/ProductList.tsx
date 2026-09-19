@@ -4,7 +4,6 @@ import { apiV1Signal } from '../lib/api'
 import { listKey, getCachedList, setCachedList, prefetchList } from '../lib/prefetch'
 import { useAuth } from '../hooks/useAuth'
 import { useIsMobile } from '../hooks/useIsMobile'
-import { useBrand } from '../hooks/useBrand'
 import { useCopy } from '../hooks/useCopy'
 import Layout from '../components/Layout'
 import FilterBar from '../components/FilterBar'
@@ -36,7 +35,6 @@ type PaginatedResult = {
 export default function ProductList() {
   const [searchParams, setSearchParams] = useSearchParams()
   const navigate = useNavigate()
-  const brand = useBrand()
   const { t } = useCopy()
   const { session } = useAuth()
   const searchRef = useRef<HTMLInputElement>(null)
@@ -212,10 +210,6 @@ export default function ProductList() {
   // Server caps guests at 8 - banner shows whenever more exist beyond the cap.
   const capped = !session && (result?.total ?? 0) > (result?.products.length ?? 0)
 
-  const handleCopy = useCallback((text: string) => {
-    navigator.clipboard.writeText(text)
-    setToastMsg(t.common.copiedToClipboard)
-  }, [t])
 
   return (
     <Layout>

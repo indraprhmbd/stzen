@@ -7,8 +7,9 @@
     "strict": true,
     "noImplicitOverride": true,
     "noFallthroughCasesInSwitch": true,
-    // Next hardening wave (Stream 5, needs ~70 mechanical fixes first):
-    // noUncheckedIndexedAccess, noUnusedLocals, noUnusedParameters,
+    "noUncheckedIndexedAccess": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,

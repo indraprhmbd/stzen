@@ -7,7 +7,7 @@ import { getEnv } from '../lib/runtime-env'
 // first property access (after setRuntimeEnv) via Proxy. Call sites unchanged:
 // supabaseAdmin.from(...), supabaseAdmin.rpc(...), supabaseAdmin.auth.* all work.
 
-function lazyClient(kind: 'service_role'): SupabaseClient {
+function lazyClient(_kind: 'service_role'): SupabaseClient {
   let inner: SupabaseClient | null = null
   const get = (): SupabaseClient => {
     if (!inner) {

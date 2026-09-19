@@ -4,7 +4,7 @@ import { appendAudit, claimIdempotencyKey } from '../../shared/lib/audit'
 import { hmacSha256Hex, verifyHmacSha256Hex } from '../../shared/lib/hmac'
 import { getEnv } from '../../shared/lib/runtime-env'
 import { ordersService } from '../orders/orders.service'
-import { DANGER, type ExportFilter, type PurgeKind } from './danger.types'
+import { DANGER, type ExportFilter } from './danger.types'
 
 const ORDERS = 'orders'
 const PRODUCTS = 'products'
@@ -18,7 +18,7 @@ function cutoffIso(days: number): string {
 // Hard delete is allowed only for catalog rows with no history: zero orders
 // of any status and zero vault rows. Anything else must be deactivated
 // (is_active=false) so buyer credentials and records stay intact.
-function blockReason(active: number, terminal: number, vault: number): string {
+function blockReason(active: number, terminal: number, _vault: number): string {
   if (active > 0) return 'Masih ada pesanan aktif (PENDING/PAID). Selesaikan dulu.'
   if (terminal > 0) return 'Sudah ada riwayat pesanan. Nonaktifkan saja agar kredensial pembeli tetap bisa dibuka.'
   return 'Masih ada stok atau kredensial terjual. Nonaktifkan saja.'
@@ -81,7 +81,7 @@ export const dangerService = {
 
     if (error) throw new Error(error.message)
     if (!base || base.length === 0) throw new NotFoundError('Product not found')
-    const internalId = base[0].id as string
+    const internalId = base[0]!.id as string
 
     const { data: variants } = await supabaseAdmin
       .from(PRODUCT_VARIANTS)
@@ -120,7 +120,7 @@ export const dangerService = {
     const blocked = (active ?? 0) > 0 || (terminal ?? 0) > 0 || vaultAvailable + vaultSold > 0
     return {
       publicId,
-      name: base[0].name,
+      name: base[0]!.name,
       variants: variantIds.length,
       vaultAvailable,
       vaultSold,
@@ -141,7 +141,7 @@ export const dangerService = {
 
     if (error) throw new Error(error.message)
     if (!base || base.length === 0) throw new NotFoundError('Variant not found')
-    const internalId = base[0].id as string
+    const internalId = base[0]!.id as string
 
     const { count: avail } = await supabaseAdmin
       .from(VAULT_ITEMS)
@@ -167,7 +167,7 @@ export const dangerService = {
     const blocked = (active ?? 0) > 0 || (terminal ?? 0) > 0 || (avail ?? 0) + (sold ?? 0) > 0
     return {
       publicId,
-      name: base[0].name,
+      name: base[0]!.name,
       variants: 0,
       vaultAvailable: avail ?? 0,
       vaultSold: sold ?? 0,
@@ -327,7 +327,7 @@ export const dangerExecute = {
       .eq('public_id', publicId)
       .limit(1)
     if (!base || base.length === 0) throw new NotFoundError('Product not found')
-    const internalId = base[0].id as string
+    const internalId = base[0]!.id as string
 
     // Variants first (FK), then the product. Vault rows attached to the
     // product cascade at the database level (ON DELETE CASCADE).
@@ -427,13 +427,13 @@ export const dangerExecute = {
     const parts = exportToken.split('.')
     if (parts.length !== 3) throw new BadRequestError('Token ekspor tidak valid')
     const [payload, exp36, sig] = parts
-    const exp = parseInt(exp36, 36)
+    const exp = parseInt(exp36!, 36)
     if (!Number.isFinite(exp) || exp < Date.now()) throw new BadRequestError('Token ekspor kedaluwarsa')
 
-    const ok = await verifyHmacSha256Hex(exportSecret(), `danger-export.${payload}.${exp36}`, sig).catch(() => false)
+    const ok = await verifyHmacSha256Hex(exportSecret(), `danger-export.${payload}.${exp36}`, sig!).catch(() => false)
     if (!ok) throw new BadRequestError('Token ekspor tidak valid')
 
-    const filter = b64decode<ExportFilter & { n: number }>(payload)
+    const filter = b64decode<ExportFilter & { n: number }>(payload!)
     if (!filter || (filter.kind !== 'orders' && filter.kind !== 'vault')) {
       throw new BadRequestError('Token ekspor tidak valid')
     }

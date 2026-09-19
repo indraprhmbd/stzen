@@ -13,21 +13,21 @@ describe('parseCsvText', () => {
     const p = parseCsvText('name,category,price\n"Netflix, Premium",Streaming,45000\n"He said ""hi""",Desain,10000', COLS)
     assert.equal(p.delimiter, ',')
     assert.equal(p.rows.length, 2)
-    assert.equal(p.rows[0].values.name, 'Netflix, Premium')
-    assert.equal(p.rows[1].values.name, 'He said "hi"')
+    assert.equal(p.rows[0]!.values.name, 'Netflix, Premium')
+    assert.equal(p.rows[1]!.values.name, 'He said "hi"')
   })
 
   it('strips BOM and accepts CRLF', () => {
     const p = parseCsvText('﻿name,category\r\nCanva,Desain\r\n', COLS)
     assert.deepEqual(p.headers, ['name', 'category'])
-    assert.equal(p.rows[0].values.name, 'Canva')
+    assert.equal(p.rows[0]!.values.name, 'Canva')
   })
 
   it('accepts semicolon dialect and indonesian aliases', () => {
     const p = parseCsvText('nama;kategori;harga\nCanva;Desain;10000', COLS)
     assert.equal(p.delimiter, ';')
     assert.deepEqual(p.headers, ['name', 'category', 'price'])
-    assert.equal(p.rows[0].values.price, '10000')
+    assert.equal(p.rows[0]!.values.price, '10000')
   })
 
   it('rejects unknown headers fail-closed', () => {
@@ -82,15 +82,15 @@ describe('validateBasisRows', () => {
     const { valid, issues } = run('name,category\nCanva,Desain')
     assert.equal(valid.length, 1)
     assert.deepEqual(issues, [])
-    assert.equal(valid[0].price, 0)
-    assert.equal(valid[0].isActive, true)
+    assert.equal(valid[0]!.price, 0)
+    assert.equal(valid[0]!.isActive, true)
   })
 
   it('coerces price and boolean aliases', () => {
     const { valid, issues } = run('name,category,price,is_active\nCanva,Desain,45000,Ya')
     assert.deepEqual(issues, [])
-    assert.equal(valid[0].price, 45000)
-    assert.equal(valid[0].isActive, true)
+    assert.equal(valid[0]!.price, 45000)
+    assert.equal(valid[0]!.isActive, true)
   })
 
   it('flags bad integers, booleans, lengths per row', () => {
@@ -105,14 +105,14 @@ describe('validateBasisRows', () => {
     const { valid, issues } = run('name,category\nCanva,Desain\nCANVA,desain')
     assert.equal(valid.length, 2)
     assert.equal(issues.length, 1)
-    assert.equal(issues[0].severity, 'warning')
-    assert.equal(issues[0].code, 'dup_in_file')
+    assert.equal(issues[0]!.severity, 'warning')
+    assert.equal(issues[0]!.code, 'dup_in_file')
   })
 
   it('rejects embedded newlines in single-line fields', () => {
     const { valid, issues } = run('name,category,overview\nCanva,Desain,"baris satu\nbaris dua"')
     assert.equal(valid.length, 0)
-    assert.equal(issues[0].code, 'multiline_deferred')
+    assert.equal(issues[0]!.code, 'multiline_deferred')
   })
 
   it('template headers match the accepted contract', () => {
@@ -124,6 +124,6 @@ describe('validateBasisRows', () => {
   it('accepts the legacy badge header via alias', () => {
     const { valid, issues } = run('name,category,badge\nCanva,Desain,PROMO')
     assert.deepEqual(issues, [])
-    assert.equal(valid[0].badge, 'PROMO')
+    assert.equal(valid[0]!.badge, 'PROMO')
   })
 })

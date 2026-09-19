@@ -141,29 +141,29 @@ export const adminOrderRoutes = new Hono<AdminOrderEnv>()
     if (!variant || variant.length === 0) return c.json({ error: 'Varian tidak ditemukan' }, 404)
 
     let baseName: string | null = null
-    if (variant[0].product_id) {
+    if (variant[0]!.product_id) {
       const { data: base } = await supabaseAdmin
         .from(PRODUCTS)
         .select('name')
-        .eq('id', variant[0].product_id)
+        .eq('id', variant[0]!.product_id)
         .limit(1)
       baseName = base?.[0]?.name ?? null
     }
 
-    const finalAmount = amount ?? String(variant[0].price)
-    const customPrice = amount !== undefined && amount !== String(variant[0].price)
+    const finalAmount = amount ?? String(variant[0]!.price)
+    const customPrice = amount !== undefined && amount !== String(variant[0]!.price)
     const order = await ordersService.create({
-      userId: profile[0].id,
-      productId: variant[0].product_id,
-      variantId: variant[0].id,
+      userId: profile[0]!.id,
+      productId: variant[0]!.product_id,
+      variantId: variant[0]!.id,
       amount: finalAmount,
       variantSnapshot: {
-        name: variant[0].name,
-        sku: variant[0].sku,
-        duration_months: variant[0].duration_months,
-        duration_unit: variant[0].duration_unit,
-        account_type: variant[0].account_type,
-        conditions: variant[0].conditions,
+        name: variant[0]!.name,
+        sku: variant[0]!.sku,
+        duration_months: variant[0]!.duration_months,
+        duration_unit: variant[0]!.duration_unit,
+        account_type: variant[0]!.account_type,
+        conditions: variant[0]!.conditions,
         baseName,
       },
     })
@@ -182,7 +182,7 @@ export const adminOrderRoutes = new Hono<AdminOrderEnv>()
       action: 'order:create',
       resourceType: 'order',
       resourcePublicId: orderPublicId,
-      resourceName: variant[0].name,
+      resourceName: variant[0]!.name,
       snapshotText: `Order ${orderPublicId} dibuat manual untuk ${customerEmail} oleh ${user.email ?? user.sub}${customPrice ? ` (harga khusus Rp ${Number(finalAmount).toLocaleString('id-ID')})` : ''} ${new Date().toLocaleString('id-ID')}`,
       actorId: user.sub,
       actorEmail: user.email ?? null,

@@ -62,14 +62,16 @@ export const checkoutService = {
       .eq('public_id', publicId)
       .limit(1)
 
+    if (error) throw new Error(error.message)
+
     let internalId: string
     let internalProductId: string | null = null
     let fulfillmentType: string = 'vault'
 
     if (internal && internal.length > 0) {
-      internalId = internal[0].id
-      internalProductId = internal[0].product_id
-      fulfillmentType = internal[0].fulfillment_type
+      internalId = internal[0]!.id
+      internalProductId = internal[0]!.product_id
+      fulfillmentType = internal[0]!.fulfillment_type
     } else {
       const { data: p, error: pError } = await supabaseAdmin
         .from(PRODUCTS)
@@ -78,7 +80,7 @@ export const checkoutService = {
         .limit(1)
 
       if (pError || !p || p.length === 0) throw new NotFoundError('Product not found or unavailable')
-      internalId = p[0].id
+      internalId = p[0]!.id
     }
 
     if (fulfillmentType !== 'on_demand') {
@@ -93,7 +95,7 @@ export const checkoutService = {
     // store blanks so unflagged variants keep the lean dialog.
     let customerAccount = ''
     let waNumber = ''
-    if (internal && internal.length > 0 && internal[0].requires_delivery_info) {
+    if (internal && internal.length > 0 && internal[0]!.requires_delivery_info) {
       const account = (input.customerAccount ?? '').trim()
       if (account.length < 3 || account.length > 120) {
         throw new BadRequestError('Akun tujuan wajib diisi (3-120 karakter)')

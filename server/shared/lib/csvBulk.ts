@@ -53,21 +53,22 @@ function detectDelimiter(firstLine: string): string {
   const counts: Record<string, number> = { ',': 0, ';': 0, '\t': 0 }
   let inQuotes = false
   for (let i = 0; i < firstLine.length; i++) {
-    const ch = firstLine[i]
+    const ch = firstLine[i]!
     if (ch === '"') {
       if (inQuotes && firstLine[i + 1] === '"') i++
       else inQuotes = !inQuotes
     } else if (!inQuotes && ch in counts) {
-      counts[ch]++
+      counts[ch] = (counts[ch] ?? 0) + 1
     }
   }
   // Comma wins ties (template dialect); nonzero count required.
   let best: ',' | ';' | '\t' = ','
   let bestCount = 0
   for (const d of [',', ';', '\t'] as const) {
-    if (counts[d] > bestCount) {
+    const n = counts[d] ?? 0
+    if (n > bestCount) {
       best = d
-      bestCount = counts[d]
+      bestCount = n
     }
   }
   return best
@@ -169,7 +170,7 @@ export function parseCsvText(text: string, columns: BulkColumn[]): ParsedCsv {
   const { records, blankLines } = parseRecords(clean, delimiter)
   if (records.length === 0) fail('CSV kosong: tidak ada baris terbaca')
 
-  const rawHeaders = records[0].fields
+  const rawHeaders = records[0]!.fields
   if (rawHeaders.length > BULK_COLUMN_LIMIT) {
     fail(`Terlalu banyak kolom (${rawHeaders.length}), maksimal ${BULK_COLUMN_LIMIT}`)
   }
@@ -200,9 +201,9 @@ export function parseCsvText(text: string, columns: BulkColumn[]): ParsedCsv {
   const rows: ParsedRow[] = []
   let skipped = blankLines
   for (let i = 1; i < records.length; i++) {
-    const rec = records[i]
+    const rec = records[i]!
     // Whitespace-only line (spaces/tabs left by editors): blank, not data.
-    if (rec.fields.length === 1 && rec.fields[0].trim() === '') {
+    if (rec.fields.length === 1 && rec.fields[0]!.trim() === '') {
       skipped++
       continue
     }
@@ -219,11 +220,11 @@ export function parseCsvText(text: string, columns: BulkColumn[]): ParsedCsv {
     let allEmpty = true
     rec.fields.forEach((cell, j) => {
       if (cell.length > BULK_CELL_LIMIT) {
-        fail(`Baris ${rec.startLine} kolom "${headers[j]}": sel sepanjang ${cell.length} karakter, maksimal ${BULK_CELL_LIMIT}`)
+        fail(`Baris ${rec.startLine} kolom "${headers[j]!}": sel sepanjang ${cell.length} karakter, maksimal ${BULK_CELL_LIMIT}`)
       }
       const v = cell.trim()
       if (v !== '') allEmpty = false
-      values[headers[j]] = v
+      values[headers[j]!] = v
     })
     if (allEmpty) {
       skipped++

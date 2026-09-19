@@ -1,8 +1,7 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { useCopy } from '../hooks/useCopy'
 import { usePublicSettings } from '../hooks/usePublicSettings'
-import { api } from '../lib/api'
 import Layout from '../components/Layout'
 import Marquee from '../components/Marquee'
 import ShopCtaCardSlim from '../components/ShopCtaCardSlim'
@@ -152,7 +151,7 @@ function Catalog() {
             { icon: 'lock', accent: 'bg-primary border-black', text: 'text-neutral', iconColor: 'text-neutral' },
             { icon: 'verified', accent: 'bg-accent border-black', text: 'text-neutral', iconColor: 'text-neutral' },
           ].map((cfg, i) => {
-            const item = t.whyUs.items[i]
+            const item = t.whyUs.items[i]!
             return (
               <div key={item.title} className={`${cfg.accent} border-comic shadow-comic p-3 flex gap-2.5 items-start transition-all duration-[60ms] ease-out md:hover:-translate-x-[2px] md:hover:-translate-y-[2px] md:hover:shadow-[7px_7px_0px_0px_#0D110F]`}>
                 <span className={`material-symbols-outlined text-lg ${(cfg as any).iconColor || cfg.text} bg-white border-2 border-black w-8 h-8 grid place-items-center shrink-0 -rotate-2`}>{cfg.icon}</span>

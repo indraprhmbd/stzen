@@ -1,7 +1,6 @@
 import { lazy, Suspense } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import { BrandProvider } from './hooks/useBrand'
-import { RequireAuth } from './components/RequireAuth'
 import { RequireAdmin } from './components/RequireAdmin'
 
 const Catalog = lazy(() => import('./pages/Catalog'))

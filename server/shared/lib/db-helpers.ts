@@ -1,5 +1,4 @@
 import { supabaseAdmin } from '../db'
-import { vaultItems, productVariants } from '../db/schema'
 
 export async function getStockCount(variantOrProductId: string): Promise<number> {
   // Single-item wrapper over the batched query. One variant fetch + one

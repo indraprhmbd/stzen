@@ -59,7 +59,7 @@ export const adminOverviewRoutes = new Hono<OverviewEnv>()
       for (let i = days - 1; i >= 0; i--) {
         const d = new Date()
         d.setDate(d.getDate() - i)
-        const dateStr = d.toISOString().split('T')[0]
+        const dateStr = d.toISOString().split('T')[0]!
         dailySalesMap.set(dateStr, {
           label: d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }),
           date: dateStr,

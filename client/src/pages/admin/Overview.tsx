@@ -8,7 +8,7 @@ import TablePagination from '../../components/admin/TablePagination'
 import StatusChip from '../../components/admin/StatusChip'
 import CopyCell from '../../components/admin/CopyCell'
 import { SkeletonRows, SkeletonCards } from '../../components/admin/TableSkeleton'
-import { Refresh, Cube, Archive, ShoppingBag, GraphUp, Plus, Eye, EyeClosed, EditPencil, Trash } from 'iconoir-react'
+import { Refresh, Cube, Archive, ShoppingBag, GraphUp, Plus, Eye, EyeClosed } from 'iconoir-react'
 import { AreaChart, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell, Area } from 'recharts'
 
 interface Stats {
@@ -226,7 +226,7 @@ export default function Overview() {
         {statDefs.map((c) => (
           <StatCard
             key={c.key}
-            value={values[c.key]}
+            value={values[c.key] ?? ''}
             label={c.label}
             sub={c.key === 'totalOrders' ? rangeLabel : c.sub}
             icon={c.icon}

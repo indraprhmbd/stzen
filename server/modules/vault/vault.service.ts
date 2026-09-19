@@ -1,7 +1,6 @@
 import { supabaseAdmin } from '../../shared/db'
 import { getEnv } from '../../shared/lib/runtime-env'
 import { NotFoundError, BadRequestError, ConflictError } from '../../shared/errors/http'
-import { generatePublicId } from '../../shared/lib/publicId'
 import { appendAudit, claimIdempotencyKey, findAuditByIdempotencyKey, releaseIdempotencyKey } from '../../shared/lib/audit'
 import {
   BULK_ROW_LIMIT,
@@ -108,8 +107,8 @@ export const vaultService = {
     if (error) throw new Error(error.message)
     if (!variants || variants.length === 0) throw new NotFoundError('Variant not found')
 
-    const variantId = variants[0].id
-    const fulfillmentType = variants[0].fulfillment_type || 'vault'
+    const variantId = variants[0]!.id
+    const fulfillmentType = variants[0]!.fulfillment_type || 'vault'
 
     let query = supabaseAdmin
       .from(VAULT_ITEMS)

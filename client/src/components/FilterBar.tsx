@@ -189,7 +189,7 @@ export default function FilterBar({ categories, active, onChange, counts = {}, s
           {categories.map((cat, index) => {
             const isActive = active === cat
             const count = counts[cat]
-            const colors = getCategoryColor(cat, index)
+            const colors = getCategoryColor(cat, index)!
             return (
               <button
                 key={cat}
@@ -241,7 +241,7 @@ export default function FilterBar({ categories, active, onChange, counts = {}, s
           {categories.map((cat, index) => {
             const isActive = active === cat
             const count = counts[cat]
-            const colors = getCategoryColor(cat, index)
+            const colors = getCategoryColor(cat, index)!
             return (
               <button
                 key={cat}

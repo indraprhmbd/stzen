@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { copy, type Copy } from '../config/copy'
+import { copy } from '../config/copy'
 
 type Lang = 'id' | 'en'
 

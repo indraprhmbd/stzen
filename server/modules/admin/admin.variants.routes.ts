@@ -14,7 +14,6 @@ import { getStockCounts } from '../../shared/lib/db-helpers'
 
 const PRODUCTS = 'products'
 const PRODUCT_VARIANTS = 'product_variants'
-const VAULT_ITEMS = 'vault_items'
 
 const VariantCreateSchema = z.object({
   productId: z.string().min(1),
@@ -207,8 +206,8 @@ export const adminVariantRoutes = new Hono<VariantEnv>()
       .limit(1)
 
     if (base && base.length > 0) {
-      baseName = base[0].name
-      baseId = base[0].id
+      baseName = base[0]!.name
+      baseId = base[0]!.id
     } else {
       const { data: base2 } = await supabaseAdmin
         .from(PRODUCTS)
@@ -217,8 +216,8 @@ export const adminVariantRoutes = new Hono<VariantEnv>()
         .limit(1)
 
       if (base2 && base2.length > 0) {
-        baseName = base2[0].name
-        baseId = base2[0].id
+        baseName = base2[0]!.name
+        baseId = base2[0]!.id
       }
     }
 
@@ -419,18 +418,18 @@ export const adminVariantRoutes = new Hono<VariantEnv>()
 
     if (error) throw new Error(error.message)
     if (!variant || variant.length === 0) return c.json({ error: 'Variant not found' }, 404)
-    if (variant[0].fulfillment_type === 'on_demand') return c.json({ error: 'Varian on demand tidak memerlukan impor stok' }, 400)
+    if (variant[0]!.fulfillment_type === 'on_demand') return c.json({ error: 'Varian on demand tidak memerlukan impor stok' }, 400)
 
     const lines = credentials.split('\n').map((l: string) => l.trim()).filter((l: string) => l.length > 0)
-    const result = await vaultService.importCredentials(variant[0].id, lines)
+    const result = await vaultService.importCredentials(variant[0]!.id, lines)
 
     const user = c.get('user')
     await appendAudit({
       action: 'stock:import',
       resourceType: 'stock',
       resourcePublicId: publicId,
-      resourceName: variant[0].name,
-      snapshotText: `Stok ${result.imported} ditambah ke ${variant[0].name} (${publicId}) oleh ${user.email ?? user.sub} ${new Date().toLocaleString('id-ID')}`,
+      resourceName: variant[0]!.name,
+      snapshotText: `Stok ${result.imported} ditambah ke ${variant[0]!.name} (${publicId}) oleh ${user.email ?? user.sub} ${new Date().toLocaleString('id-ID')}`,
       actorId: user.sub,
       actorEmail: user.email ?? null,
       actorType: 'admin',

@@ -123,7 +123,7 @@ export default function ProductDetail() {
     if (!ctaRef.current) return
     const observer = new IntersectionObserver(
       ([entry]) => {
-        setShowStickyBar(!entry.isIntersecting)
+        setShowStickyBar(!entry!.isIntersecting)
       },
       { threshold: 0 }
     )

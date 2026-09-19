@@ -18,10 +18,10 @@ describe('validateVarianRows', () => {
     const { valid, issues } = run('basis,duration,unit,price\nABC123,1,bulan,45000')
     assert.equal(valid.length, 1)
     assert.deepEqual(issues, [])
-    assert.equal(valid[0].unit, 'month')
-    assert.equal(valid[0].accountType, null)
-    assert.equal(valid[0].isActive, true)
-    assert.equal(valid[0].deliveryInfo, false)
+    assert.equal(valid[0]!.unit, 'month')
+    assert.equal(valid[0]!.accountType, null)
+    assert.equal(valid[0]!.isActive, true)
+    assert.equal(valid[0]!.deliveryInfo, false)
   })
 
   it('accepts indonesian and english unit aliases', () => {
@@ -33,9 +33,9 @@ describe('validateVarianRows', () => {
   it('accepts boolean aliases and zero price', () => {
     const { valid, issues } = run('basis,duration,unit,price,is_active,requires_delivery_info\nA,1,bulan,0,Ya,1')
     assert.deepEqual(issues, [])
-    assert.equal(valid[0].price, 0)
-    assert.equal(valid[0].isActive, true)
-    assert.equal(valid[0].deliveryInfo, true)
+    assert.equal(valid[0]!.price, 0)
+    assert.equal(valid[0]!.isActive, true)
+    assert.equal(valid[0]!.deliveryInfo, true)
   })
 
   it('flags missing required, bad integers, unknown unit per row', () => {
@@ -56,15 +56,15 @@ describe('validateVarianRows', () => {
     const { valid, issues } = run('basis,duration,unit,account_type,price\nA,1,bulan,Private,45000\nA,1,Bulan,private,45000')
     assert.equal(valid.length, 2)
     assert.equal(issues.length, 1)
-    assert.equal(issues[0].code, 'dup_in_file')
-    assert.equal(issues[0].severity, 'warning')
+    assert.equal(issues[0]!.code, 'dup_in_file')
+    assert.equal(issues[0]!.severity, 'warning')
   })
 
   it('maps empty tags to null (ikut induk) and flags long tags', () => {
     const { valid, issues } = run('basis,duration,unit,price,tags\nA,1,bulan,45000,PROMO\nB,1,bulan,45000,\nC,1,bulan,45000,' + 'x'.repeat(51))
     assert.equal(valid.length, 2)
-    assert.equal(valid[0].tags, 'PROMO')
-    assert.equal(valid[1].tags, null)
+    assert.equal(valid[0]!.tags, 'PROMO')
+    assert.equal(valid[1]!.tags, null)
     assert.deepEqual(issues.map((e) => e.code), ['too_long'])
   })
 })

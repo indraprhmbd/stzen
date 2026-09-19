@@ -45,7 +45,7 @@ export const adminAnalyticsRoutes = new Hono<AnalyticsEnv>()
       for (let i = days - 1; i >= 0; i--) {
         const d = new Date()
         d.setDate(d.getDate() - i)
-        const dateStr = d.toISOString().split('T')[0]
+        const dateStr = d.toISOString().split('T')[0]!
         const label = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })
         dailySalesMap.set(dateStr, { label, date: dateStr, count: 0, revenue: 0 })
       }

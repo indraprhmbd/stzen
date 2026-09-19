@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { Eye, EyeClosed } from 'iconoir-react'
 import { useAuth } from '../hooks/useAuth'
 import { useBrand } from '../hooks/useBrand'
@@ -18,7 +18,6 @@ export default function SignUp() {
   const [cooldown, setCooldown] = useState(0)
   const { signUp, signInWithGoogle, resendConfirmation } = useAuth()
   const brand = useBrand()
-  const navigate = useNavigate()
   const { t } = useCopy()
 
   useEffect(() => {

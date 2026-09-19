@@ -207,8 +207,8 @@ describe('gcal provider with stub fetch', () => {
     assert.equal(res.ok, true)
     const inserts = calls.filter((c) => (c.init as RequestInit)?.method === 'POST' && c.url.includes('/calendars/'))
     assert.equal(inserts.length, 2)
-    assert.ok(inserts[0].url.includes(encodeURIComponent('a@gmail.com')))
-    assert.ok(inserts[1].url.includes(encodeURIComponent('b@gmail.com')))
+    assert.ok(inserts[0]!.url.includes(encodeURIComponent('a@gmail.com')))
+    assert.ok(inserts[1]!.url.includes(encodeURIComponent('b@gmail.com')))
     // Token exchanged once for the whole fan-out, not per calendar.
     assert.equal(calls.filter((c) => c.url.includes('oauth2.googleapis.com/token')).length, 1)
     assert.ok(res.externalId?.includes('a@gmail.com=evt-1'))

@@ -375,7 +375,7 @@ export default function BulkImportDialog({ config, open, onClose, onDone, notify
   // columns instead of one hardcoded basis-shaped row.
   function samplePlaceholder(): string {
     if (!template || template.samples.length === 0) return 'name,category,...'
-    const s = template.samples[0]
+    const s = template.samples[0]!
     return template.headerLine + '\n' + template.headers.map((h) => quoteCell(s[h] ?? '')).join(',')
   }
 

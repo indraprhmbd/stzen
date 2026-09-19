@@ -9,7 +9,7 @@ interface PaginationProps {
 }
 
 export default function Pagination({ currentPage, totalPages, onPrefetchNext }: PaginationProps) {
-  const [searchParams, setSearchParams] = useSearchParams()
+  const [, setSearchParams] = useSearchParams()
   const navRef = useRef<HTMLElement | null>(null)
   const firedFor = useRef(0)
 
@@ -19,7 +19,7 @@ export default function Pagination({ currentPage, totalPages, onPrefetchNext }: 
     if (!el) return
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting) {
+        if (entry!.isIntersecting) {
           firedFor.current = currentPage
           onPrefetchNext()
           observer.disconnect()

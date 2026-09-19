@@ -13,15 +13,6 @@ type SettingsEnv = AuthEnv
 // Public storefront surface. Allowlist only: payment keys and ops keys must
 // never leave the server. Response shape is consumed by usePublicSettings
 // ({ announcement, storeName, whatsapp, telegram, email }).
-const PUBLIC_KEYS = [
-  'store.name',
-  'store.announcement',
-  'support.whatsapp',
-  'support.telegram',
-  'support.email',
-  'checkout.terms_body',
-  'checkout.terms_updated_at',
-] as const
 
 const KNOWN_KEYS = [
   'store.name',

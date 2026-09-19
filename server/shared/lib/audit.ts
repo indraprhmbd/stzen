@@ -55,7 +55,7 @@ export async function findAuditByIdempotencyKey(key: string): Promise<any | null
   if (error) throw new Error(error.message)
   if (!rows || rows.length === 0) return null
 
-  const row = rows[0]
+  const row = rows[0]!
   if (!row.diff) return null
   return typeof row.diff === 'string' ? JSON.parse(row.diff) : row.diff
 }

@@ -19,7 +19,7 @@ import {
   type BulkIssue,
   type ParsedCsv,
 } from '../../shared/lib/csvBulk'
-import type { ProductWithStock, PaginatedProducts, PaginatedCatalog, CatalogCard, ProductQueryParams } from './products.types'
+import type { ProductWithStock, PaginatedCatalog, CatalogCard, ProductQueryParams } from './products.types'
 
 function pickProductFields(variant: any): { category: string; description: string | null; overview: string | null; instructions: string | null; name: string; badge: string | null } {
   const product = Array.isArray(variant.products) ? variant.products[0] : (variant.products || variant.product || {})
@@ -363,7 +363,7 @@ export const productsService = {
     if (error) throw new Error(error.message)
 
     if (variants && variants.length > 0) {
-      const variant = variants[0]
+      const variant = variants[0]!
       const stockCount = await getStockCount(variant.id)
       return mapVariantToProduct(variant, stockCount)
     }
@@ -390,7 +390,7 @@ export const productsService = {
       throw new NotFoundError('Product not found')
     }
 
-    const stockCount = await getStockCount(product[0].id)
+    const stockCount = await getStockCount(product[0]!.id)
     return mapProductRow(product[0], stockCount)
   },
 

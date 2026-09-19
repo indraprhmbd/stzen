@@ -332,7 +332,7 @@ export const ordersService = {
         .eq('id', row.variant_id)
         .limit(1)
       if (variant && variant.length > 0) {
-        fulfillmentType = variant[0].fulfillment_type
+        fulfillmentType = variant[0]!.fulfillment_type
       }
     }
 
@@ -378,7 +378,7 @@ export const ordersService = {
         .eq('id', row.variant_id)
         .limit(1)
       if (variant && variant.length > 0) {
-        fulfillmentType = variant[0].fulfillment_type
+        fulfillmentType = variant[0]!.fulfillment_type
       }
     }
 

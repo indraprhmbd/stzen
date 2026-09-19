@@ -1,6 +1,5 @@
 import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
-import { z } from 'zod'
 import { supabaseAdmin } from '../../shared/db'
 import { type AuthEnv } from '../../shared/middleware/auth'
 import { productsService, basisBulkService } from '../products/products.service'
@@ -174,7 +173,7 @@ export const adminProductRoutes = new Hono<AdminProductEnv>()
     const { count: variantCount } = await supabaseAdmin
       .from(PRODUCT_VARIANTS)
       .select('*', { count: 'exact', head: true })
-      .eq('product_id', base[0].id)
+      .eq('product_id', base[0]!.id)
 
     if ((variantCount || 0) > 0) {
       return c.json({ error: `Induk masih memiliki ${variantCount} varian. Pindahkan atau hapus varian dulu.` }, 409)
@@ -225,14 +224,14 @@ export const adminProductRoutes = new Hono<AdminProductEnv>()
       .limit(1)
 
     if (variant && variant.length > 0) {
-      const result = await vaultService.importCredentials(variant[0].id, lines)
+      const result = await vaultService.importCredentials(variant[0]!.id, lines)
       const user = c.get('user')
       await appendAudit({
         action: 'stock:import',
         resourceType: 'stock',
         resourcePublicId: publicId,
-        resourceName: variant[0].name,
-        snapshotText: `Stok ${result.imported} ditambah ke ${variant[0].name} (${publicId}) oleh ${user.email ?? user.sub} ${new Date().toLocaleString('id-ID')}`,
+        resourceName: variant[0]!.name,
+        snapshotText: `Stok ${result.imported} ditambah ke ${variant[0]!.name} (${publicId}) oleh ${user.email ?? user.sub} ${new Date().toLocaleString('id-ID')}`,
         actorId: user.sub,
         actorEmail: user.email ?? null,
         actorType: 'admin',
@@ -248,14 +247,14 @@ export const adminProductRoutes = new Hono<AdminProductEnv>()
 
     if (!product || product.length === 0) return c.json({ error: 'Product not found' }, 404)
 
-    const result = await vaultService.importCredentials(product[0].id, lines)
+    const result = await vaultService.importCredentials(product[0]!.id, lines)
     const user = c.get('user')
     await appendAudit({
       action: 'stock:import',
       resourceType: 'stock',
       resourcePublicId: publicId,
-      resourceName: product[0].name,
-      snapshotText: `Stok ${result.imported} ditambah ke ${product[0].name} (${publicId}) oleh ${user.email ?? user.sub} ${new Date().toLocaleString('id-ID')}`,
+      resourceName: product[0]!.name,
+      snapshotText: `Stok ${result.imported} ditambah ke ${product[0]!.name} (${publicId}) oleh ${user.email ?? user.sub} ${new Date().toLocaleString('id-ID')}`,
       actorId: user.sub,
       actorEmail: user.email ?? null,
       actorType: 'admin',

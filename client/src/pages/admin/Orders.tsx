@@ -223,7 +223,7 @@ export default function Orders() {
       await fetchOrders()
       setActionMsg(out.skipped.length === 0
         ? `Disetujui: ${out.approved} pesanan`
-        : `Disetujui ${out.approved} dari ${out.scanned} — ${out.skipped.length} dilewati (${out.skipped[0].reason})`)
+        : `Disetujui ${out.approved} dari ${out.scanned} — ${out.skipped.length} dilewati (${out.skipped[0]!.reason})`)
     } catch (e: unknown) {
       setActionErr(e instanceof Error ? e.message : 'Gagal menyetujui massal')
     } finally {
