@@ -7,6 +7,7 @@ import { allocateCredential, getStockCounts } from '../../shared/lib/db-helpers'
 import { importKeyFromBase64, encrypt } from '../../shared/lib/crypto'
 import { dispatchReminder } from '../../shared/lib/notify/notify.dispatcher'
 import { auditDispatchResults } from '../../shared/lib/notify/notify.audit'
+import { appendAudit } from '../../shared/lib/audit'
 import type { OrderReminderFacts, ReminderEvent } from '../../shared/lib/notify/notify.types'
 import {
   VALID_TRANSITIONS,
@@ -42,6 +43,42 @@ function mapOrderRow(r: any): OrderWithProduct {
     durationUnit: r.duration_snapshot_unit ?? null,
     variantSku: r.variant_sku_snapshot ?? null,
   }
+}
+
+export interface BulkActor {
+  sub: string
+  email: string | null
+}
+
+export interface BulkApproveDeps {
+  /** Defaults to transitionStatus(id, 'approve'). Injected in tests. */
+  run?: (id: string) => Promise<any>
+  /** Defaults to auditOrderApprove. Injected in tests. */
+  audit?: (order: any, actor: BulkActor) => Promise<void>
+}
+
+export interface BulkApproveResult {
+  scanned: number
+  approved: number
+  skipped: { id: string; reason: string }[]
+}
+
+// Shared approve-audit row: single and bulk routes write identical rows.
+// Never throws (matches the single-route .catch pattern) so audit trouble
+// never marks a committed approval as skipped.
+export async function auditOrderApprove(order: any, actor: BulkActor, idempotencyKey?: string | null) {
+  await appendAudit({
+    action: 'order:approve',
+    resourceType: 'order',
+    resourcePublicId: order.publicId ?? order.id,
+    resourceName: order.productName ?? '',
+    snapshotText: `Order ${order.publicId ?? order.id} PENDING->PAID oleh ${actor.email ?? actor.sub} ${new Date().toLocaleString('id-ID')}`,
+    actorId: actor.sub,
+    actorEmail: actor.email,
+    actorType: 'admin',
+    diff: order,
+    idempotencyKey,
+  }).catch((e) => console.error('[audit] admin order action failed', e))
 }
 
 // Reminder fan-out after a committed state change. Shared dispatcher only:
@@ -539,5 +576,25 @@ export const ordersService = {
 
     await this.setVaultItem(order.id, allocated.id)
     return this.transitionStatus(publicId, 'deliver')
+  },
+
+  // Bulk approve: sequential transitionStatus, one approve-audit row per
+  // success, per-id skip reasons. Invalid transitions (already PAID etc.)
+  // skip instead of failing the batch — same shape as reminders bulk.
+  async bulkApprove(ids: string[], actor: BulkActor, deps: BulkApproveDeps = {}): Promise<BulkApproveResult> {
+    const run = deps.run ?? ((id: string) => this.transitionStatus(id, 'approve'))
+    const audit = deps.audit ?? ((order: any) => auditOrderApprove(order, actor))
+    const skipped: { id: string; reason: string }[] = []
+    let approved = 0
+    for (const id of ids) {
+      try {
+        const order = await run(id)
+        await audit(order, actor)
+        approved++
+      } catch (e: unknown) {
+        skipped.push({ id, reason: e instanceof Error ? e.message : 'Gagal' })
+      }
+    }
+    return { scanned: ids.length, approved, skipped }
   },
 }

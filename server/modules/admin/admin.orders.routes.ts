@@ -3,7 +3,7 @@ import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
 import { supabaseAdmin } from '../../shared/db'
 import { type AuthEnv } from '../../shared/middleware/auth'
-import { ordersService } from '../orders/orders.service'
+import { ordersService, auditOrderApprove } from '../orders/orders.service'
 import { appendAudit, findAuditByIdempotencyKey } from '../../shared/lib/audit'
 
 const PROFILES = 'profiles'
@@ -13,8 +13,14 @@ const ORDERS = 'orders'
 
 const DeliverSchema = z.object({ credential: z.string().max(5000).optional() })
 
-const ManualOrderSchema = z.object({
-  customerEmail: z.string().email(),
+// Bulk approve (selection bar). Literal action keeps the door open for
+// future bulk actions without overbuilding; 20-cap matches reminders bulk.
+const BulkApproveSchema = z.object({
+  action: z.literal('approve'),
+  ids: z.array(z.string().min(1)).min(1).max(20),
+})
+
+const ManualOrderSchema = z.object({  customerEmail: z.string().email(),
   variantId: z.string().min(1),
   paymentRef: z.string().max(120).nullable().optional(),
   // Optional override (deal price, rounding, promo). Raw digits; variant
@@ -45,6 +51,12 @@ export const adminOrderRoutes = new Hono<AdminOrderEnv>()
     return c.json(result)
   })
 
+  .post('/bulk', zValidator('json', BulkApproveSchema), async (c) => {
+    const user = c.get('user')
+    const { ids } = c.req.valid('json')
+    return c.json(await ordersService.bulkApprove(ids, { sub: user.sub, email: user.email ?? null }))
+  })
+
   .post('/:id/approve', async (c) => {
     const user = c.get('user')
     const idempotencyKey = c.req.header('Idempotency-Key') || undefined
@@ -53,18 +65,7 @@ export const adminOrderRoutes = new Hono<AdminOrderEnv>()
       if (prior) return c.json(prior)
     }
     const order = await ordersService.transitionStatus(c.req.param('id'), 'approve')
-    await appendAudit({
-      action: 'order:approve',
-      resourceType: 'order',
-      resourcePublicId: (order as any).publicId ?? c.req.param('id'),
-      resourceName: (order as any).productName ?? '',
-      snapshotText: `Order ${(order as any).publicId ?? c.req.param('id')} PENDING->PAID oleh ${user.email ?? user.sub} ${new Date().toLocaleString('id-ID')}`,
-      actorId: user.sub,
-      actorEmail: user.email ?? null,
-      actorType: 'admin',
-      diff: order,
-      idempotencyKey,
-    }).catch((e) => console.error('[audit] admin order action failed', e))
+    await auditOrderApprove(order, { sub: user.sub, email: user.email ?? null }, idempotencyKey)
     return c.json(order)
   })
 

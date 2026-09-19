@@ -12,6 +12,9 @@ import { printReceipt as printOrderReceipt } from '../../lib/receipt'
 import { Refresh, Plus, Search, Key, EditPencil, Trash, Notes } from 'iconoir-react'
 import { SkeletonRows } from '../../components/admin/TableSkeleton'
 import { useTableSort } from '../../hooks/useTableSort'
+import { useRowSelection } from '../../hooks/useRowSelection'
+import { SelectableRow, SelectAllCheckbox } from '../../components/admin/RowSelection'
+import AdminBulkBar from '../../components/admin/AdminBulkBar'
 import TableSortMenu from '../../components/admin/TableSortMenu'
 import RupiahInput from '../../components/admin/RupiahInput'
 
@@ -83,6 +86,8 @@ export default function Orders() {
   const [limit, setLimit] = useState(10)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [actionErr, setActionErr] = useState<string | null>(null)
+  const [actionMsg, setActionMsg] = useState<string | null>(null)
+  const [bulkBusy, setBulkBusy] = useState(false)
   const [pendingReject, setPendingReject] = useState<AdminOrder | null>(null)
   const [pendingRefund, setPendingRefund] = useState<AdminOrder | null>(null)
   const [pendingDeliver, setPendingDeliver] = useState<AdminOrder | null>(null)
@@ -128,13 +133,20 @@ export default function Orders() {
   const orders = data?.orders ?? []
   const total = data?.total ?? 0
   const counts = data?.counts ?? { ALL: 0 }
+  const pageIds = orders.map((o) => o.id)
 
   useEffect(() => { setOffset(0) }, [tab, q, limit, sortKey, sortDir])
+
+  // Uniform bulk selection: checkbox column always visible, row-body clicks
+  // toggle only once armed. Clears on any view change.
+  const selection = useRowSelection()
+  useEffect(() => { selection.clear() }, [tab, q, offset, limit, sortKey, sortDir])
 
   function switchTab(key: TabKey) {
     setQ('')
     setOffset(0)
     setActionErr(null)
+    setActionMsg(null)
     // Merge: keep sort/page params so an active sort persists across tabs.
     setSearchParams((prev) => {
       const next = new URLSearchParams(prev)
@@ -187,6 +199,35 @@ export default function Orders() {
     } catch (e: unknown) {
       setActionErr(e instanceof Error ? e.message : 'Gagal mengirim')
     } finally { setActionLoading(null) }
+  }
+
+  // Bulk approve: forward-only PENDING->PAID per row, inapplicable rows skip
+  // with reasons. Reject/refund stay per-row behind their confirm dialogs.
+  async function bulkApprove() {
+    const ids = selection.selected
+    if (bulkBusy || ids.length === 0) return
+    setBulkBusy(true)
+    setActionErr(null)
+    setActionMsg(null)
+    try {
+      const res = await authedApiRequest((c) =>
+        c.api.v1.admin.orders.bulk.$post({ json: { action: 'approve' as const, ids: ids.slice(0, 20) } })
+      )
+      if (!res.ok) {
+        const err = (await res.json().catch(() => ({}))) as { error?: string }
+        throw new Error(err.error || 'Gagal menyetujui massal')
+      }
+      const out = (await res.json()) as { scanned: number; approved: number; skipped: { id: string; reason: string }[] }
+      selection.clear()
+      await fetchOrders()
+      setActionMsg(out.skipped.length === 0
+        ? `Disetujui: ${out.approved} pesanan`
+        : `Disetujui ${out.approved} dari ${out.scanned} — ${out.skipped.length} dilewati (${out.skipped[0].reason})`)
+    } catch (e: unknown) {
+      setActionErr(e instanceof Error ? e.message : 'Gagal menyetujui massal')
+    } finally {
+      setBulkBusy(false)
+    }
   }
 
   function askDeliver(o: AdminOrder) {
@@ -380,6 +421,18 @@ export default function Orders() {
         </div>
       </div>
       {actionErr && <div className="bg-[#fdecec] rounded-[10px] px-4 py-2.5 text-xs font-semibold text-[#b91c1c]">{actionErr}</div>}
+      {actionMsg && <div className="bg-[#e9f9ee] rounded-[10px] px-4 py-2.5 text-xs font-semibold text-[#15803d]">{actionMsg}</div>}
+
+      <AdminBulkBar
+        count={selection.count}
+        onClear={selection.clear}
+        headerCheckboxId="orders-select-all"
+        actions={
+          <button onClick={bulkApprove} disabled={bulkBusy} className="ad-btn ad-btn-dark w-full sm:w-auto">
+            {bulkBusy ? 'Memproses...' : `Setujui (${selection.count})`}
+          </button>
+        }
+      />
 
       <div className="ad-card">
         <DataTable
@@ -389,12 +442,26 @@ export default function Orders() {
           sortDir={sortDir}
           onSort={toggleSort}
           emptyText={tab === 'butuh-tindakan' ? 'Antrian kosong: tidak ada pesanan menunggu tindakan.' : 'Belum ada pesanan di tab ini.'}
+          selectHeader={
+            <SelectAllCheckbox
+              id="orders-select-all"
+              label="Pilih semua di halaman ini"
+              state={selection.headerState(pageIds)}
+              onToggle={() => selection.toggleAll(pageIds)}
+            />
+          }
         >
-          {loading ? <SkeletonRows rows={8} cols={9} /> : orders.map((o) => {
+          {loading ? <SkeletonRows rows={8} cols={10} /> : orders.map((o) => {
             const stockout = o.fulfillmentType !== 'on_demand' && o.vaultAvailable === 0
             const overdue = (o.status === 'PENDING' || o.status === 'PAID') && Date.now() - new Date(o.createdAt).getTime() > 24 * 3600 * 1000
             return (
-            <tr key={o.id}>
+            <SelectableRow
+              key={o.id}
+              id={o.id}
+              selection={selection}
+              pageIds={pageIds}
+              selectLabel={`Pilih pesanan ${o.id.slice(0, 8).toUpperCase()}`}
+            >
               <td><CopyCell value={o.id} display={o.id.slice(0, 8).toUpperCase()} className="ad-num text-xs font-semibold" /></td>
               <td className="text-xs ad-num text-[#6e6e73] whitespace-nowrap">{new Date(o.createdAt).toLocaleDateString('id-ID', { day:'2-digit', month:'short', year:'numeric' })}</td>
               <td className={`text-xs ad-num whitespace-nowrap ${overdue ? 'text-red-600 font-semibold' : 'text-[#6e6e73]'}`}>{formatAge(o.createdAt)}</td>
@@ -429,7 +496,7 @@ export default function Orders() {
                   {!['PENDING','PAID'].includes(o.status) && <span className="text-xs text-[#aeaeb2]">-</span>}
                 </div>
               </td>
-            </tr>
+            </SelectableRow>
             )
           })}
         </DataTable>
