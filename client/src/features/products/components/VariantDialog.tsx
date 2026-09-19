@@ -18,6 +18,7 @@ export default function VariantDialog({ products, form: v, onSubmit, onImportNow
   const base = products.find((p) => p.id === v.vProductId)
   const baseOverview = base?.overview ?? ''
   const baseDescription = base?.description ?? ''
+  const baseTags = base?.badge ?? ''
   function mode(text: string, blank: boolean, baseText: string): 'blank' | 'inherit' | 'custom' {
     if (blank) return 'blank'
     const t = text.trim()
@@ -25,6 +26,8 @@ export default function VariantDialog({ products, form: v, onSubmit, onImportNow
   }
   const overviewMode = mode(v.vOverview, v.vOverviewBlank, baseOverview)
   const descriptionMode = mode(v.vDescription, v.vDescriptionBlank, baseDescription)
+  // Tags are 2-state only (no blank/hide): empty-or-equal means ikut induk.
+  const tagsMode = mode(v.vBadge, false, baseTags)
   const modeCaption = { blank: 'Kosong, disembunyikan di katalog', inherit: 'Ikut induk', custom: 'Kustom, menimpa induk' } as const
   const clearBtn = 'inline-flex items-center gap-1 text-[11px] font-semibold text-[#6e6e73] hover:text-[#1d1d1f]'
   function handleClose() {
@@ -96,7 +99,14 @@ export default function VariantDialog({ products, form: v, onSubmit, onImportNow
           </div>
           <div className="grid grid-cols-2 gap-3">
             <RupiahInput label="Harga (Rp)" required value={v.vPrice} onChange={v.setVPrice} placeholder="45000" hint={v.vPrice !== '' && Number(v.vPrice) < 10_000 ? 'Di bawah Rp10.000: QRIS otomatis nonaktif, hanya pesanan manual' : undefined} />
-            <label className="ad-label">Badge<input type="text" value={v.vBadge} onChange={(e) => v.setVBadge(e.target.value)} placeholder="TERLARIS;PROMO" className="ad-input mt-1.5 normal-case" /><p className="text-[11px] text-[#aeaeb2] mt-1 normal-case font-normal">Pisahkan beberapa badge dengan ;</p></label>
+            <div>
+              <label className="ad-label">Tags<input type="text" value={v.vBadge} onChange={(e) => v.setVBadge(e.target.value)} maxLength={50} placeholder={baseTags || 'TERLARIS;PROMO'} className="ad-input mt-1.5 normal-case" /></label>
+              <p className="text-[11px] text-[#aeaeb2] mt-1 normal-case font-normal">Pisahkan beberapa tags dengan ;</p>
+              <div className="flex items-center justify-between mt-1">
+                <span className="text-[11px] text-[#aeaeb2]">{modeCaption[tagsMode]}</span>
+                {tagsMode === 'custom' && <button type="button" onClick={() => v.setVBadge('')} className={clearBtn}>Ikuti induk</button>}
+              </div>
+            </div>
           </div>
           <RupiahInput label="Harga Coret (opsional)" value={v.vCompareAt} onChange={v.setVCompareAt} placeholder="60000" hint="Tampil dicoret bila lebih besar dari harga" />
           <label className="ad-label">Pemenuhan<select value={v.vFulfillmentType} onChange={(e) => v.setVFulfillmentType(e.target.value === 'on_demand' ? 'on_demand' : 'vault')} className="ad-input mt-1.5 normal-case"><option value="vault">Gudang</option><option value="on_demand">On Demand</option></select><p className="text-[11px] text-[#aeaeb2] mt-1">{v.vFulfillmentType === 'on_demand' ? 'Selalu tersedia, tanpa impor stok' : 'Perlu impor kredensial ke vault'}</p></label>

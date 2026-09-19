@@ -21,7 +21,7 @@ import {
 } from '../../shared/lib/csvBulk'
 import type { ProductWithStock, PaginatedProducts, PaginatedCatalog, CatalogCard, ProductQueryParams } from './products.types'
 
-function pickProductFields(variant: any): { category: string; description: string | null; overview: string | null; instructions: string | null; name: string } {
+function pickProductFields(variant: any): { category: string; description: string | null; overview: string | null; instructions: string | null; name: string; badge: string | null } {
   const product = Array.isArray(variant.products) ? variant.products[0] : (variant.products || variant.product || {})
   return {
     category: product?.category ?? '',
@@ -29,6 +29,7 @@ function pickProductFields(variant: any): { category: string; description: strin
     overview: product?.overview ?? null,
     instructions: product?.instructions ?? null,
     name: product?.name ?? '',
+    badge: product?.badge ?? null,
   }
 }
 
@@ -40,7 +41,7 @@ function mapVariantToProduct(variant: any, stockCount: number): ProductWithStock
     description: variant.description ?? product.description ?? null,
     category: product.category,
     price: String(variant.price),
-    badge: variant.badge ?? null,
+    badge: variant.badge ?? product.badge ?? null,
     isActive: variant.is_active,
     stockCount,
     fulfillmentType: variant.fulfillment_type,
@@ -62,7 +63,7 @@ function mapVariantToCard(variant: any, stockCount: number): CatalogCard {
     category: product.category,
     price: String(variant.price),
     compareAtPrice: variant.compare_at_price ?? null,
-    badge: variant.badge ?? null,
+    badge: variant.badge ?? product.badge ?? null,
     isActive: variant.is_active,
     stockCount,
     fulfillmentType: variant.fulfillment_type,
@@ -118,7 +119,8 @@ export const productsService = {
           description,
           category,
           instructions,
-          overview
+          overview,
+          badge
         )
       `)
       .eq('is_active', true)
@@ -197,7 +199,8 @@ export const productsService = {
       products (
         id,
         name,
-        category
+        category,
+        badge
       )
     `
     // Inner join when filtering by category so PostgREST drops non-matching
@@ -213,9 +216,10 @@ export const productsService = {
     }
     if (tags) {
       // Badge column stores ';'-separated promo tokens: substring match on
-      // the single tapped token (same escaping as name search).
+      // the single tapped token (same escaping as name search). Effective
+      // tags may be inherited, so match the parent column too.
       const like = `%${tags.replace(/[%_]/g, (c) => `\\${c}`)}%`
-      query = query.ilike('badge', like)
+      query = query.or(`badge.ilike.${like},products.badge.ilike.${like}`)
     }
     if (search) {
       const like = `%${search.replace(/[%_]/g, (c) => `\\${c}`)}%`
@@ -304,7 +308,8 @@ export const productsService = {
           name,
           description,
           category,
-          overview
+          overview,
+          badge
         )
       `)
       .eq('public_id', publicId)
@@ -421,6 +426,7 @@ export const VARIAN_BULK_COLUMNS: BulkColumn[] = [
   { header: 'duration', label: 'Durasi', required: true, aliases: ['durasi'] },
   { header: 'unit', label: 'Satuan', required: true, aliases: ['satuan'] },
   { header: 'account_type', label: 'Tipe Akun', aliases: ['tipe_akun', 'tipe'] },
+  { header: 'tags', label: 'Tags', aliases: ['badge'] },
   { header: 'price', label: 'Harga', required: true, aliases: ['harga'] },
   { header: 'is_active', label: 'Aktif', aliases: ['aktif', 'isactive'] },
   { header: 'requires_delivery_info', label: 'Minta Akun', aliases: ['delivery_info', 'minta_akun'] },
@@ -442,6 +448,7 @@ export interface VarianBulkRow {
   duration: number
   unit: VarianDurationUnit
   accountType: string | null
+  tags: string | null
   price: number
   isActive: boolean
   deliveryInfo: boolean
@@ -471,15 +478,16 @@ export function varianBulkTemplate() {
     headers: VARIAN_BULK_COLUMNS.map((c) => c.header),
     headerLine: VARIAN_BULK_COLUMNS.map((c) => c.header).join(','),
     samples: [
-      { basis: 'TULIS_ID_INDUK', duration: '1', unit: 'bulan', account_type: 'Private', price: '45000', is_active: 'true', requires_delivery_info: 'false' },
-      { basis: 'TULIS_ID_INDUK', duration: '7', unit: 'hari', account_type: 'Sharing', price: '15000', is_active: 'true', requires_delivery_info: 'true' },
+      { basis: 'TULIS_ID_INDUK', duration: '1', unit: 'bulan', account_type: 'Private', tags: 'TERLARIS', price: '45000', is_active: 'true', requires_delivery_info: 'false' },
+      { basis: 'TULIS_ID_INDUK', duration: '7', unit: 'hari', account_type: 'Sharing', tags: '', price: '15000', is_active: 'true', requires_delivery_info: 'true' },
     ],
     notes: [
       'Satu baris = satu varian baru di bawah induk basis (kolom basis = ID publik induk, lihat tab Basis).',
       'duration angka + unit hari/minggu/bulan (boleh juga day/week/month). Nama varian digabung otomatis.',
       'price angka bulat rupiah wajib, terima 0. account_type teks bebas.',
+      'tags opsional, pisahkan dengan ; , kosong = ikut induk.',
       'SKU dibuat otomatis saat commit; pratinjau hanya menampilkan contoh.',
-      'compare_at_price, badge, conditions, description belum didukung: isi lewat dialog Edit setelah impor.',
+      'compare_at_price, conditions, description belum didukung: isi lewat dialog Edit setelah impor.',
       `Maksimal ${BULK_ROW_LIMIT} baris dan 1MB per impor.`,
     ],
     limits: { rows: BULK_ROW_LIMIT, bytes: BULK_TEXT_LIMIT },
@@ -528,6 +536,12 @@ export function validateVarianRows(parsed: ParsedCsv): { valid: VarianBulkRow[];
     check(checkMaxLength(accountRaw, r.row, 'account_type', 'Tipe Akun', 100))
     check(accountRaw ? checkSingleLine(accountRaw, r.row, 'account_type', 'Tipe Akun') : null)
 
+    // Empty tags = ikut induk (null): same link-preserving rule as the
+    // variant dialog submit.
+    const tagsRaw = v.tags ?? ''
+    check(checkMaxLength(tagsRaw, r.row, 'tags', 'Tags', 50))
+    check(tagsRaw ? checkSingleLine(tagsRaw, r.row, 'tags', 'Tags') : null)
+
     const priceRaw = v.price ?? ''
     if (priceRaw === '') {
       fail('price', 'required', 'Harga wajib diisi')
@@ -558,6 +572,7 @@ export function validateVarianRows(parsed: ParsedCsv): { valid: VarianBulkRow[];
       duration: duration.value ?? 0,
       unit: unit.value ?? 'month',
       accountType: accountRaw === '' ? null : accountRaw,
+      tags: tagsRaw === '' ? null : tagsRaw,
       price: price.value ?? 0,
       isActive: active.value ?? true,
       deliveryInfo: delivery.value ?? false,
@@ -680,6 +695,7 @@ export const varianBulkService = {
         name: composeVariantName(baseName, d.duration, d.unit, d.accountType, null),
         price: d.price,
         compare_at_price: null,
+        badge: d.tags,
         duration_months: d.duration,
         duration_unit: d.unit,
         account_type: d.accountType,
@@ -723,7 +739,7 @@ export const BASIS_BULK_COLUMNS: BulkColumn[] = [
   { header: 'name', label: 'Nama', required: true, aliases: ['nama'] },
   { header: 'category', label: 'Kategori', required: true, aliases: ['kategori'] },
   { header: 'overview', label: 'Ringkasan', aliases: ['ringkasan'] },
-  { header: 'badge', label: 'Badge' },
+  { header: 'tags', label: 'Tags', aliases: ['badge'] },
   { header: 'price', label: 'Harga', aliases: ['harga'] },
   { header: 'is_active', label: 'Aktif', aliases: ['aktif', 'isactive'] },
 ]
@@ -748,12 +764,12 @@ export function basisBulkTemplate() {
     headers: BASIS_BULK_COLUMNS.map((c) => c.header),
     headerLine: BASIS_BULK_COLUMNS.map((c) => c.header).join(','),
     samples: [
-      { name: 'Netflix Premium', category: 'Streaming', overview: 'Akun premium 1 bulan', badge: 'TERLARIS', price: '45000', is_active: 'true' },
-      { name: 'Canva Pro', category: 'Desain', overview: '', badge: '', price: '10000', is_active: 'true' },
+      { name: 'Netflix Premium', category: 'Streaming', overview: 'Akun premium 1 bulan', tags: 'TERLARIS', price: '45000', is_active: 'true' },
+      { name: 'Canva Pro', category: 'Desain', overview: '', tags: '', price: '10000', is_active: 'true' },
     ],
     notes: [
       'Satu baris = satu induk baru. Kolom name dan category wajib.',
-      'overview maksimal 200 karakter satu baris; badge maksimal 50.',
+      'overview maksimal 200 karakter satu baris; tags maksimal 50, pisahkan dengan ; .',
       'price angka bulat rupiah, kosong = 0. is_active true/false, 1/0, atau ya/tidak.',
       'description dan instructions belum didukung: isi lewat dialog Edit setelah impor.',
       `Maksimal ${BULK_ROW_LIMIT} baris dan 1MB per impor.`,
@@ -795,9 +811,9 @@ export function validateBasisRows(parsed: ParsedCsv): { valid: BasisBulkRow[]; i
     check(checkMaxLength(overviewRaw, r.row, 'overview', 'Ringkasan', 200))
     check(overviewRaw ? checkSingleLine(overviewRaw, r.row, 'overview', 'Ringkasan') : null)
 
-    const badgeRaw = v.badge ?? ''
-    check(checkMaxLength(badgeRaw, r.row, 'badge', 'Badge', 50))
-    check(badgeRaw ? checkSingleLine(badgeRaw, r.row, 'badge', 'Badge') : null)
+    const badgeRaw = v.tags ?? ''
+    check(checkMaxLength(badgeRaw, r.row, 'tags', 'Tags', 50))
+    check(badgeRaw ? checkSingleLine(badgeRaw, r.row, 'tags', 'Tags') : null)
 
     const price = coerceInteger(v.price ?? '', r.row, 'price', 'Harga')
     check(price.issue)

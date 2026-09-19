@@ -82,11 +82,15 @@ export function useVariantForm(products: Product[], fetchAll: () => void, showTo
     const base = products.find((p) => p.id === vProductId)
     const trimmedOverview = vOverview.trim()
     const trimmedDescription = vDescription.trim()
+    // Tags follow the same link-preserving rule: empty-or-equal stays null
+    // (ikut induk live); only real edits become overrides. No blank state:
+    // untagged and inherited render identically.
+    const trimmedBadge = vBadge.trim()
     const payload: any = {
       productId: vProductId,
       price: vPrice,
       compareAtPrice: vCompareAt.trim() === '' ? null : vCompareAt.trim(),
-      badge: vBadge || null,
+      badge: trimmedBadge === '' || trimmedBadge === (base?.badge ?? '').trim() ? null : trimmedBadge,
       durationMonths: vDuration ? parseInt(vDuration, 10) : null,
       durationUnit: vDurationUnit,
       accountType: vAccountType || null,

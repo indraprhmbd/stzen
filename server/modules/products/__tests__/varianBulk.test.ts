@@ -59,6 +59,14 @@ describe('validateVarianRows', () => {
     assert.equal(issues[0].code, 'dup_in_file')
     assert.equal(issues[0].severity, 'warning')
   })
+
+  it('maps empty tags to null (ikut induk) and flags long tags', () => {
+    const { valid, issues } = run('basis,duration,unit,price,tags\nA,1,bulan,45000,PROMO\nB,1,bulan,45000,\nC,1,bulan,45000,' + 'x'.repeat(51))
+    assert.equal(valid.length, 2)
+    assert.equal(valid[0].tags, 'PROMO')
+    assert.equal(valid[1].tags, null)
+    assert.deepEqual(issues.map((e) => e.code), ['too_long'])
+  })
 })
 
 describe('varianBulkTemplate', () => {

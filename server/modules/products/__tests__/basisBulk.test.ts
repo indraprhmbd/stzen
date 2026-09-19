@@ -117,7 +117,13 @@ describe('validateBasisRows', () => {
 
   it('template headers match the accepted contract', () => {
     const t = basisBulkTemplate()
-    assert.deepEqual(t.headers, ['name', 'category', 'overview', 'badge', 'price', 'is_active'])
+    assert.deepEqual(t.headers, ['name', 'category', 'overview', 'tags', 'price', 'is_active'])
     assert.ok(t.samples.length > 0)
+  })
+
+  it('accepts the legacy badge header via alias', () => {
+    const { valid, issues } = run('name,category,badge\nCanva,Desain,PROMO')
+    assert.deepEqual(issues, [])
+    assert.equal(valid[0].badge, 'PROMO')
   })
 })
