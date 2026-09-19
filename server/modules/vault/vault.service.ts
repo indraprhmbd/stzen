@@ -489,7 +489,7 @@ export function stokBulkTemplate() {
     ],
     notes: [
       'Satu baris = satu kredensial untuk satu varian. variant_ref = ID publik atau SKU varian.',
-      'Kredensial satu baris, tidak boleh kosong. Baris tanpa titik dua (:) tetap diimpor tapi ditandai peringatan.',
+      'Kredensial satu baris, tidak boleh kosong. Format bebas: email:password, PIN, atau kode lisensi.',
       'Pratinjau TIDAK pernah menampilkan isi kredensial, hanya panjangnya.',
       'Varian on demand tidak punya stok: barisnya ditolak.',
       `Maksimal ${BULK_ROW_LIMIT} baris dan 1MB per impor.`,
@@ -529,9 +529,6 @@ export function validateStokRows(parsed: ParsedCsv): { valid: StokBulkRow[]; iss
     } else {
       check(checkSingleLine(cred, r.row, 'credential', 'Kredensial'))
       check(checkMaxLength(cred, r.row, 'credential', 'Kredensial', 2000))
-      if (!cred.includes(':')) {
-        issues.push({ row: r.row, column: 'credential', code: 'no_colon', message: 'Tanpa titik dua (:), pastikan format benar', severity: 'warning' })
-      }
     }
 
     if (ok && ref && cred) {

@@ -15,12 +15,10 @@ describe('validateStokRows', () => {
     return validateStokRows(parseCsvText(csv, COLS))
   }
 
-  it('accepts clean rows, warns colon-less lines', () => {
+  it('accepts clean rows, colon-less lines pass silently', () => {
     const { valid, issues } = run('variant_ref,credential\nABC,user1:x\nDEF,TOKEN123')
     assert.equal(valid.length, 2)
-    assert.equal(issues.length, 1)
-    assert.equal(issues[0].code, 'no_colon')
-    assert.equal(issues[0].severity, 'warning')
+    assert.equal(issues.length, 0)
   })
 
   it('flags missing ref and credential per row', () => {
