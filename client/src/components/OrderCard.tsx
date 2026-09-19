@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { useBrand } from '../hooks/useBrand'
 import { useCopy } from '../hooks/useCopy'
 
@@ -53,14 +54,14 @@ function getStatusConfig(status: Order['status']) {
   }
 }
 
-export default function OrderCard({ order, onViewCredentials, onReport, onReceipt, onPay, onContactWa, paying, onCancel }: OrderCardProps) {
+function OrderCard({ order, onViewCredentials, onReport, onReceipt, onPay, onContactWa, paying, onCancel }: OrderCardProps) {
   const brand = useBrand()
   const { t, lang } = useCopy()
   const statusConfig = getStatusConfig(order.status)
   const amount = Number(order.amount).toLocaleString(lang === 'id' ? 'id-ID' : 'en-US')
 
   return (
-    <div className="bg-white border-[3px] border-black shadow-brutal-sm p-3">
+    <div className="bg-white border-[3px] border-black shadow-brutal-sm p-3" style={{ contentVisibility: 'auto', containIntrinsicSize: 'auto 120px' }}>
       {/* Row 1: status + name + amount */}
       <div className="flex items-center gap-2">
         <span className={`shrink-0 border-2 border-black font-black text-[10px] uppercase px-1.5 py-px ${statusConfig.className}`}>
@@ -126,7 +127,7 @@ export default function OrderCard({ order, onViewCredentials, onReport, onReceip
           )}
           {onReport && (
             <button
-              className="bg-white text-black border-2 border-black shadow-brutal-sm btn-brutal-interactive font-black uppercase text-[10px] px-2 py-1"
+              className="bg-error text-white border-2 border-black shadow-brutal-sm btn-brutal-interactive font-black uppercase text-[10px] px-2 py-1"
               onClick={onReport}
             >
               {t.dashboard.reportIssue}
@@ -137,3 +138,5 @@ export default function OrderCard({ order, onViewCredentials, onReport, onReceip
     </div>
   )
 }
+
+export default memo(OrderCard)

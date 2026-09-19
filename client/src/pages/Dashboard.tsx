@@ -59,6 +59,7 @@ const { t } = useCopy()
   const [loadingCredentials, setLoadingCredentials] = useState(false)
   const [credentialsError, setCredentialsError] = useState('')
   const [payingId, setPayingId] = useState<string | null>(null)
+  const ordersRef = useRef<Order[]>([])
   const { toasts, showToast, dismissToast } = useToast()
 
   const fetchOrders = useCallback(async (pages: number = 1, tab: FilterTab = 'ALL') => {
@@ -115,10 +116,7 @@ const { t } = useCopy()
     const onFocus = () => fetchOrders(page, activeTab)
     window.addEventListener('focus', onFocus)
     const id = setInterval(() => {
-      setOrders((prev) => {
-        if (prev.some((o) => o.status === 'PENDING')) fetchOrders(page, activeTab)
-        return prev
-      })
+      if (ordersRef.current.some((o) => o.status === 'PENDING')) fetchOrders(page, activeTab)
     }, 10000)
     return () => {
       window.removeEventListener('focus', onFocus)
@@ -131,6 +129,7 @@ const { t } = useCopy()
   const prevStatuses = useRef<Record<string, string>>({})
   useEffect(() => {
     const prev = prevStatuses.current
+    ordersRef.current = orders
     for (const o of orders) {
       const was = prev[o.id]
       if (was === 'PENDING' && o.status !== 'PENDING') {
@@ -301,8 +300,23 @@ const { t } = useCopy()
           </div>
 
           {loading ? (
-            <div className="flex justify-center py-12">
-              <span className="loading loading-spinner loading-lg"></span>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4" aria-busy="true">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="bg-white border-[3px] border-black p-3 animate-pulse">
+                  <div className="flex items-center gap-2">
+                    <div className="h-5 w-16 bg-neutral/20" />
+                    <div className="h-4 flex-1 bg-neutral/20" />
+                    <div className="h-4 w-14 bg-neutral/20" />
+                  </div>
+                  <div className="flex items-center gap-2 mt-2">
+                    <div className="h-3 w-32 bg-neutral/20" />
+                    <div className="ml-auto flex gap-1.5">
+                      <div className="h-6 w-14 bg-neutral/20" />
+                      <div className="h-6 w-14 bg-neutral/20" />
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           ) : filteredOrders.length === 0 ? (
             <div className="text-center py-12 bg-surface-container border-[3px] border-on-surface shadow-brutal p-8">
@@ -374,7 +388,7 @@ const { t } = useCopy()
                   <button onClick={() => handleCopy(credentials.credentials)} className="flex-1 btn btn-primary border-2 border-black font-black text-xs uppercase py-2.5 btn-comic-interactive">
                     Salin
                   </button>
-                  <button onClick={() => selectedOrder && window.open(getWhatsAppUrl(selectedOrder), '_blank')} className="flex-1 bg-white text-black font-black text-xs uppercase border-2 border-black py-2.5 hover:bg-black hover:text-white transition-colors">
+                  <button onClick={() => selectedOrder && window.open(getWhatsAppUrl(selectedOrder), '_blank')} className="flex-1 bg-error text-white font-black text-xs uppercase border-2 border-black py-2.5 btn-brutal-interactive">
                     Lapor
                   </button>
                 </div>
