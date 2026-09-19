@@ -1,4 +1,4 @@
-import { supabase, supabaseAdmin } from '../db'
+import { supabaseAdmin } from '../db'
 
 export type AuditAction =
   | 'order:create' | 'order:approve' | 'order:reject' | 'order:deliver' | 'order:refund' | 'order:replace'

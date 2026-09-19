@@ -6,8 +6,8 @@ node_modules/
 
 # Environment
 .env
-.env.local
-.env.*.local
+.env.*
+!.env.example
 .dev.vars
 server/.dev.vars
 
