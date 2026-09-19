@@ -563,6 +563,9 @@ interface StokParent {
 async function resolveStokVariants(valid: StokBulkRow[]): Promise<{ kept: StokBulkRow[]; parents: Map<string, StokParent>; issues: BulkIssue[] }> {
   const issues: BulkIssue[] = []
   const refs = [...new Set(valid.map((d) => d.variantRef))]
+  // Empty .in() is a PostgREST 400: skip the DB round-trip entirely so an
+  // all-invalid file still returns row-level errors instead of a 500.
+  if (refs.length === 0) return { kept: [], parents: new Map<string, StokParent>(), issues }
   const [{ data: byPublicRows, error: errPub }, { data: bySkuRows, error: errSku }] = await Promise.all([
     supabaseAdmin.from(PRODUCT_VARIANTS).select('id, public_id, sku, name, fulfillment_type').in('public_id', refs),
     supabaseAdmin.from(PRODUCT_VARIANTS).select('id, public_id, sku, name, fulfillment_type').in('sku', refs),

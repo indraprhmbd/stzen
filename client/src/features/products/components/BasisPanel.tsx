@@ -1,5 +1,6 @@
 ﻿import { useMemo, useState } from 'react'
 import DataTable from '../../../components/admin/DataTable'
+import CopyCell from '../../../components/admin/CopyCell'
 import TableSortMenu from '../../../components/admin/TableSortMenu'
 import StatusChip from '../../../components/admin/StatusChip'
 import { SkeletonRows } from '../../../components/admin/TableSkeleton'
@@ -142,7 +143,10 @@ export default function BasisPanel({ products, variants, onCreate, onEdit, onDel
         {loading ? <SkeletonRows rows={5} cols={10} /> : sorted.map((p) => {
           return (
           <tr key={p.id}>
-            <td className="text-[13px] font-medium">{p.name}</td>
+            <td>
+              <div className="text-[13px] font-medium">{p.name}</div>
+              <CopyCell value={p.id} display={p.id.slice(0, 8)} className="text-[11px] ad-num text-[#aeaeb2]" />
+            </td>
             <td className="text-xs text-[#6e6e73]">{p.category}</td>
             <td className="text-[13px] ad-num font-semibold">{p.stockLabel}</td>
             <td className="text-xs text-[#6e6e73]">{p.durLabel}</td>

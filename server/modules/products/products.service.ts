@@ -572,6 +572,9 @@ export function validateVarianRows(parsed: ParsedCsv): { valid: VarianBulkRow[];
 async function resolveVarianParents(valid: VarianBulkRow[]): Promise<{ kept: VarianBulkRow[]; parents: Map<string, { id: number; name: string }>; issues: BulkIssue[] }> {
   const issues: BulkIssue[] = []
   const ids = [...new Set(valid.map((d) => d.basis))]
+  // Empty .in() is a PostgREST 400: skip the DB round-trip entirely so an
+  // all-invalid file still returns row-level errors instead of a 500.
+  if (ids.length === 0) return { kept: [], parents: new Map<string, { id: number; name: string }>(), issues }
   const { data, error } = await supabaseAdmin.from('products').select('id, public_id, name').in('public_id', ids)
   if (error) throw new Error(error.message)
   const parents = new Map((data || []).map((p: any) => [p.public_id as string, { id: p.id as number, name: p.name as string }]))

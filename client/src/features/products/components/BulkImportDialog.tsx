@@ -325,6 +325,15 @@ export default function BulkImportDialog({ config, open, onClose, onDone, notify
   const shownIssues = (errorsOnly ? blockingErrors : (preview?.issues ?? [])).slice(0, 30)
   const canCommit = !!preview && preview.invalid === 0 && preview.valid > 0 && !committing && !result
 
+  // Placeholder example comes from the server template's first sample row
+  // (same construction as Unduh contoh), so each entity shows its own real
+  // columns instead of one hardcoded basis-shaped row.
+  function samplePlaceholder(): string {
+    if (!template || template.samples.length === 0) return 'name,category,...'
+    const s = template.samples[0]
+    return template.headerLine + '\n' + template.headers.map((h) => quoteCell(s[h] ?? '')).join(',')
+  }
+
   return (
     <dialog open className="modal" style={{ zIndex: 60 }}>
       <div className="modal-box ad-dialog max-w-2xl max-h-[90vh] overflow-y-auto p-6">
@@ -374,7 +383,7 @@ export default function BulkImportDialog({ config, open, onClose, onDone, notify
               setPreview(null)
               setResult(null)
             }}
-            placeholder={template ? template.headerLine + '\nNetflix Premium,Streaming,Akun premium 1 bulan,,45000,true' : 'name,category,...'}
+            placeholder={samplePlaceholder()}
             rows={6}
             className="ad-input font-mono text-xs leading-relaxed"
           />
