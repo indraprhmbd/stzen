@@ -1,4 +1,4 @@
-import { Children, Fragment, isValidElement, cloneElement, type ReactNode, type ReactElement } from 'react'
+import { Children, Fragment, isValidElement, cloneElement, useMemo, type ReactNode, type ReactElement } from 'react'
 import { NavArrowDown } from 'iconoir-react'
 import EmptyState from './EmptyState'
 
@@ -72,6 +72,14 @@ export default function DataTable({ columns, children, empty, emptyText = 'Belum
   // The select column has no label: withMobileLabels() leaves its cells
   // unstamped so every body cell still lines up with its column label.
   const labels = selectHeader !== undefined ? ['', ...columns.map((c) => c.label)] : columns.map((c) => c.label)
+  // Row stamping clones the whole subtree every render (admin tables render
+  // hundreds of <td>s). Skip entirely on desktop where the mobile labeled
+  // layout never applies; memoize per label-set otherwise.
+  const isDesktop = useMemo(() => window.matchMedia('(min-width: 640px)').matches, [])
+  const stamped = useMemo(
+    () => (empty || isDesktop ? children : withMobileLabels(children, labels)),
+    [empty, isDesktop, children, labels]
+  )
   return (
     <div className="overflow-x-auto">
       <table className="admin-table ad-table table table-sm w-full">
@@ -111,7 +119,7 @@ export default function DataTable({ columns, children, empty, emptyText = 'Belum
               </td>
             </tr>
           ) : (
-            withMobileLabels(children, labels)
+            stamped
           )}
         </tbody>
       </table>

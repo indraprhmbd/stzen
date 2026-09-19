@@ -14,13 +14,13 @@ interface Order {
 
 interface OrderCardProps {
   order: Order
-  onViewCredentials?: () => void
-  onReport?: () => void
-  onReceipt?: () => void
-  onPay?: () => void
-  onContactWa?: () => void
+  onViewCredentials?: (id: string) => void
+  onReport?: (id: string) => void
+  onReceipt?: (id: string) => void
+  onPay?: (id: string) => void
+  onContactWa?: (id: string) => void
   paying?: boolean
-  onCancel?: () => void
+  onCancel?: (id: string) => void
 }
 
 function formatIdDate(iso: string) {
@@ -87,7 +87,7 @@ function OrderCard({ order, onViewCredentials, onReport, onReceipt, onPay, onCon
           {order.status === 'PENDING' && order.paymentProvider === 'manual' && onContactWa && (
             <button
               className="bg-primary text-black border-2 border-black shadow-brutal-sm btn-brutal-interactive font-black uppercase text-[10px] px-2 py-1"
-              onClick={onContactWa}
+              onClick={() => onContactWa?.(order.id)}
             >
               {t.dashboard.contactWa}
             </button>
@@ -95,7 +95,7 @@ function OrderCard({ order, onViewCredentials, onReport, onReceipt, onPay, onCon
           {order.status === 'PENDING' && order.paymentProvider !== 'manual' && onPay && (
             <button
               className="bg-primary text-black border-2 border-black shadow-brutal-sm btn-brutal-interactive font-black uppercase text-[10px] px-2 py-1 disabled:opacity-50"
-              onClick={onPay}
+              onClick={() => onPay?.(order.id)}
               disabled={paying}
             >
               {paying ? '…' : t.dashboard.payNow}
@@ -104,7 +104,7 @@ function OrderCard({ order, onViewCredentials, onReport, onReceipt, onPay, onCon
           {order.status === 'DELIVERED' && onViewCredentials && (
             <button
               className="bg-primary text-black border-2 border-black shadow-brutal-sm btn-brutal-interactive font-black uppercase text-[10px] px-2 py-1"
-              onClick={onViewCredentials}
+              onClick={() => onViewCredentials?.(order.id)}
             >
               {t.dashboard.viewCredentials}
             </button>
@@ -112,7 +112,7 @@ function OrderCard({ order, onViewCredentials, onReport, onReceipt, onPay, onCon
           {order.status === 'PENDING' && onCancel && (
             <button
               className="bg-white text-black border-2 border-black shadow-brutal-sm btn-brutal-interactive font-black uppercase text-[10px] px-2 py-1"
-              onClick={onCancel}
+              onClick={() => onCancel?.(order.id)}
             >
               {t.dashboard.cancelOrder}
             </button>
@@ -120,7 +120,7 @@ function OrderCard({ order, onViewCredentials, onReport, onReceipt, onPay, onCon
           {onReceipt && (
             <button
               className="bg-white text-black border-2 border-black shadow-brutal-sm btn-brutal-interactive font-black uppercase text-[10px] px-2 py-1"
-              onClick={onReceipt}
+              onClick={() => onReceipt?.(order.id)}
             >
               {t.dashboard.receipt}
             </button>
@@ -128,7 +128,7 @@ function OrderCard({ order, onViewCredentials, onReport, onReceipt, onPay, onCon
           {onReport && (
             <button
               className="bg-error text-white border-2 border-black shadow-brutal-sm btn-brutal-interactive font-black uppercase text-[10px] px-2 py-1"
-              onClick={onReport}
+              onClick={() => onReport?.(order.id)}
             >
               {t.dashboard.reportIssue}
             </button>

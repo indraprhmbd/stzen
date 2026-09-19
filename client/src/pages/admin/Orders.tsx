@@ -107,7 +107,8 @@ export default function Orders() {
   const [exportErr, setExportErr] = useState<string | null>(null)
   const [csvLimit, setCsvLimit] = useState(1000)
 
-  // CSV cap follows ops.csv_limit (one-time fetch, silent fallback).
+  // CSV cap follows ops.csv_limit. Parallel with first orders fetch below:
+  // two independent calls, one round-trip of latency instead of two.
   useEffect(() => {
     authedApiRequest((c) => c.api.v1.admin.settings.$get())
       .then((r) => r.json() as Promise<{ values?: Record<string, string> }>)

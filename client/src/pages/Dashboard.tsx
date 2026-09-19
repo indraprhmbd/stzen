@@ -115,12 +115,18 @@ const { t } = useCopy()
     if (!session) return
     const onFocus = () => fetchOrders(page, activeTab)
     window.addEventListener('focus', onFocus)
-    const id = setInterval(() => {
-      if (ordersRef.current.some((o) => o.status === 'PENDING')) fetchOrders(page, activeTab)
-    }, 10000)
+    // Self-scheduling poll: 10s while PENDING exists, 60s idle. Skips hidden
+    // tabs entirely — every skipped tick saves Worker reqs + egress (0-cost).
+    let timer: ReturnType<typeof setTimeout>
+    const tick = () => {
+      const hasPending = ordersRef.current.some((o) => o.status === 'PENDING')
+      if (document.visibilityState === 'visible' && hasPending) fetchOrders(page, activeTab)
+      timer = setTimeout(tick, hasPending ? 10000 : 60000)
+    }
+    timer = setTimeout(tick, 10000)
     return () => {
       window.removeEventListener('focus', onFocus)
-      clearInterval(id)
+      clearTimeout(timer)
     }
   }, [session, fetchOrders, page, activeTab])
 
@@ -147,7 +153,9 @@ const { t } = useCopy()
   const tabKeys: FilterTab[] = ['ALL', 'PENDING', 'PAID', 'DELIVERED', 'REJECTED', 'REFUNDED']
   const tabLabels = t.dashboard.tabs
 
-  async function handlePay(orderId: string) {
+  // Stable refs: memo(OrderCard) shallow-compares props, so these must keep
+  // identity across renders. Lookups go through ordersRef, never `orders`.
+  const handlePay = useCallback(async (orderId: string) => {
     if (payingId) return
     setPayingId(orderId)
     try {
@@ -162,9 +170,9 @@ const { t } = useCopy()
     } finally {
       setPayingId(null)
     }
-  }
+  }, [payingId, page, activeTab, fetchOrders, showToast])
 
-  async function handleCancel(orderId: string) {
+  const handleCancel = useCallback(async (orderId: string) => {
     if (!window.confirm(t.dashboard.cancelConfirm)) return
     try {
       await deleteOrder(orderId)
@@ -173,10 +181,10 @@ const { t } = useCopy()
     } catch (e: any) {
       showToast(e?.message || 'Gagal membatalkan order', 'error')
     }
-  }
+  }, [page, activeTab, fetchOrders, showToast, t])
 
-  async function handleViewCredentials(orderId: string) {
-    const order = orders.find((o) => o.id === orderId)
+  const handleViewCredentials = useCallback(async (orderId: string) => {
+    const order = ordersRef.current.find((o) => o.id === orderId)
     if (order) setSelectedOrder(order)
     setLoadingCredentials(true)
     setCredentialsError('')
@@ -195,7 +203,7 @@ const { t } = useCopy()
     } finally {
       setLoadingCredentials(false)
     }
-  }
+  }, [])
 
   function handleCopy(text: string) {
     navigator.clipboard.writeText(text)
@@ -229,6 +237,21 @@ const { t } = useCopy()
     )
     return `https://wa.me/${number}?text=${text}`
   }
+
+  const handleContactWa = useCallback((orderId: string) => {
+    const order = ordersRef.current.find((o) => o.id === orderId)
+    if (order) window.open(getManualConfirmUrl(order), '_blank')
+  }, [support.whatsapp, brand.support.whatsappNumber, t])
+
+  const handleReport = useCallback((orderId: string) => {
+    const order = ordersRef.current.find((o) => o.id === orderId)
+    if (order) window.open(getWhatsAppUrl(order), '_blank')
+  }, [support.whatsapp, brand.support.whatsappNumber, user, t])
+
+  const handleReceipt = useCallback((orderId: string) => {
+    const order = ordersRef.current.find((o) => o.id === orderId)
+    if (order) printReceipt(order)
+  }, [])
 
   return (
     <Layout>
@@ -330,13 +353,13 @@ const { t } = useCopy()
                   <OrderCard
                     key={order.id}
                     order={order}
-                    onViewCredentials={order.status === 'DELIVERED' ? () => handleViewCredentials(order.id) : undefined}
-                    onPay={order.status === 'PENDING' && order.paymentProvider !== 'manual' ? () => handlePay(order.id) : undefined}
-                    onContactWa={order.status === 'PENDING' && order.paymentProvider === 'manual' ? () => window.open(getManualConfirmUrl(order), '_blank') : undefined}
+                    onViewCredentials={order.status === 'DELIVERED' ? handleViewCredentials : undefined}
+                    onPay={order.status === 'PENDING' && order.paymentProvider !== 'manual' ? handlePay : undefined}
+                    onContactWa={order.status === 'PENDING' && order.paymentProvider === 'manual' ? handleContactWa : undefined}
                     paying={payingId === order.id}
-                    onCancel={order.status === 'PENDING' ? () => handleCancel(order.id) : undefined}
-                    onReport={() => window.open(getWhatsAppUrl(order), '_blank')}
-                    onReceipt={() => printReceipt(order)}
+                    onCancel={order.status === 'PENDING' ? handleCancel : undefined}
+                    onReport={handleReport}
+                    onReceipt={handleReceipt}
                   />
                 ))}
               </div>

@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef, useCallback, startTransition } from 'react'
 import { useNavigate, useSearchParams, Link } from 'react-router-dom'
-import { apiV1 } from '../lib/api'
+import { apiV1Signal } from '../lib/api'
 import { listKey, getCachedList, setCachedList, prefetchList } from '../lib/prefetch'
 import { useAuth } from '../hooks/useAuth'
+import { useIsMobile } from '../hooks/useIsMobile'
 import { useBrand } from '../hooks/useBrand'
 import { useCopy } from '../hooks/useCopy'
 import Layout from '../components/Layout'
@@ -32,17 +33,6 @@ type PaginatedResult = {
   totalPages: number
 }
 
-function useIsMobile() {
-  const [isMobile, setIsMobile] = useState(false)
-  useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 768)
-    check()
-    window.addEventListener('resize', check)
-    return () => window.removeEventListener('resize', check)
-  }, [])
-  return isMobile
-}
-
 export default function ProductList() {
   const [searchParams, setSearchParams] = useSearchParams()
   const navigate = useNavigate()
@@ -67,6 +57,8 @@ export default function ProductList() {
   const [result, setResult] = useState<PaginatedResult | null>(null)
   const [loading, setLoading] = useState(true)
   const [toastMsg, setToastMsg] = useState('')
+  // Stable ref for memo(ProductCard): inline closures kill the memo.
+  const goBuy = useCallback((id: string) => navigate(`/products/${id}`), [navigate])
   const [catData, setCatData] = useState<{ categories: string[]; counts: Record<string, number> }>({ categories: ['all'], counts: {} })
   const [tagData, setTagData] = useState<{ tags: string[]; counts: Record<string, number> }>({ tags: [], counts: {} })
   // Category pill deep-links land here mid-scroll: reset viewport on change.
@@ -74,23 +66,28 @@ export default function ProductList() {
 
   // Fetch full category + tag lists once (independent of active filter)
   useEffect(() => {
-    apiV1.products.categories.$get().then(async (res) => {
+    const controller = new AbortController()
+    const client = apiV1Signal(controller.signal)
+    client.products.categories.$get().then(async (res) => {
       if (res.ok) {
         const data = await res.json() as { categories: string[]; counts: Record<string, number> }
         setCatData({ categories: ['all', ...data.categories], counts: data.counts })
       }
     }).catch(() => {})
-    apiV1.products.tags.$get().then(async (res) => {
+    client.products.tags.$get().then(async (res) => {
       if (res.ok) {
         const data = await res.json() as { tags: string[]; counts: Record<string, number> }
         setTagData(data)
       }
     }).catch(() => {})
+    return () => controller.abort()
   }, [])
 
   // Fetch products on every URL param change - cache-first: back-nav and
   // prefetched pages paint instantly, then revalidate silently.
   useEffect(() => {
+    const controller = new AbortController()
+    const client = apiV1Signal(controller.signal)
     let cancelled = false
 
     if (prevFilter.current !== `${category}|${activeTagKey}`) {
@@ -117,7 +114,7 @@ export default function ProductList() {
       setLoading(true)
     }
 
-    apiV1.products.$get({ query }).then(async (res) => {
+    client.products.$get({ query }).then(async (res) => {
       if (cancelled) return
       if (res.ok) {
         const data = (await res.json()) as PaginatedResult
@@ -132,7 +129,7 @@ export default function ProductList() {
       setLoading(false)
     }).catch(() => { if (!cancelled) setLoading(false) })
 
-    return () => { cancelled = true }
+    return () => { cancelled = true; controller.abort() }
   }, [category, activeTagKey, sort, page, search, session])
 
   // Pre-warm page+1 while the pager is on screen (Pagination calls this once
@@ -296,7 +293,7 @@ export default function ProductList() {
               product={product}
               index={index}
               view="grid"
-              onBuy={() => navigate(`/products/${product.id}`)}
+              onBuy={goBuy}
             />
           ))}
         </div>
@@ -308,7 +305,7 @@ export default function ProductList() {
               product={product}
               index={index}
               view="list"
-              onBuy={() => navigate(`/products/${product.id}`)}
+              onBuy={goBuy}
             />
           ))}
         </div>

@@ -1,6 +1,6 @@
-import { useEffect, useState, useRef, lazy, Suspense } from 'react'
+import { useEffect, useState, useRef, useCallback, lazy, Suspense } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { apiV1, authedApiRequest } from '../lib/api'
+import { apiV1, apiV1Signal, authedApiRequest } from '../lib/api'
 import { initiatePayment, deleteOrder } from '../lib/pay'
 import { getCachedDetail, prefetchList } from '../lib/prefetch'
 import { useToast } from '../hooks/useToast'
@@ -10,6 +10,7 @@ import Layout from '../components/Layout'
 import SkeletonDetail from '../components/SkeletonDetail'
 import ProductCard from '../components/ProductCard'
 import { useBrand } from '../hooks/useBrand'
+import { useRafScroll } from '../hooks/useRafScroll'
 import { useCopy } from '../hooks/useCopy'
 import { useAuth } from '../hooks/useAuth'
 
@@ -43,6 +44,7 @@ function buildRails(methods: string[], price: string | number | null | undefined
 export default function ProductDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const goBuy = useCallback((id: string) => navigate(`/products/${id}`), [navigate])
   const brand = useBrand()
   const { t } = useCopy()
   const { session } = useAuth()
@@ -77,6 +79,11 @@ export default function ProductDetail() {
 
   useEffect(() => {
     if (!id) return
+    // Related-tap swaps id fast: abort the old chain + ignore its late
+    // responses so a slow fetch can't overwrite the new product.
+    const controller = new AbortController()
+    let active = true
+    const client = apiV1Signal(controller.signal)
     // Same-component id change (related click): swap to cache or blank first.
     const hit = getCachedDetail<Product>(id)
     if (hit) {
@@ -85,13 +92,16 @@ export default function ProductDetail() {
       setProduct(null)
       setLoading(true)
     }
-    apiV1.products[':id'].$get({ param: { id } }).then(async (res) => {
+    client.products[':id'].$get({ param: { id } }).then(async (res) => {
+      if (!active) return
       if (res.ok) {
         const data = (await res.json()) as Product
+        if (!active) return
         setProduct(data)
         // Fetch related products (same category). Plain object: hono/client
         // serializes query via Object.entries, which drops URLSearchParams.
-        apiV1.products.$get({ query: { category: data.category, limit: '4' } }).then(async (relRes) => {
+        client.products.$get({ query: { category: data.category, limit: '4' } }).then(async (relRes) => {
+          if (!active) return
           if (relRes.ok) {
             const relData = await relRes.json()
             const products = Array.isArray(relData) ? relData : relData.products || []
@@ -103,8 +113,9 @@ export default function ProductDetail() {
           }
         }).catch(() => {})
       }
-      setLoading(false)
-    }).catch(() => setLoading(false))
+      if (active) setLoading(false)
+    }).catch(() => { if (active) setLoading(false) })
+    return () => { active = false; controller.abort() }
   }, [id])
 
   // IntersectionObserver to detect when main CTA scrolls out of view
@@ -121,15 +132,10 @@ export default function ProductDetail() {
   }, [product])
 
   // Same scroll contract as BottomNav: hide past 80px scrolling down.
-  useEffect(() => {
-    const onScroll = () => {
-      const y = window.scrollY
-      setNavHidden(y > lastY.current && y > 80)
-      lastY.current = y
-    }
-    window.addEventListener('scroll', onScroll, { passive: true })
-    return () => window.removeEventListener('scroll', onScroll)
-  }, [])
+  useRafScroll((y) => {
+    setNavHidden(y > lastY.current && y > 80)
+    lastY.current = y
+  })
 
   async function openBuyConfirm() {
     if (!product || purchasing || !inStock) return
@@ -164,18 +170,21 @@ export default function ProductDetail() {
     // the open dialog honest without blocking the tap.
     const pid = product.id
     try {
-      const res = await apiV1.products[':id'].$get({ param: { id: pid } })
+      // One waterfall instead of two: product fetch and settings revalidate
+      // are independent, run concurrently; rails build after both settle.
+      const [res, freshSettings] = await Promise.all([
+        apiV1.products[':id'].$get({ param: { id: pid } }),
+        refreshPublicSettings().catch(() => null),
+      ])
       if (!res.ok) return
       const fresh = await res.json() as Product
       setProduct(fresh)
-      const liveRails = buildRails(settings.paymentMethods, Number(fresh.price), minAmount)
-      try {
-        const freshSettings = await refreshPublicSettings()
+      if (freshSettings) {
         setMinAmount(freshSettings.sumopodMinAmount)
         const rails = buildRails(freshSettings.paymentMethods, Number(fresh.price), freshSettings.sumopodMinAmount)
         setRails(rails)
         setMethod((m) => (rails.includes(m) ? m : rails.includes('sumopod') ? 'sumopod' : 'manual'))
-      } catch { setRails(liveRails) }
+      }
     } catch { /* keep cached paint */ }
   }
 
@@ -409,7 +418,7 @@ export default function ProductDetail() {
               >
                 <ProductCard
                   product={rel}
-                  onBuy={() => navigate(`/products/${rel.id}`)}
+                  onBuy={goBuy}
                   view="grid"
                 />
               </div>
@@ -422,7 +431,7 @@ export default function ProductDetail() {
               <div key={rel.id}>
                 <ProductCard
                   product={rel}
-                  onBuy={() => navigate(`/products/${rel.id}`)}
+                  onBuy={goBuy}
                   view="grid"
                 />
               </div>

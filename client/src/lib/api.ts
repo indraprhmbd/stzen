@@ -16,6 +16,13 @@ export const api = hc<AppType>(API_BASE)
 // orphans every path lookup. Runtime URLs are identical either way.
 export const apiV1 = hc<AppType>(API_BASE).api.v1
 
+// ─── Abortable Requests ─────────────────────────────────────────────────
+// hono/client takes RequestInit at creation only, so a per-request signal
+// needs its own client instance. Cheap (proxy object, no connection).
+export function apiV1Signal(signal: AbortSignal) {
+  return hc<AppType>(API_BASE, { init: { signal } }).api.v1
+}
+
 // ─── Authed Request Helper ──────────────────────────────────────────────────
 // Injects Authorization header from current Supabase session.
 // Usage: const data = await authedApiRequest(c => c.orders.$get())
@@ -30,7 +37,7 @@ function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
 
 export async function authedApiRequest<T>(
   fn: (client: ReturnType<typeof hc<AppType>>) => Promise<T>,
-  opts?: { headers?: Record<string, string> }
+  opts?: { headers?: Record<string, string>; signal?: AbortSignal }
 ): Promise<T> {
   const token = await getCachedToken()
 
@@ -39,6 +46,7 @@ export async function authedApiRequest<T>(
       Authorization: `Bearer ${token}`,
       ...opts?.headers,
     },
+    ...(opts?.signal ? { init: { signal: opts.signal } } : {}),
   })
 
   return withTimeout(fn(client) as Promise<T>, 15000, 'api')

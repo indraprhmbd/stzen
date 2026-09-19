@@ -54,9 +54,17 @@ export default function BasisPanel({ products, variants, onCreate, onEdit, onDel
     for (const [, s] of map) {
       s.avg = Math.round(s.avg / s.count)
     }
-    // Median + mode per product
+    // Median + mode per product: one grouping pass (O(N)) instead of a
+    // filter per product (O(N*M) — froze admin with many variants).
+    const byProduct = new Map<string, number[]>()
+    for (const v of variants) {
+      if (!v.productId) continue
+      const arr = byProduct.get(v.productId)
+      if (arr) arr.push(Number(v.price))
+      else byProduct.set(v.productId, [Number(v.price)])
+    }
     for (const [pid, s] of map) {
-      const prices = variants.filter((v) => v.productId === pid).map((v) => Number(v.price)).sort((a, b) => a - b)
+      const prices = (byProduct.get(pid) ?? []).sort((a, b) => a - b)
       const mid = Math.floor(prices.length / 2)
       s.median = prices.length % 2 ? prices[mid] : Math.round((prices[mid - 1] + prices[mid]) / 2)
       const freq = new Map<number, number>()

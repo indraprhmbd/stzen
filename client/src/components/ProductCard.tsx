@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react'
+import { memo } from 'react'
 import { useBrand } from '../hooks/useBrand'
 import { useCopy } from '../hooks/useCopy'
+import { useIsMobile } from '../hooks/useIsMobile'
 import { prefetchDetailChunk, prefetchDetailData } from '../lib/prefetch'
 
 interface Product {
@@ -19,19 +20,8 @@ interface Product {
 interface ProductCardProps {
   product: Product
   index?: number
-  onBuy: () => void
+  onBuy: (id: string) => void
   view?: 'grid' | 'list'
-}
-
-function useIsMobile() {
-  const [isMobile, setIsMobile] = useState(false)
-  useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 768)
-    check()
-    window.addEventListener('resize', check)
-    return () => window.removeEventListener('resize', check)
-  }, [])
-  return isMobile
 }
 
 function discountPct(price: string | number, compare: number | null | undefined): number | null {
@@ -46,7 +36,7 @@ function badgeList(badge: string | null): string[] {
   return badge.split(';').map((b) => b.trim()).filter(Boolean)
 }
 
-export default function ProductCard({ product, index = 0, onBuy, view = 'grid' }: ProductCardProps) {
+function ProductCard({ product, index = 0, onBuy, view = 'grid' }: ProductCardProps) {
   // Warm the detail route ahead of the tap: chunk for every card, API data
   // for above-the-fold cards only (index < 4). Hover (desktop), touch-start
   // (mobile, fires before click), focus (keyboard via the buy button).
@@ -73,7 +63,7 @@ export default function ProductCard({ product, index = 0, onBuy, view = 'grid' }
     return (
       <div
         className="bg-white border-comic shadow-comic relative overflow-hidden group flex flex-col"
-        onClick={onBuy}
+        onClick={() => onBuy(product.id)}
         onMouseEnter={warmDetail}
         onTouchStart={warmDetail}
       >
@@ -129,7 +119,7 @@ export default function ProductCard({ product, index = 0, onBuy, view = 'grid' }
               `}
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
               disabled={!inStock}
-              onClick={(e) => { e.stopPropagation(); onBuy() }}
+              onClick={(e) => { e.stopPropagation(); onBuy(product.id) }}
               onFocus={warmDetail}
             >
               {inStock ? t.products.buy : t.products.soldOut}
@@ -145,7 +135,7 @@ export default function ProductCard({ product, index = 0, onBuy, view = 'grid' }
     return (
       <div
       className="col-span-1 bg-white border-comic shadow-comic relative overflow-hidden group hover:-translate-y-0.5 transition-all duration-200 cursor-pointer"
-      onClick={onBuy}
+      onClick={() => onBuy(product.id)}
       onMouseEnter={warmDetail}
       onTouchStart={warmDetail}
     >
@@ -193,7 +183,7 @@ export default function ProductCard({ product, index = 0, onBuy, view = 'grid' }
               className={`btn btn-primary border-comic shadow-comic btn-comic-interactive font-black uppercase text-[9px] px-3 py-1.5 ${!inStock ? 'opacity-50 cursor-not-allowed' : ''}`}
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
               disabled={!inStock}
-              onClick={(e) => { e.stopPropagation(); onBuy() }}
+              onClick={(e) => { e.stopPropagation(); onBuy(product.id) }}
               onFocus={warmDetail}
             >
               {inStock ? t.products.buy : t.products.soldOut}
@@ -214,7 +204,7 @@ export default function ProductCard({ product, index = 0, onBuy, view = 'grid' }
         hover:-translate-y-1
         transition-all duration-200 flex flex-col cursor-pointer
       "
-      onClick={onBuy}
+      onClick={() => onBuy(product.id)}
       onMouseEnter={warmDetail}
       onTouchStart={warmDetail}
     >
@@ -260,7 +250,7 @@ export default function ProductCard({ product, index = 0, onBuy, view = 'grid' }
             className={`btn btn-primary border-comic shadow-comic btn-comic-interactive font-black uppercase text-xs px-3 py-1 ${!inStock ? 'opacity-50 cursor-not-allowed' : ''}`}
             style={{ fontFamily: "'Space Grotesk', sans-serif" }}
             disabled={!inStock}
-            onClick={(e) => { e.stopPropagation(); onBuy() }}
+            onClick={(e) => { e.stopPropagation(); onBuy(product.id) }}
           >
             {inStock ? t.products.buy : t.products.soldOut}
           </button>
@@ -269,3 +259,5 @@ export default function ProductCard({ product, index = 0, onBuy, view = 'grid' }
     </div>
   )
 }
+
+export default memo(ProductCard)

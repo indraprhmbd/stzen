@@ -14,7 +14,20 @@ export function prefetchDetailChunk(): Promise<unknown> {
 }
 
 const DATA_TTL_MS = 60_000
+// LRU-capped: unbounded Maps outlive SPA navigation and grow all session.
+// On insert-at + delete-before-reinsert, Map iteration order = LRU order.
+const DATA_CACHE_MAX = 50
 const dataCache = new Map<string, { at: number; data: unknown }>()
+
+function cacheSetLru(map: Map<string, { at: number; data: unknown }>, key: string, data: unknown, max: number) {
+  map.delete(key)
+  map.set(key, { at: Date.now(), data })
+  while (map.size > max) {
+    const oldest = map.keys().next().value
+    if (oldest === undefined) break
+    map.delete(oldest)
+  }
+}
 
 export function prefetchDetailData(id: string): Promise<unknown> {
   const hit = dataCache.get(id)
@@ -24,7 +37,7 @@ export function prefetchDetailData(id: string): Promise<unknown> {
     .then(async (res) => {
       if (!res.ok) return null
       const data = await res.json()
-      dataCache.set(id, { at: Date.now(), data })
+      cacheSetLru(dataCache, id, data, DATA_CACHE_MAX)
       return data
     })
     .catch(() => null)
@@ -41,6 +54,7 @@ export function getCachedDetail<T>(id: string): T | null {
 // List pages always revalidate in background after a cache hit.
 
 const LIST_TTL_MS = 30_000
+const LIST_CACHE_MAX = 40
 const listCache = new Map<string, { at: number; data: unknown }>()
 
 export function listKey(query: Record<string, string | string[]>): string {
@@ -57,7 +71,7 @@ export function getCachedList<T>(key: string): T | null {
 }
 
 export function setCachedList(key: string, data: unknown): void {
-  listCache.set(key, { at: Date.now(), data })
+  cacheSetLru(listCache, key, data, LIST_CACHE_MAX)
 }
 
 export function prefetchList(query: Record<string, string | string[]>): void {

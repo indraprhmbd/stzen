@@ -14,12 +14,15 @@ export function useProducts() {
   const fetchAll = useCallback(async () => {
     setError(null); setLoading(true)
     try {
+      // Single waterfall: both responses parse concurrently, not serially.
       const [resP, resV] = await Promise.all([
         authedApiRequest((c) => c.api.v1.admin.products.$get()),
         authedApiRequest((c) => c.api.v1.admin.variants.$get()),
       ])
-      const dataP = await resP.json() as Product[]
-      const dataV = await resV.json() as Variant[]
+      const [dataP, dataV] = await Promise.all([
+        resP.json() as Promise<Product[]>,
+        resV.json() as Promise<Variant[]>,
+      ])
       setProducts(dataP)
       setVariants(dataV)
       setFetchedAt(Date.now())

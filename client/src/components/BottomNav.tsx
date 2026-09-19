@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useRef } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useCopy } from '../hooks/useCopy'
+import { useRafScroll } from '../hooks/useRafScroll'
 
 const tabs = [
   { to: '/', icon: 'house', labelKey: 'home' as const },
@@ -13,21 +14,12 @@ export default function BottomNav() {
   const location = useLocation()
   const { t } = useCopy()
   const [visible, setVisible] = useState(true)
-  const [lastScroll, setLastScroll] = useState(0)
+  const lastY = useRef(0)
 
-  useEffect(() => {
-    const onScroll = () => {
-      const y = window.scrollY
-      if (y > lastScroll && y > 80) {
-        setVisible(false)
-      } else {
-        setVisible(true)
-      }
-      setLastScroll(y)
-    }
-    window.addEventListener('scroll', onScroll, { passive: true })
-    return () => window.removeEventListener('scroll', onScroll)
-  }, [lastScroll])
+  useRafScroll((y) => {
+    setVisible(!(y > lastY.current && y > 80))
+    lastY.current = y
+  })
 
   function isActive(to: string) {
     if (to === '/') return location.pathname === '/'

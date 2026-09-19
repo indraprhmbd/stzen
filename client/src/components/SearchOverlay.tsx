@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { apiV1 } from '../lib/api'
+import { apiV1Signal } from '../lib/api'
 import { useBrand } from '../hooks/useBrand'
 import { useCopy } from '../hooks/useCopy'
 
@@ -48,29 +48,36 @@ export default function SearchOverlay({ open, onClose }: SearchOverlayProps) {
     return () => document.removeEventListener('keydown', handler)
   }, [open, onClose])
 
-  // Debounced search
+  // Debounced search: abort in-flight on close/retyping so slow responses
+  // can't overwrite results of a newer query (last-wins guaranteed).
   useEffect(() => {
     if (!query || query.length < 2) {
       setResults([])
       return
     }
     setLoading(true)
+    const controller = new AbortController()
+    const client = apiV1Signal(controller.signal)
     const timer = setTimeout(async () => {
       try {
         // Plain object: hono/client drops URLSearchParams instances in query.
-        const res = await apiV1.products.$get({ query: { search: query } })
+        const res = await client.products.$get({ query: { search: query } })
+        if (controller.signal.aborted) return
         if (res.ok) {
           const data = await res.json()
           const products = Array.isArray(data) ? data : Array.isArray((data as any)?.products) ? (data as any).products : []
           setResults(products.slice(0, 8))
         }
       } catch {
-        // ignore
+        // ignore (aborts land here)
       } finally {
-        setLoading(false)
+        if (!controller.signal.aborted) setLoading(false)
       }
     }, 300)
-    return () => clearTimeout(timer)
+    return () => {
+      clearTimeout(timer)
+      controller.abort()
+    }
   }, [query])
 
   const handleSelect = useCallback((id: string) => {

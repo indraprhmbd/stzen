@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { useCopy } from '../hooks/useCopy'
 import SearchOverlay from './SearchOverlay'
+import { useRafScroll } from '../hooks/useRafScroll'
 import SignOutDialog, { openSignOutDialog } from './SignOutDialog'
 
 export default function Header() {
@@ -14,11 +15,7 @@ export default function Header() {
   const [searchOpen, setSearchOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 10)
-    window.addEventListener('scroll', onScroll, { passive: true })
-    return () => window.removeEventListener('scroll', onScroll)
-  }, [])
+  useRafScroll((y) => setScrolled(y > 10))
 
   // Close menu on click outside
   useEffect(() => {
