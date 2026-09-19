@@ -1,6 +1,7 @@
 import { memo } from 'react'
 import { useBrand } from '../hooks/useBrand'
 import { useCopy } from '../hooks/useCopy'
+import { formatIdNumber } from '../lib/format'
 
 interface Order {
   id: string
@@ -58,7 +59,7 @@ function OrderCard({ order, onViewCredentials, onReport, onReceipt, onPay, onCon
   const brand = useBrand()
   const { t, lang } = useCopy()
   const statusConfig = getStatusConfig(order.status)
-  const amount = Number(order.amount).toLocaleString(lang === 'id' ? 'id-ID' : 'en-US')
+  const amount = formatIdNumber(order.amount, lang === 'id' ? 'id-ID' : 'en-US')
 
   return (
     <div className="bg-white border-[3px] border-black shadow-brutal-sm p-3" style={{ contentVisibility: 'auto', containIntrinsicSize: 'auto 120px' }}>

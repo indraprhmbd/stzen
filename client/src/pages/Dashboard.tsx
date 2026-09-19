@@ -12,6 +12,7 @@ import { useToast } from '../hooks/useToast'
 import ToastStack from '../components/Toast'
 import Layout from '../components/Layout'
 import OrderCard from '../components/OrderCard'
+import { formatIdNumber } from '../lib/format'
 
 interface Order {
   id: string
@@ -228,7 +229,7 @@ const { t } = useCopy()
         `Order ID: ${order.id}`,
         `Email: ${user?.email ?? '-'}`,
         `Produk: ${order.productName}`,
-        `Nominal: Rp ${Number(order.amount).toLocaleString('id-ID')}`,
+        `Nominal: Rp ${formatIdNumber(order.amount)}`,
         `Status: ${order.status}`,
         `Ref: ${order.paymentRef ?? '-'}`,
         `Tanggal: ${new Date(order.createdAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}`,

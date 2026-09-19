@@ -3,6 +3,7 @@ import { authedApiRequest } from '../../../lib/api'
 import DataTable from '../../../components/admin/DataTable'
 import StatusChip from '../../../components/admin/StatusChip'
 import { Copy, Download, Xmark } from 'iconoir-react'
+import { formatIdNumber } from '../../../lib/format'
 
 // ─── Reusable bulk-import dialog shell ──────────────────────────────────────
 // Generic flow (input -> template -> preview -> commit), schema-specific
@@ -153,7 +154,7 @@ export const varianBulkConfig: BulkImportConfig = {
     { label: 'DURASI', render: (d) => <span className="text-[13px]">{String(d.durationLabel)}</span> },
     {
       label: 'HARGA',
-      render: (d) => <span className="text-[13px] ad-num font-semibold">Rp {Number(d.price).toLocaleString('id-ID')}</span>,
+      render: (d) => <span className="text-[13px] ad-num font-semibold">Rp {formatIdNumber(String(d.price))}</span>,
     },
     {
       label: 'AKTIF',
@@ -222,7 +223,7 @@ export const basisBulkConfig: BulkImportConfig = {
     { label: 'KATEGORI', render: (d) => <span className="text-xs text-[#6e6e73]">{String(d.category)}</span> },
     {
       label: 'HARGA',
-      render: (d) => <span className="text-[13px] ad-num font-semibold">Rp {Number(d.price).toLocaleString('id-ID')}</span>,
+      render: (d) => <span className="text-[13px] ad-num font-semibold">Rp {formatIdNumber(String(d.price))}</span>,
     },
     {
       label: 'AKTIF',

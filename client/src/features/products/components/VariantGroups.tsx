@@ -8,6 +8,7 @@ import { useTableSort, sortByKey } from '../../../hooks/useTableSort'
 import { NavArrowDown, Plus, Expand, Collapse, EditPencil, Trash, Key, Download } from 'iconoir-react'
 import BulkImportDialog, { varianBulkConfig } from './BulkImportDialog'
 import type { Variant, VariantGroup } from '../types'
+import { formatIdNumber } from '../../../lib/format'
 
 function stockTone(v: { fulfillmentType: string; stockCount: number }): { tone: ChipTone; label: string } {
   if (v.fulfillmentType === 'on_demand') return { tone: 'emerald', label: 'Tersedia' }
@@ -72,7 +73,7 @@ export default function VariantGroups({ groups, filteredCount, collapsedGroups, 
           <div className="text-[13px] font-medium">{v.name}</div>
         </td>
         <td><CopyCell value={v.sku} className="text-xs ad-num text-[#6e6e73]" /></td>
-        <td className="text-[13px] ad-num font-semibold">Rp {Number(v.price).toLocaleString('id-ID')}{v.compareAtPrice != null && Number(v.compareAtPrice) > Number(v.price) && (<><br /><s className="text-[11px] font-normal text-[#aeaeb2]">Rp {Number(v.compareAtPrice).toLocaleString('id-ID')}</s></>)}</td>
+        <td className="text-[13px] ad-num font-semibold">Rp {formatIdNumber(v.price)}{v.compareAtPrice != null && Number(v.compareAtPrice) > Number(v.price) && (<><br /><s className="text-[11px] font-normal text-[#aeaeb2]">Rp {formatIdNumber(v.compareAtPrice)}</s></>)}</td>
         <td><StatusChip tone={stockTone(v).tone}>{stockTone(v).label}</StatusChip></td>
         <td><StatusChip tone="zinc" className={v.isActive ? '' : 'opacity-60'}>{v.isActive ? 'AKTIF' : 'NONAKTIF'}</StatusChip></td>
         <td className="text-right">

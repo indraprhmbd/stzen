@@ -3,6 +3,7 @@ import { useBrand } from '../hooks/useBrand'
 import { useCopy } from '../hooks/useCopy'
 import { useIsMobile } from '../hooks/useIsMobile'
 import { prefetchDetailChunk, prefetchDetailData } from '../lib/prefetch'
+import { formatIdNumber } from '../lib/format'
 
 interface Product {
   id: string
@@ -97,7 +98,7 @@ function ProductCard({ product, index = 0, onBuy, view = 'grid' }: ProductCardPr
               {pct !== null && (
                 <div className="flex items-center gap-1">
                   <s className="text-[9px] font-bold text-neutral/50 whitespace-nowrap">
-                    {brand.storefront.currencySymbol} {Number(product.compareAtPrice).toLocaleString('id-ID')}
+                    {brand.storefront.currencySymbol} {formatIdNumber(product.compareAtPrice)}
                   </s>
                   <span className="rounded-full border border-black text-black text-[8px] px-1.5 py-0.5 whitespace-nowrap">
                     -{pct}%
@@ -108,7 +109,7 @@ function ProductCard({ product, index = 0, onBuy, view = 'grid' }: ProductCardPr
                 className="font-black text-lg text-neutral"
                 style={{ fontFamily: "'Space Grotesk', sans-serif" }}
               >
-                {brand.storefront.currencySymbol} {Number(product.price).toLocaleString('id-ID')}
+                {brand.storefront.currencySymbol} {formatIdNumber(product.price)}
               </span>
             </div>
             <button
@@ -168,7 +169,7 @@ function ProductCard({ product, index = 0, onBuy, view = 'grid' }: ProductCardPr
               {pct !== null && (
                 <div className="flex items-center gap-1">
                   <s className="text-[10px] font-bold text-neutral/50 whitespace-nowrap">
-                    {brand.storefront.currencySymbol} {Number(product.compareAtPrice).toLocaleString('id-ID')}
+                    {brand.storefront.currencySymbol} {formatIdNumber(product.compareAtPrice)}
                   </s>
                   <span className="rounded-full border border-black text-black text-[8px] px-1.5 py-0.5 whitespace-nowrap">
                     -{pct}%
@@ -176,7 +177,7 @@ function ProductCard({ product, index = 0, onBuy, view = 'grid' }: ProductCardPr
                 </div>
               )}
               <span className="font-black text-xl text-neutral" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-                {brand.storefront.currencySymbol} {Number(product.price).toLocaleString('id-ID')}
+                {brand.storefront.currencySymbol} {formatIdNumber(product.price)}
               </span>
             </div>
             <button
@@ -235,7 +236,7 @@ function ProductCard({ product, index = 0, onBuy, view = 'grid' }: ProductCardPr
             {pct !== null && (
               <div className="flex items-center gap-1.5">
                 <s className="text-xs font-bold text-neutral/50 whitespace-nowrap">
-                  {brand.storefront.currencySymbol} {Number(product.compareAtPrice).toLocaleString('id-ID')}
+                  {brand.storefront.currencySymbol} {formatIdNumber(product.compareAtPrice)}
                 </s>
                 <span className="rounded-full border border-black text-black text-[10px] px-2 py-0.5 whitespace-nowrap">
                   -{pct}%
@@ -243,7 +244,7 @@ function ProductCard({ product, index = 0, onBuy, view = 'grid' }: ProductCardPr
               </div>
             )}
             <span className="font-black text-neutral text-2xl" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-              {brand.storefront.currencySymbol} {Number(product.price).toLocaleString('id-ID')}
+              {brand.storefront.currencySymbol} {formatIdNumber(product.price)}
             </span>
           </div>
           <button

@@ -8,6 +8,7 @@ import { useTableSort, sortByKey } from '../../../hooks/useTableSort'
 import { Plus, EditPencil, Trash, Download } from 'iconoir-react'
 import BulkImportDialog, { basisBulkConfig } from './BulkImportDialog'
 import type { Product, Variant } from '../types'
+import { formatIdNumber } from '../../../lib/format'
 
 interface Props {
   products: Product[]
@@ -113,7 +114,7 @@ export default function BasisPanel({ products, variants, onCreate, onEdit, onDel
       mode: stats?.mode ?? null,
       stockLabel: vs && vs.vaultCount > 0 ? `${vs.stock}/${vs.vaultCount} var` : vs ? '0 var' : '-',
       durLabel: durArr.size === 0 ? '-' : durArr.size === 1 ? [...durArr][0] : `${durArr.size} tipe`,
-      rentangLabel: stats && stats.min !== stats.max ? `Rp ${stats.min.toLocaleString('id-ID')} - ${stats.max.toLocaleString('id-ID')}` : stats ? `Rp ${stats.min.toLocaleString('id-ID')}` : '-',
+      rentangLabel: stats && stats.min !== stats.max ? `Rp ${formatIdNumber(stats.min)} - ${formatIdNumber(stats.max)}` : stats ? `Rp ${formatIdNumber(stats.min)}` : '-',
     }
   }), [products, priceMap, variantStats])
 
@@ -159,9 +160,9 @@ export default function BasisPanel({ products, variants, onCreate, onEdit, onDel
             <td className="text-xs text-[#6e6e73]">{p.category}</td>
             <td className="text-[13px] ad-num font-semibold">{p.stockLabel}</td>
             <td className="text-xs text-[#6e6e73]">{p.durLabel}</td>
-            <td className="text-[13px] ad-num font-semibold">{p.avg != null ? `Rp ${p.avg.toLocaleString('id-ID')}` : '-'}</td>
-            <td className="text-[13px] ad-num text-[#6e6e73]">{p.median != null ? `Rp ${p.median.toLocaleString('id-ID')}` : '-'}</td>
-            <td className="text-[13px] ad-num text-[#6e6e73]">{p.mode != null ? `Rp ${p.mode.toLocaleString('id-ID')}` : '-'}</td>
+            <td className="text-[13px] ad-num font-semibold">{p.avg != null ? `Rp ${formatIdNumber(p.avg)}` : '-'}</td>
+            <td className="text-[13px] ad-num text-[#6e6e73]">{p.median != null ? `Rp ${formatIdNumber(p.median)}` : '-'}</td>
+            <td className="text-[13px] ad-num text-[#6e6e73]">{p.mode != null ? `Rp ${formatIdNumber(p.mode)}` : '-'}</td>
             <td className="text-xs ad-num text-[#6e6e73]">{p.rentangLabel}</td>
             <td><StatusChip tone={p.isActive ? 'green' : 'zinc'}>{p.isActive ? 'AKTIF' : 'NONAKTIF'}</StatusChip></td>
             <td className="text-right"><div className="flex justify-end gap-1.5"><button onClick={() => onEdit(p)} className="ad-btn"><EditPencil width={14} height={14} strokeWidth={1.5} />Edit</button><button onClick={() => onDelete(p)} className="ad-btn ad-btn-danger"><Trash width={14} height={14} strokeWidth={1.5} />Hapus</button></div></td>

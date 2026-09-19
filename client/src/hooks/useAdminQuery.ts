@@ -8,7 +8,14 @@ interface QueryState<T> {
   refetch: () => void
 }
 
-export function useAdminQuery<T>(fn: () => Promise<T>, deps: unknown[] = []): QueryState<T> {
+interface QueryOpts {
+  // Keep previous data visible while a dep change (tab/sort/page) refetches,
+  // instead of blanking to loading. Avoids full-table flash on every nav.
+  keepPreviousData?: boolean
+}
+
+export function useAdminQuery<T>(fn: () => Promise<T>, deps: unknown[] = [], opts: QueryOpts = {}): QueryState<T> {
+  const { keepPreviousData = false } = opts
   const [data, setData] = useState<T | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -20,6 +27,7 @@ export function useAdminQuery<T>(fn: () => Promise<T>, deps: unknown[] = []): Qu
     ;(async () => {
       setError(null)
       setLoading(true)
+      if (!keepPreviousData) setData(null)
       try {
         const result = await fn()
         if (!cancelled) {
@@ -36,7 +44,7 @@ export function useAdminQuery<T>(fn: () => Promise<T>, deps: unknown[] = []): Qu
       cancelled = true
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [nonce, ...deps])
+  }, [nonce, keepPreviousData, ...deps])
 
   return { data, loading, error, fetchedAt, refetch: () => setNonce((n) => n + 1) }
 }

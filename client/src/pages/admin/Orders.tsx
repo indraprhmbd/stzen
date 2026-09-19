@@ -17,6 +17,7 @@ import { SelectableRow, SelectAllCheckbox } from '../../components/admin/RowSele
 import AdminBulkBar from '../../components/admin/AdminBulkBar'
 import TableSortMenu from '../../components/admin/TableSortMenu'
 import RupiahInput from '../../components/admin/RupiahInput'
+import { formatIdNumber } from '../../lib/format'
 
 // Shared by DataTable headers (desktop) and TableSortMenu (mobile <sm).
 const orderColumns = [
@@ -471,7 +472,7 @@ export default function Orders() {
                 {[o.fulfillmentType === 'on_demand' ? 'On-demand' : 'Vault', stockout ? 'Stok habis' : null].filter(Boolean).join(', ')}
               </td>
               <td className="ad-num text-xs text-[#6e6e73]" title={o.customerEmail ?? o.userId}>{o.customerEmail ?? o.userId.slice(0, 8)}</td>
-              <td className="text-[13px] ad-num font-semibold">Rp {Number(o.amount).toLocaleString('id-ID')}</td>
+              <td className="text-[13px] ad-num font-semibold">Rp {formatIdNumber(o.amount)}</td>
               <td><StatusChip status={o.status}>{o.status}</StatusChip></td>
               <td className="text-right">
                 <div className="flex justify-end gap-1.5">
@@ -518,7 +519,7 @@ export default function Orders() {
               <div className="flex justify-between"><span className="text-[#6e6e73]">ID</span><span className="font-semibold">{receipt.id.slice(0, 8).toUpperCase()}</span></div>
               <div className="flex justify-between"><span className="text-[#6e6e73]">Tanggal</span><span>{new Date(receipt.createdAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}</span></div>
               <div className="flex justify-between gap-4"><span className="text-[#6e6e73]">Produk</span><span className="text-right font-medium">{receipt.productName}</span></div>
-              <div className="flex justify-between"><span className="text-[#6e6e73]">Jumlah</span><span className="font-semibold">Rp {Number(receipt.amount).toLocaleString('id-ID')}</span></div>
+              <div className="flex justify-between"><span className="text-[#6e6e73]">Jumlah</span><span className="font-semibold">Rp {formatIdNumber(receipt.amount)}</span></div>
               <div className="flex justify-between"><span className="text-[#6e6e73]">Status</span><span>{receipt.status}</span></div>
               <div className="flex justify-between"><span className="text-[#6e6e73]">Ref</span><span>{receipt.paymentRef ?? '-'}</span></div>
               {(receipt.customerAccount || receipt.waNumber) && (
@@ -553,7 +554,7 @@ export default function Orders() {
                   <div className="relative mt-1.5">
                     <input
                       type="text"
-                      value={mSelected ? `${mSelected.name} - Rp ${Number(mSelected.price).toLocaleString('id-ID')}` : mSearch}
+                      value={mSelected ? `${mSelected.name} - Rp ${formatIdNumber(mSelected.price)}` : mSearch}
                       onChange={(e) => { setMVariantId(''); setMSearch(e.target.value) }}
                       onFocus={() => { if (mSelected) { setMSearch(''); setMVariantId('') } }}
                       placeholder="Ketik untuk cari varian..."
@@ -574,7 +575,7 @@ export default function Orders() {
                             className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left hover:bg-[#f5f5f7] border-b border-[#f4f4f5] last:border-0"
                           >
                             <span className="text-[13px] font-medium truncate">{v.name}</span>
-                            <span className="ad-num text-xs font-semibold shrink-0">Rp {Number(v.price).toLocaleString('id-ID')}</span>
+                            <span className="ad-num text-xs font-semibold shrink-0">Rp {formatIdNumber(v.price)}</span>
                           </button>
                         ))
                       )}
@@ -602,11 +603,11 @@ export default function Orders() {
                     <div className="flex justify-between gap-4"><span className="text-[#6e6e73]">Pelanggan</span><span className="text-right truncate normal-case">{mEmail || '-'}</span></div>
                     {mUseCustom && mFinalPrice ? (
                       <>
-                        <div className="flex justify-between"><span className="text-[#6e6e73]">Katalog</span><s className="text-[#aeaeb2]">Rp {Number(mCatalogPrice).toLocaleString('id-ID')}</s></div>
-                        <div className="flex justify-between"><span className="text-[#6e6e73]">Harga final</span><span className="font-semibold">Rp {Number(mFinalPrice).toLocaleString('id-ID')}</span></div>
+                        <div className="flex justify-between"><span className="text-[#6e6e73]">Katalog</span><s className="text-[#aeaeb2]">Rp {formatIdNumber(mCatalogPrice)}</s></div>
+                        <div className="flex justify-between"><span className="text-[#6e6e73]">Harga final</span><span className="font-semibold">Rp {formatIdNumber(mFinalPrice)}</span></div>
                       </>
                     ) : (
-                      <div className="flex justify-between"><span className="text-[#6e6e73]">Harga</span><span className="font-semibold">Rp {Number(mCatalogPrice).toLocaleString('id-ID')}</span></div>
+                      <div className="flex justify-between"><span className="text-[#6e6e73]">Harga</span><span className="font-semibold">Rp {formatIdNumber(mCatalogPrice)}</span></div>
                     )}
                     <div className="flex justify-between"><span className="text-[#6e6e73]">Ref</span><span className="normal-case">{mPaymentRef || '-'}</span></div>
                   </div>
@@ -627,7 +628,7 @@ export default function Orders() {
                   <div className="flex justify-between"><span className="text-[#6e6e73]">Tanggal</span><span>{new Date(mCreated.createdAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}</span></div>
                   <div className="flex justify-between gap-4"><span className="text-[#6e6e73]">Produk</span><span className="text-right font-medium normal-case">{mCreated.productName}</span></div>
                   <div className="flex justify-between gap-4"><span className="text-[#6e6e73]">Pelanggan</span><span className="text-right truncate normal-case">{mEmail}</span></div>
-                  <div className="flex justify-between"><span className="text-[#6e6e73]">Jumlah</span><span className="font-semibold">Rp {Number(mCreated.amount).toLocaleString('id-ID')}</span></div>
+                  <div className="flex justify-between"><span className="text-[#6e6e73]">Jumlah</span><span className="font-semibold">Rp {formatIdNumber(mCreated.amount)}</span></div>
                   <div className="flex justify-between"><span className="text-[#6e6e73]">Status</span><StatusChip status={mCreated.status}>{mCreated.status}</StatusChip></div>
                   <div className="flex justify-between"><span className="text-[#6e6e73]">Ref</span><span className="normal-case">{mPaymentRef || '-'}</span></div>
                 </div>

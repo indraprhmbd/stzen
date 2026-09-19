@@ -10,6 +10,7 @@ import CopyCell from '../../components/admin/CopyCell'
 import { SkeletonRows, SkeletonCards } from '../../components/admin/TableSkeleton'
 import { Refresh, Cube, Archive, ShoppingBag, GraphUp, Plus, Eye, EyeClosed } from 'iconoir-react'
 import { AreaChart, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell, Area } from 'recharts'
+import { formatIdNumber } from '../../lib/format'
 
 interface Stats {
   totalProducts: number
@@ -162,7 +163,7 @@ export default function Overview() {
     pendingOrders: String(stats?.pendingOrders ?? 0),
     totalOrders: String(byStatus.reduce((s, e) => s + (e.count ?? 0), 0)),
   }
-  const revenueText = showRevenue && stats?.revenue ? `Rp ${Number(stats.revenue).toLocaleString('id-ID')}` : '*****'
+  const revenueText = showRevenue && stats?.revenue ? `Rp ${formatIdNumber(stats.revenue)}` : '*****'
 
   return (
     <div className="flex flex-col gap-4">
@@ -270,7 +271,7 @@ export default function Overview() {
                 <CartesianGrid stroke="#f1f1f4" vertical={false} />
                 <XAxis dataKey="label" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} interval={4} />
                 <YAxis tick={{ fontSize: 10 }} axisLine={false} tickLine={false} width={40} tickFormatter={(v) => `${v / 1000}k`} />
-                <Tooltip contentStyle={tooltipStyle} formatter={(v: unknown) => [`Rp ${Number(v).toLocaleString('id-ID')}`, 'revenue']} />
+                <Tooltip contentStyle={tooltipStyle} formatter={(v: unknown) => [`Rp ${formatIdNumber(v as number)}`, 'revenue']} />
                 <Area type="monotone" dataKey="revenue" stroke="#1d1d1f" fill="#1d1d1f" fillOpacity={0.06} strokeWidth={1.5} />
               </AreaChart>
             </ResponsiveContainer>
@@ -396,7 +397,7 @@ export default function Overview() {
                   <td className="text-xs ad-num whitespace-nowrap text-[#6e6e73]">{formatAge(o.createdAt)}</td>
                   <td className="text-[13px] font-medium max-w-[160px] truncate" title={o.productName}>{o.productName}</td>
                   <td className="text-xs ad-num text-[#6e6e73] max-w-[140px] truncate" title={o.customerEmail ?? '-'}>{o.customerEmail ?? '-'}</td>
-                  <td className="text-[13px] ad-num">Rp {Number(o.amount).toLocaleString('id-ID')}</td>
+                  <td className="text-[13px] ad-num">Rp {formatIdNumber(o.amount)}</td>
                   <td className="text-right">
                     <div className="flex justify-end gap-1.5">
                       {o.status === 'PENDING' && (

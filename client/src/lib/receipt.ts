@@ -1,3 +1,4 @@
+import { formatIdNumber } from '../lib/format'
 export interface ReceiptOrder {
   id: string
   productName: string
@@ -21,7 +22,7 @@ export function printReceipt(o: ReceiptOrder): void {
   const w = window.open('', '_blank')
   if (!w) return
   const no = o.id.slice(0, 8).toUpperCase()
-  const amt = 'Rp ' + Number(o.amount).toLocaleString('id-ID')
+  const amt = 'Rp ' + formatIdNumber(o.amount)
   const customerRow = o.userId
     ? `<div><span>PELANGGAN</span><b>${o.userId.slice(0, 8).toUpperCase()}</b></div>`
     : ''

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { apiV1Signal } from '../lib/api'
 import { useBrand } from '../hooks/useBrand'
 import { useCopy } from '../hooks/useCopy'
+import { formatIdNumber } from '../lib/format'
 
 type Product = {
   id: string
@@ -154,7 +155,7 @@ export default function SearchOverlay({ open, onClose }: SearchOverlayProps) {
                     </div>
                     <div className="shrink-0 text-right">
                       <p className="font-black text-sm text-black" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-                        {brand.storefront.currencySymbol} {Number(product.price).toLocaleString('id-ID')}
+                        {brand.storefront.currencySymbol} {formatIdNumber(product.price)}
                       </p>
                       <p className={`text-[9px] font-bold uppercase ${inStock ? 'text-green-600' : 'text-red-500'}`}>
                         {inStock ? t.products.inStock : t.products.outOfStock}

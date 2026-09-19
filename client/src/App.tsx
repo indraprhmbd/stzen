@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import { BrandProvider } from './hooks/useBrand'
 import { RequireAdmin } from './components/RequireAdmin'
+import { ErrorBoundary } from './components/ErrorBoundary'
 
 const Catalog = lazy(() => import('./pages/Catalog'))
 const ProductList = lazy(() => import('./pages/ProductList'))
@@ -40,6 +41,7 @@ function PageLoader() {
 function App() {
   return (
     <BrandProvider>
+      <ErrorBoundary>
       <Suspense fallback={<PageLoader />}>
         <Routes>
           {/* Public */}
@@ -83,6 +85,7 @@ function App() {
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>
+      </ErrorBoundary>
     </BrandProvider>
   )
 }

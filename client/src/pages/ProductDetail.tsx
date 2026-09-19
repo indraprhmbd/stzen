@@ -13,6 +13,7 @@ import { useBrand } from '../hooks/useBrand'
 import { useRafScroll } from '../hooks/useRafScroll'
 import { useCopy } from '../hooks/useCopy'
 import { useAuth } from '../hooks/useAuth'
+import { formatIdNumber } from '../lib/format'
 
 // Lazy: description sits below related products, parser never costs paint.
 const Markdown = lazy(() => import('../components/Markdown'))
@@ -349,11 +350,11 @@ export default function ProductDetail() {
           {/* Price */}
           <div className="flex items-center gap-2 mb-4">
             <div className="font-black text-4xl text-neutral" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-              {brand.storefront.currencySymbol} {Number(product.price).toLocaleString('id-ID')}
+              {brand.storefront.currencySymbol} {formatIdNumber(product.price)}
             </div>
             {pct !== null && (
               <s className="text-sm font-bold text-neutral/50">
-                {brand.storefront.currencySymbol} {Number(product.compareAtPrice).toLocaleString('id-ID')}
+                {brand.storefront.currencySymbol} {formatIdNumber(product.compareAtPrice)}
               </s>
             )}
             {pct !== null && (
@@ -468,11 +469,11 @@ export default function ProductDetail() {
               {product.name}
             </p>
             <p className="font-black text-sm text-neutral" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-              {brand.storefront.currencySymbol} {Number(product.price).toLocaleString('id-ID')}
+              {brand.storefront.currencySymbol} {formatIdNumber(product.price)}
               {pct !== null && (
                 <>
                   {' '}<s className="text-[10px] font-bold text-neutral/50">
-                    {brand.storefront.currencySymbol} {Number(product.compareAtPrice).toLocaleString('id-ID')}
+                    {brand.storefront.currencySymbol} {formatIdNumber(product.compareAtPrice)}
                   </s>
                   {' '}<span className="rounded-full border border-black text-black text-[9px] px-1.5 py-0.5">
                     -{pct}%
@@ -568,12 +569,12 @@ export default function ProductDetail() {
               </div>
               <div className="flex justify-between gap-3 py-1">
                 <span className="opacity-60">HARGA</span>
-                <span className="font-bold whitespace-nowrap">{brand.storefront.currencySymbol} {Number(pct !== null ? product.compareAtPrice : product.price).toLocaleString('id-ID')}</span>
+                <span className="font-bold whitespace-nowrap">{brand.storefront.currencySymbol} {formatIdNumber(pct !== null ? product.compareAtPrice : product.price)}</span>
               </div>
               {pct !== null && (
                 <div className="flex justify-between gap-3 py-1">
                   <span className="opacity-60">DISKON</span>
-                  <span className="font-bold whitespace-nowrap">-{brand.storefront.currencySymbol}{(Number(product.compareAtPrice) - Number(product.price)).toLocaleString('id-ID')} ({pct}%)</span>
+                  <span className="font-bold whitespace-nowrap">-{brand.storefront.currencySymbol}{formatIdNumber(Number(product.compareAtPrice) - Number(product.price))} ({pct}%)</span>
                 </div>
               )}
               <div className="flex justify-between gap-3 py-1">
@@ -583,12 +584,12 @@ export default function ProductDetail() {
               {method === 'sumopod' && (
                 <div className="flex justify-between gap-3 py-1">
                   <span className="opacity-60">{t.products.feeLabel}</span>
-                  <span className="font-bold whitespace-nowrap">+{brand.storefront.currencySymbol} {(Math.ceil(Number(product.price) * settings.sumopodFeePct) + settings.sumopodFeeFixed).toLocaleString('id-ID')}</span>
+                  <span className="font-bold whitespace-nowrap">+{brand.storefront.currencySymbol} {formatIdNumber(Math.ceil(Number(product.price) * settings.sumopodFeePct) + settings.sumopodFeeFixed)}</span>
                 </div>
               )}
               <div className="border-t-2 border-dashed border-black/60 mt-2 pt-2 flex justify-between items-center gap-3">
                 <span className="font-black text-sm">TOTAL</span>
-                <span className="font-black text-xl whitespace-nowrap">{brand.storefront.currencySymbol} {(method === 'sumopod' ? Number(product.price) + Math.ceil(Number(product.price) * settings.sumopodFeePct) + settings.sumopodFeeFixed : Number(product.price)).toLocaleString('id-ID')}</span>
+                <span className="font-black text-xl whitespace-nowrap">{brand.storefront.currencySymbol} {formatIdNumber(method === 'sumopod' ? Number(product.price) + Math.ceil(Number(product.price) * settings.sumopodFeePct) + settings.sumopodFeeFixed : product.price)}</span>
               </div>
             </div>
             {rails.length > 1 && (
