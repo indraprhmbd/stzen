@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { Eye, EyeSlash } from '@phosphor-icons/react'
+import { Eye, EyeClosed } from 'iconoir-react'
 import { useAuth } from '../hooks/useAuth'
 import { useBrand } from '../hooks/useBrand'
 import { useCopy } from '../hooks/useCopy'
@@ -84,7 +84,7 @@ export default function UpdatePassword() {
                       onClick={() => setShowPw((v) => !v)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-[#0D110F]/60 hover:text-[#0D110F]"
                     >
-                      {showPw ? <EyeSlash size={18} weight="bold" /> : <Eye size={18} weight="bold" />}
+                      {showPw ? <EyeClosed width={18} height={18} strokeWidth={2} /> : <Eye width={18} height={18} strokeWidth={2} />}
                     </button>
                   </div>
                   <div className="relative">
@@ -104,7 +104,7 @@ export default function UpdatePassword() {
                       onClick={() => setShowPw((v) => !v)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-[#0D110F]/60 hover:text-[#0D110F]"
                     >
-                      {showPw ? <EyeSlash size={18} weight="bold" /> : <Eye size={18} weight="bold" />}
+                      {showPw ? <EyeClosed width={18} height={18} strokeWidth={2} /> : <Eye width={18} height={18} strokeWidth={2} />}
                     </button>
                   </div>
 

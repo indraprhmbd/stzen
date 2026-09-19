@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { authedApiRequest } from '../lib/api'
 import { useAuth } from '../hooks/useAuth'
 import { useNavigate } from 'react-router-dom'
-import { Tray } from '@phosphor-icons/react'
+import { Box } from 'iconoir-react'
 import Layout from '../components/Layout'
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -181,7 +181,7 @@ export default function AdminOrders() {
         </div>
       ) : filteredOrders.length === 0 ? (
         <div className="text-center py-12 bg-surface-container border-[3px] border-on-surface shadow-brutal p-8">
-          <span className="text-on-surface-variant/30 mb-2 flex justify-center"><Tray size={40} weight="duotone" /></span>
+          <span className="text-on-surface-variant/30 mb-2 flex justify-center"><Box width={40} height={40} strokeWidth={1.5} /></span>
           <p className="text-on-surface-variant/50 font-bold">No orders found</p>
         </div>
       ) : (

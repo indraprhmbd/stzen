@@ -5,6 +5,10 @@
     "moduleResolution": "bundler",
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "strict": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    // Next hardening wave (Stream 5, needs ~70 mechanical fixes first):
+    // noUncheckedIndexedAccess, noUnusedLocals, noUnusedParameters,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,

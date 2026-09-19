@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { Link } from 'react-router-dom'
-import { Tray, Lock } from '@phosphor-icons/react'
+import { Box, Lock } from 'iconoir-react'
 import { useAuth } from '../hooks/useAuth'
 import { useBrand } from '../hooks/useBrand'
 import { usePublicSettings } from '../hooks/usePublicSettings'
@@ -276,7 +276,7 @@ const { t } = useCopy()
 
       {!session && (
         <div className="text-center py-12 bg-surface-container border-[3px] border-on-surface shadow-brutal p-8">
-          <span className="text-on-surface-variant/30 mb-3 flex justify-center"><Lock size={48} weight="duotone" /></span>
+          <span className="text-on-surface-variant/30 mb-3 flex justify-center"><Lock width={48} height={48} strokeWidth={1.5} /></span>
           <p className="font-bold text-on-surface mb-1">
             {user ? 'Loading your orders...' : 'Sign in to view your orders'}
           </p>
@@ -343,7 +343,7 @@ const { t } = useCopy()
             </div>
           ) : filteredOrders.length === 0 ? (
             <div className="text-center py-12 bg-surface-container border-[3px] border-on-surface shadow-brutal p-8">
-              <span className="text-on-surface-variant/30 mb-2 flex justify-center"><Tray size={40} weight="duotone" /></span>
+              <span className="text-on-surface-variant/30 mb-2 flex justify-center"><Box width={40} height={40} strokeWidth={1.5} /></span>
               <p className="text-on-surface-variant/50 font-bold">{t.dashboard.noOrders}</p>
             </div>
           ) : (

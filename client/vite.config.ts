@@ -38,6 +38,9 @@ export default defineConfig({
           'vendor-react': ['react', 'react-dom'],
           'vendor-router': ['react-router-dom'],
           'vendor-supabase': ['@supabase/supabase-js'],
+          // Heavy deps, single-page usage: keep out of the main route chunks.
+          'vendor-charts': ['recharts'],
+          'vendor-markdown': ['react-markdown', 'remark-gfm'],
         },
       },
     },
