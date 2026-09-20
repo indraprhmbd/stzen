@@ -675,6 +675,18 @@ export default function Orders() {
                   </div>
                 )}
                 <label className="ad-label">Ref Bayar (opsional)<input type="text" value={mPaymentRef} onChange={(e) => setMPaymentRef(e.target.value)} placeholder="tunai / transfer ..." className="ad-input mt-1.5 normal-case" /></label>
+                <div className="-mt-2 flex max-w-full gap-1.5 overflow-x-auto pb-0.5 *:shrink-0">
+                  {['SEABANK', 'QRIS', 'TF BANK', 'TUNAI'].map((r) => (
+                    <button
+                      key={r}
+                      type="button"
+                      onClick={() => setMPaymentRef(r)}
+                      className={`rounded-full border px-2.5 py-1 text-[10px] font-bold tracking-wide transition-colors ${mPaymentRef === r ? 'border-black bg-black text-white' : 'border-[#e0e0e6] bg-white text-[#6e6e73] hover:border-black hover:text-black'}`}
+                    >
+                      {r}
+                    </button>
+                  ))}
+                </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <label className="ad-label">Akun Tujuan{mSelected?.requiresDeliveryInfo ? ' *' : ''}
                     <input type="text" value={mAccount} onChange={(e) => setMAccount(e.target.value)} placeholder="email / username tujuan" className="ad-input mt-1.5 normal-case" />
