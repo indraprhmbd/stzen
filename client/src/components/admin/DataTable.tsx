@@ -39,6 +39,22 @@ interface DataTableProps {
 // data attribute - zero extra DOM nodes, zero JS on the row-render call
 // sites. app.css turns this into a labeled-card layout below the sm
 // breakpoint, no per-page markup duplication needed.
+function stampCells(cellChildren: ReactNode, labels: string[]): ReactNode {
+  let colIndex = 0
+  return Children.toArray(cellChildren).map((cell) => {
+    if (!isValidElement(cell)) return cell
+    const cellEl = cell as ReactElement<{ colSpan?: number }>
+    const span = cellEl.props.colSpan ?? 1
+    const label = labels[colIndex]
+    colIndex += span
+    // Colspan group headers and empty-labeled cells (e.g. the select
+    // checkbox column) stay unlabeled: on mobile they fall into the
+    // plain full-width td:not([data-label]) rule.
+    if (cellEl.props.colSpan || !label) return cellEl
+    return cloneElement(cellEl, { 'data-label': label } as Record<string, unknown>)
+  })
+}
+
 function withMobileLabels(children: ReactNode, labels: string[]): ReactNode {
   return Children.map(children, (child) => {
     if (!isValidElement(child)) return child
@@ -48,30 +64,19 @@ function withMobileLabels(children: ReactNode, labels: string[]): ReactNode {
       return cloneElement(frag, undefined, withMobileLabels(frag.props.children, labels))
     }
 
-    // SelectableRow renders its own <tr> with a leading checkbox <td>:
-    // consume the empty select label so body cells align with columns.
+    // SelectableRow renders its own <tr> with a leading checkbox <td> and
+    // takes body <td>s as children: stamp them directly (there is no inner
+    // <tr> to walk into) with the label window shifted past the empty
+    // select label so columns stay aligned on mobile cards.
     if (child.type === SelectableRow) {
       const sel = child as ReactElement<{ children?: ReactNode }>
       const bodyLabels = labels[0] === '' ? labels.slice(1) : labels
-      return cloneElement(sel, undefined, withMobileLabels(sel.props.children, bodyLabels))
+      return cloneElement(sel, undefined, stampCells(sel.props.children, bodyLabels))
     }
 
     if (child.type === 'tr') {
       const tr = child as ReactElement<{ children?: ReactNode }>
-      let colIndex = 0
-      const cells = Children.toArray(tr.props.children).map((cell) => {
-        if (!isValidElement(cell)) return cell
-        const cellEl = cell as ReactElement<{ colSpan?: number }>
-        const span = cellEl.props.colSpan ?? 1
-        const label = labels[colIndex]
-        colIndex += span
-        // Colspan group headers and empty-labeled cells (e.g. the select
-        // checkbox column) stay unlabeled: on mobile they fall into the
-        // plain full-width td:not([data-label]) rule.
-        if (cellEl.props.colSpan || !label) return cellEl
-        return cloneElement(cellEl, { 'data-label': label } as Record<string, unknown>)
-      })
-      return cloneElement(tr, undefined, cells)
+      return cloneElement(tr, undefined, stampCells(tr.props.children, labels))
     }
 
     return child
