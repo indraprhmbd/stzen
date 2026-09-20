@@ -153,7 +153,7 @@ export default function BasisPanel({ products, variants, onCreate, onEdit, onDel
       notify(
         out.skipped.length === 0
           ? `${verb}: ${out.updated} induk`
-          : `${verb} ${out.updated} dari ${out.scanned} — ${out.skipped.length} dilewati (${out.skipped[0]!.reason})`,
+          : `${verb} ${out.updated} dari ${out.scanned} - ${out.skipped.length} dilewati (${out.skipped[0]!.reason})`,
         out.updated > 0 ? 'success' : 'error'
       )
     } catch (e: unknown) {

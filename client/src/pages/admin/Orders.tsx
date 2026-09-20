@@ -71,6 +71,8 @@ function formatAge(iso: string): string {
   return `${Math.floor(hours / 24)}h ${hours % 24}j`
 }
 
+interface ManualVariant { id: string; name: string; price: string | number; requiresDeliveryInfo: boolean }
+
 export default function Orders() {
   const [q, setQ] = useState('')
   const [searchParams, setSearchParams] = useSearchParams()
@@ -93,8 +95,13 @@ export default function Orders() {
   const [pendingRefund, setPendingRefund] = useState<AdminOrder | null>(null)
   const [pendingDeliver, setPendingDeliver] = useState<AdminOrder | null>(null)
   const [receipt, setReceipt] = useState<AdminOrder | null>(null)
-  const [manualVariants, setManualVariants] = useState<{ id: string; name: string; price: string | number }[]>([])
+  const [manualVariants, setManualVariants] = useState<ManualVariant[]>([])
   const [mEmail, setMEmail] = useState('')
+  const [mAccount, setMAccount] = useState('')
+  const [mWa, setMWa] = useState('')
+  // Review mode: Setujui on a manual PENDING row prefills this form instead
+  // of bare-approving. Null = create mode.
+  const [mReview, setMReview] = useState<AdminOrder | null>(null)
   const [mVariantId, setMVariantId] = useState('')
   const [mSearch, setMSearch] = useState('')
   const [mPaymentRef, setMPaymentRef] = useState('')
@@ -204,7 +211,8 @@ export default function Orders() {
   }
 
   // Bulk approve: forward-only PENDING->PAID per row, inapplicable rows skip
-  // with reasons. Reject/refund stay per-row behind their confirm dialogs.
+  // with reasons. Manual-provider rows always skip (per-row review form).
+  // Reject/refund stay per-row behind their confirm dialogs.
   async function bulkApprove() {
     const ids = selection.selected
     if (bulkBusy || ids.length === 0) return
@@ -224,7 +232,7 @@ export default function Orders() {
       await fetchOrders()
       setActionMsg(out.skipped.length === 0
         ? `Disetujui: ${out.approved} pesanan`
-        : `Disetujui ${out.approved} dari ${out.scanned} — ${out.skipped.length} dilewati (${out.skipped[0]!.reason})`)
+        : `Disetujui ${out.approved} dari ${out.scanned} - ${out.skipped.length} dilewati (${out.skipped[0]!.reason})`)
     } catch (e: unknown) {
       setActionErr(e instanceof Error ? e.message : 'Gagal menyetujui massal')
     } finally {
@@ -291,22 +299,54 @@ export default function Orders() {
     setMPaymentRef('')
     setMUseCustom(false)
     setMCustomPrice('')
+    setMAccount('')
+    setMWa('')
+    setMReview(null)
     setMError(null)
     setMCreated(null)
     setMStep(1)
   }
 
-  async function openManual() {
-    setMError(null)
-    setMStep(1)
-    setMCreated(null)
-    if (manualVariants.length === 0) {
-      try {
-        const res = await authedApiRequest((c) => c.api.v1.admin.variants.$get({ query: { compact: '1' } }))
-        const list = (await res.json()) as { id: string; name: string; price: string | number; isActive: boolean }[]
-        setManualVariants(list.filter((v) => v.isActive).map((v) => ({ id: v.id, name: v.name, price: v.price })))
-      } catch { setMError('Gagal memuat varian') }
+  async function ensureManualVariants(): Promise<ManualVariant[]> {
+    if (manualVariants.length > 0) return manualVariants
+    try {
+      const res = await authedApiRequest((c) => c.api.v1.admin.variants.$get({ query: { compact: '1' } }))
+      const list = (await res.json()) as { id: string; name: string; price: string | number; isActive: boolean; requiresDeliveryInfo?: boolean }[]
+      const mapped = list.filter((v) => v.isActive).map((v) => ({ id: v.id, name: v.name, price: v.price, requiresDeliveryInfo: v.requiresDeliveryInfo ?? false }))
+      setManualVariants(mapped)
+      return mapped
+    } catch {
+      setMError('Gagal memuat varian')
+      return []
     }
+  }
+
+  async function openManual() {
+    resetManualForm()
+    setMError(null)
+    await ensureManualVariants()
+    ;(document.getElementById('manual_modal') as HTMLDialogElement | null)?.showModal()
+  }
+
+  // Review mode: manual PENDING rows land here prefilled — price + contact
+  // editable, email/variant locked — instead of a bare Setujui click.
+  async function openReview(o: AdminOrder) {
+    resetManualForm()
+    setMError(null)
+    const list = await ensureManualVariants()
+    const match = list.find((v) => v.id === o.variantPublicId) ?? null
+    setMEmail(o.customerEmail ?? '')
+    if (match) {
+      setMVariantId(match.id)
+      if (o.amount !== String(match.price)) {
+        setMUseCustom(true)
+        setMCustomPrice(o.amount)
+      }
+    }
+    setMPaymentRef(o.paymentRef ?? '')
+    setMAccount(o.customerAccount ?? '')
+    setMWa(o.waNumber ?? '')
+    setMReview(o)
     ;(document.getElementById('manual_modal') as HTMLDialogElement | null)?.showModal()
   }
 
@@ -356,6 +396,8 @@ export default function Orders() {
             variantId: mVariantId,
             paymentRef: mPaymentRef.trim() || null,
             ...(customAmount ? { amount: customAmount } : {}),
+            ...(mAccount.trim() ? { customerAccount: mAccount.trim() } : {}),
+            ...(mWa.trim() ? { waNumber: mWa.trim() } : {}),
           },
         })
       )
@@ -369,6 +411,42 @@ export default function Orders() {
       await fetchOrders()
     } catch (err: unknown) {
       setMError(err instanceof Error ? err.message : 'Gagal membuat pesanan')
+    } finally {
+      setMSaving(false)
+    }
+  }
+
+  async function submitReview(e: React.FormEvent) {
+    e.preventDefault()
+    if (!mReview) return
+    setMError(null)
+    setMSaving(true)
+    try {
+      const customAmount = mUseCustom && mCustomPrice && mCustomPrice !== mCatalogPrice ? mCustomPrice : undefined
+      const res = await authedApiRequest((c) =>
+        c.api.v1.admin.orders[':id']['approve-manual'].$post(
+          {
+            param: { id: mReview.id },
+            json: {
+              ...(customAmount ? { amount: customAmount } : {}),
+              customerAccount: mAccount.trim(),
+              waNumber: mWa.trim(),
+            },
+          },
+          { headers: { 'Idempotency-Key': crypto.randomUUID() } }
+        )
+      )
+      if (!res.ok) {
+        const err = (await res.json().catch(() => ({}))) as { error?: string }
+        throw new Error(err.error || 'Gagal menyetujui')
+      }
+      const out = (await res.json()) as { order: AdminOrder; allocated: boolean }
+      setMReview(null)
+      ;(document.getElementById('manual_modal') as HTMLDialogElement | null)?.close()
+      await fetchOrders()
+      setActionMsg(out.allocated ? `Disetujui + dialokasikan: ${out.order.productName}` : 'Disetujui (PAID), lanjut Kirim dari antrean')
+    } catch (err: unknown) {
+      setMError(err instanceof Error ? err.message : 'Gagal menyetujui')
     } finally {
       setMSaving(false)
     }
@@ -481,7 +559,7 @@ export default function Orders() {
                   )}
                   {o.status === 'PENDING' && (
                     <>
-                      <button disabled={actionLoading === o.id} onClick={() => handleAction(o.id, 'approve')} className="ad-btn ad-btn-dark"><EditPencil width={14} height={14} strokeWidth={1.5} />Setujui</button>
+                      <button disabled={actionLoading === o.id} onClick={() => { if (o.paymentProvider === 'manual' || o.paymentProvider == null) void openReview(o); else void handleAction(o.id, 'approve') }} className="ad-btn ad-btn-dark"><EditPencil width={14} height={14} strokeWidth={1.5} />Setujui</button>
                           <button disabled={actionLoading === o.id} onClick={() => askReject(o)} className="ad-btn ad-btn-danger"><Trash width={14} height={14} strokeWidth={1.5} />Tolak</button>
                     </>
                   )}
@@ -542,19 +620,20 @@ export default function Orders() {
         <div className="modal-box ad-dialog max-w-md p-6">
           {mStep === 1 ? (
             <>
-              <h3 className="font-semibold text-[17px] tracking-tight">Buat Pesanan Manual</h3>
-              <p className="text-xs text-[#6e6e73] mt-1">Pesanan tercatat PENDING - setujui dari antrean untuk alokasi stok.</p>
-              <form onSubmit={submitManual} className="flex flex-col gap-4 mt-5">
+              <h3 className="font-semibold text-[17px] tracking-tight">{mReview ? 'Review Pesanan Manual' : 'Buat Pesanan Manual'}</h3>
+              <p className="text-xs text-[#6e6e73] mt-1">{mReview ? 'Periksa harga + kontak, konfirmasi untuk setujui + alokasi.' : 'Pesanan tercatat PENDING - setujui dari antrean untuk alokasi stok.'}</p>
+              <form onSubmit={mReview ? submitReview : submitManual} className="flex flex-col gap-4 mt-5">
                 <label className="ad-label">Email Pelanggan
-                  <input type="email" required value={mEmail} onChange={(e) => setMEmail(e.target.value)} placeholder="pelanggan@email.com" className="ad-input mt-1.5 normal-case" />
-                  <span className="text-[11px] text-[#aeaeb2] mt-1 normal-case font-normal">Harus sudah terdaftar (punya akun).</span>
+                  <input type="email" required disabled={mReview !== null} value={mEmail} onChange={(e) => setMEmail(e.target.value)} placeholder="pelanggan@email.com" className="ad-input mt-1.5 normal-case" />
+                  <span className="text-[11px] text-[#aeaeb2] mt-1 normal-case font-normal">{mReview ? 'Pemilik pesanan (terkunci).' : 'Harus sudah terdaftar (punya akun).'}</span>
                 </label>
                 <div>
                   <span className="ad-label">Varian</span>
                   <div className="relative mt-1.5">
                     <input
                       type="text"
-                      value={mSelected ? `${mSelected.name} - Rp ${formatIdNumber(mSelected.price)}` : mSearch}
+                      disabled={mReview !== null}
+                      value={mSelected ? `${mSelected.name} - Rp ${formatIdNumber(mSelected.price)}` : mReview ? mReview.productName : mSearch}
                       onChange={(e) => { setMVariantId(''); setMSearch(e.target.value) }}
                       onFocus={() => { if (mSelected) { setMSearch(''); setMVariantId('') } }}
                       placeholder="Ketik untuk cari varian..."
@@ -562,7 +641,7 @@ export default function Orders() {
                     />
                     <Search width={15} height={15} strokeWidth={1.5} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#aeaeb2] pointer-events-none" />
                   </div>
-                  {!mSelected && (
+                  {!mSelected && !mReview && (
                     <div className="mt-1.5 max-h-44 overflow-y-auto rounded-[10px] border border-[#e8e8ed]">
                       {mFiltered.length === 0 ? (
                         <p className="text-xs text-[#aeaeb2] px-3 py-2.5">Tidak ada varian cocok.</p>
@@ -596,6 +675,15 @@ export default function Orders() {
                   </div>
                 )}
                 <label className="ad-label">Ref Bayar (opsional)<input type="text" value={mPaymentRef} onChange={(e) => setMPaymentRef(e.target.value)} placeholder="tunai / transfer ..." className="ad-input mt-1.5 normal-case" /></label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <label className="ad-label">Akun Tujuan{mSelected?.requiresDeliveryInfo ? ' *' : ''}
+                    <input type="text" value={mAccount} onChange={(e) => setMAccount(e.target.value)} placeholder="email / username tujuan" className="ad-input mt-1.5 normal-case" />
+                  </label>
+                  <label className="ad-label">No. WA{mSelected?.requiresDeliveryInfo ? ' *' : ''}
+                    <input type="tel" value={mWa} onChange={(e) => setMWa(e.target.value)} placeholder="08..." className="ad-input mt-1.5 normal-case" />
+                  </label>
+                </div>
+                {mSelected?.requiresDeliveryInfo && <p className="text-[11px] text-[#aeaeb2] -mt-2">Varian ini wajib info pengiriman.</p>}
                 {mSelected && (
                   <div className="ad-num text-[13px] border-t-2 border-dashed border-[#e8e8ed] pt-3 flex flex-col gap-1.5">
                     <div className="text-[11px] font-bold tracking-wider text-[#aeaeb2]">PRATINJAU STRUK</div>
@@ -610,12 +698,18 @@ export default function Orders() {
                       <div className="flex justify-between"><span className="text-[#6e6e73]">Harga</span><span className="font-semibold">Rp {formatIdNumber(mCatalogPrice)}</span></div>
                     )}
                     <div className="flex justify-between"><span className="text-[#6e6e73]">Ref</span><span className="normal-case">{mPaymentRef || '-'}</span></div>
+                    {(mAccount || mWa) && (
+                      <>
+                        {mAccount && <div className="flex justify-between gap-4"><span className="text-[#6e6e73]">Akun</span><span className="text-right font-medium break-all normal-case">{mAccount}</span></div>}
+                        {mWa && <div className="flex justify-between"><span className="text-[#6e6e73]">WA</span><span className="font-mono font-semibold">+{mWa}</span></div>}
+                      </>
+                    )}
                   </div>
                 )}
                 {mError && <p className="text-xs font-semibold text-red-600">{mError}</p>}
                 <div className="flex justify-end gap-2 mt-2">
                   <button type="button" onClick={() => (document.getElementById('manual_modal') as HTMLDialogElement | null)?.close()} className="ad-btn">Batal</button>
-                  <button type="submit" disabled={mSaving || !mSelected || (mUseCustom && !mCustomPrice)} className="ad-btn ad-btn-dark">{mSaving ? 'Menyimpan...' : 'Buat Pesanan'}</button>
+                  <button type="submit" disabled={mSaving || !mSelected || (mUseCustom && !mCustomPrice)} className="ad-btn ad-btn-dark">{mSaving ? 'Menyimpan...' : mReview ? 'Setujui & Alokasikan' : 'Buat Pesanan'}</button>
                 </div>
               </form>
             </>

@@ -107,12 +107,12 @@ export const adminVariantRoutes = new Hono<VariantEnv>()
   })
 
   .get('/', async (c) => {
-    // ?compact=1: 4-column projection for dropdowns (manual-order picker).
+    // ?compact=1: 5-column projection for dropdowns (manual-order picker).
     // The full 18-field rows stay on the default path for ProductsPage.
     if (c.req.query('compact') === '1') {
       const { data, error } = await supabaseAdmin
         .from(PRODUCT_VARIANTS)
-        .select('public_id, name, price, is_active')
+        .select('public_id, name, price, is_active, requires_delivery_info')
         .order('name', { ascending: true })
       if (error) throw new Error(error.message)
       return c.json((data || []).map((v: any) => ({
@@ -120,6 +120,7 @@ export const adminVariantRoutes = new Hono<VariantEnv>()
         name: v.name,
         price: v.price,
         isActive: v.is_active,
+        requiresDeliveryInfo: v.requires_delivery_info ?? false,
       })))
     }
 

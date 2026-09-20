@@ -5,6 +5,8 @@ import { supabaseAdmin } from '../../shared/db'
 import { type AuthEnv } from '../../shared/middleware/auth'
 import { ordersService, auditOrderApprove } from '../orders/orders.service'
 import { appendAudit, findAuditByIdempotencyKey } from '../../shared/lib/audit'
+import { normalizeWaNumber } from '../../shared/lib/wa'
+import { BadRequestError } from '../../shared/errors/http'
 
 const PROFILES = 'profiles'
 const PRODUCT_VARIANTS = 'product_variants'
@@ -26,6 +28,18 @@ const ManualOrderSchema = z.object({  customerEmail: z.string().email(),
   // Optional override (deal price, rounding, promo). Raw digits; variant
   // catalog price applies when omitted.
   amount: z.string().regex(/^\d+$/, 'Harga integer').optional(),
+  // Delivery contact (admin-collected). Required iff the variant's
+  // requires_delivery_info flag is on (enforced below from the DB row).
+  customerAccount: z.string().max(120).optional(),
+  waNumber: z.string().max(32).optional(),
+})
+
+// Manual review approve: amount/contact edits + approve (+allocate vault)
+// in one call. PENDING + manual rail only; enforced in the service.
+const ApproveManualSchema = z.object({
+  amount: z.string().regex(/^\d+$/, 'Harga integer').optional(),
+  customerAccount: z.string().max(120).optional(),
+  waNumber: z.string().max(32).optional(),
 })
 
 type AdminOrderEnv = AuthEnv
@@ -54,7 +68,12 @@ export const adminOrderRoutes = new Hono<AdminOrderEnv>()
   .post('/bulk', zValidator('json', BulkApproveSchema), async (c) => {
     const user = c.get('user')
     const { ids } = c.req.valid('json')
-    return c.json(await ordersService.bulkApprove(ids, { sub: user.sub, email: user.email ?? null }))
+    // Manual-provider rows skip bulk: they need the per-row review form.
+    const inspect = (id: string) =>
+      ordersService.getById(id)
+        .then((o) => ({ paymentProvider: (o as any).paymentProvider ?? null }))
+        .catch(() => null)
+    return c.json(await ordersService.bulkApprove(ids, { sub: user.sub, email: user.email ?? null }, { inspect }))
   })
 
   .post('/:id/approve', async (c) => {
@@ -67,6 +86,35 @@ export const adminOrderRoutes = new Hono<AdminOrderEnv>()
     const order = await ordersService.transitionStatus(c.req.param('id'), 'approve')
     await auditOrderApprove(order, { sub: user.sub, email: user.email ?? null }, idempotencyKey)
     return c.json(order)
+  })
+
+  .post('/:id/approve-manual', zValidator('json', ApproveManualSchema), async (c) => {
+    const user = c.get('user')
+    const idempotencyKey = c.req.header('Idempotency-Key') || undefined
+    if (idempotencyKey) {
+      const prior = await findAuditByIdempotencyKey(idempotencyKey).catch(() => null)
+      if (prior) return c.json(prior)
+    }
+    const out = await ordersService.approveManual(c.req.param('id'), c.req.valid('json'))
+    if (out.priceChanged || out.contactChanged) {
+      const bits: string[] = []
+      if (out.priceChanged) bits.push(`harga Rp ${Number(out.prevAmount).toLocaleString('id-ID')} -> Rp ${Number((out.order as any).amount).toLocaleString('id-ID')}`)
+      if (out.contactChanged) bits.push('kontak diperbarui')
+      await appendAudit({
+        action: 'order:update',
+        resourceType: 'order',
+        resourcePublicId: (out.order as any).publicId ?? c.req.param('id'),
+        resourceName: (out.order as any).productName ?? '',
+        snapshotText: `Order ${(out.order as any).publicId ?? c.req.param('id')} review manual (${bits.join(', ')}) oleh ${user.email ?? user.sub} ${new Date().toLocaleString('id-ID')}`,
+        actorId: user.sub,
+        actorEmail: user.email ?? null,
+        actorType: 'admin',
+        diff: { prevAmount: out.prevAmount, order: out.order },
+        idempotencyKey,
+      }).catch((e) => console.error('[audit] admin order action failed', e))
+    }
+    await auditOrderApprove(out.order, { sub: user.sub, email: user.email ?? null }, idempotencyKey)
+    return c.json(out)
   })
 
   .post('/:id/reject', async (c) => {
@@ -118,7 +166,7 @@ export const adminOrderRoutes = new Hono<AdminOrderEnv>()
 
   .post('/manual', zValidator('json', ManualOrderSchema), async (c) => {
     const user = c.get('user')
-    const { customerEmail, variantId, paymentRef, amount } = c.req.valid('json')
+    const { customerEmail, variantId, paymentRef, amount, customerAccount, waNumber } = c.req.valid('json')
 
     // Auth stores emails lowercase; exact-match lookup would 404 on
     // `User@Mail.com`, so normalize before comparing.
@@ -140,6 +188,19 @@ export const adminOrderRoutes = new Hono<AdminOrderEnv>()
 
     if (!variant || variant.length === 0) return c.json({ error: 'Varian tidak ditemukan' }, 404)
 
+    // Contact required iff the variant's flag is on (same rules as
+    // checkout); ignored blanks otherwise so the review form stays lean.
+    let finalAccount = ''
+    let finalWa = ''
+    if (variant[0]!.requires_delivery_info === true) {
+      const account = (customerAccount ?? '').trim()
+      if (account.length < 3 || account.length > 120) throw new BadRequestError('Akun tujuan wajib diisi (3-120 karakter)')
+      const wa = normalizeWaNumber(waNumber ?? '')
+      if (!wa) throw new BadRequestError('Nomor WA tidak valid (format 08..)')
+      finalAccount = account
+      finalWa = wa
+    }
+
     let baseName: string | null = null
     if (variant[0]!.product_id) {
       const { data: base } = await supabaseAdmin
@@ -157,6 +218,9 @@ export const adminOrderRoutes = new Hono<AdminOrderEnv>()
       productId: variant[0]!.product_id,
       variantId: variant[0]!.id,
       amount: finalAmount,
+      paymentProvider: 'manual',
+      customerAccount: finalAccount,
+      waNumber: finalWa,
       variantSnapshot: {
         name: variant[0]!.name,
         sku: variant[0]!.sku,

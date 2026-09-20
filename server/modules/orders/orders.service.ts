@@ -4,6 +4,7 @@ import type { PayableOrder, OrderWithProduct, OrderAction } from './orders.types
 import { NotFoundError, ConflictError, BadRequestError } from '../../shared/errors/http'
 import { generatePublicId } from '../../shared/lib/publicId'
 import { allocateCredential, getStockCounts } from '../../shared/lib/db-helpers'
+import { normalizeWaNumber } from '../../shared/lib/wa'
 import { importKeyFromBase64, encrypt } from '../../shared/lib/crypto'
 import { dispatchReminder } from '../../shared/lib/notify/notify.dispatcher'
 import { auditDispatchResults } from '../../shared/lib/notify/notify.audit'
@@ -55,6 +56,10 @@ export interface BulkApproveDeps {
   run?: (id: string) => Promise<any>
   /** Defaults to auditOrderApprove. Injected in tests. */
   audit?: (order: any, actor: BulkActor) => Promise<void>
+  /** Manual-provider rows skip bulk (per-row form review only). Defaults
+    to null (proceed, preserves legacy behavior); the admin route passes a
+    DB-backed inspect. Injected in tests. */
+  inspect?: (id: string) => Promise<{ paymentProvider: string | null } | null>
 }
 
 export interface BulkApproveResult {
@@ -584,10 +589,16 @@ export const ordersService = {
   async bulkApprove(ids: string[], actor: BulkActor, deps: BulkApproveDeps = {}): Promise<BulkApproveResult> {
     const run = deps.run ?? ((id: string) => this.transitionStatus(id, 'approve'))
     const audit = deps.audit ?? ((order: any) => auditOrderApprove(order, actor))
+    const inspect = deps.inspect ?? (async () => null)
     const skipped: { id: string; reason: string }[] = []
     let approved = 0
     for (const id of ids) {
       try {
+        const info = await inspect(id).catch(() => null)
+        if (info?.paymentProvider === 'manual') {
+          skipped.push({ id, reason: 'Manual: setujui via form review' })
+          continue
+        }
         const order = await run(id)
         await audit(order, actor)
         approved++
@@ -596,5 +607,84 @@ export const ordersService = {
       }
     }
     return { scanned: ids.length, approved, skipped }
+  },
+
+  // Manual review approve: PENDING (+manual rail, null legacy included) only.
+  // Applies admin price/contact edits, then PENDING->PAID. Vault stock
+  // allocates + delivers in the same call; on-demand / variant-less /
+  // empty stock stops at PAID for the existing Kirim flow. Contact rules
+  // mirror checkout (flag read from the DB row, never the client).
+  async approveManual(publicId: string, input: { amount?: string; customerAccount?: string; waNumber?: string }) {
+    const full = await this.getById(publicId)
+    if (full.status !== 'PENDING') {
+      throw new ConflictError(`Cannot approve-manual order in ${full.status} status`)
+    }
+    const provider = (full as any).paymentProvider ?? null
+    if (provider && provider !== 'manual') {
+      throw new ConflictError('Hanya pesanan manual')
+    }
+    const pay = await this.getPayableDetails(publicId)
+
+    let requiresContact = false
+    if (pay.variantId) {
+      const { data: vrows } = await supabaseAdmin
+        .from(PRODUCT_VARIANTS)
+        .select('requires_delivery_info')
+        .eq('id', pay.variantId)
+        .limit(1)
+      requiresContact = (vrows?.[0] as any)?.requires_delivery_info === true
+    }
+
+    const prevAmount = full.amount
+    let nextAmount = prevAmount
+    if (input.amount !== undefined) {
+      if (!/^\d+$/.test(input.amount)) throw new BadRequestError('Harga integer')
+      nextAmount = String(parseInt(input.amount, 10))
+    }
+
+    let nextAccount = full.customerAccount ?? ''
+    let nextWa = full.waNumber ?? ''
+    const contactTouched = input.customerAccount !== undefined || input.waNumber !== undefined
+    if (input.customerAccount !== undefined) nextAccount = input.customerAccount.trim()
+    if (input.waNumber !== undefined) nextWa = input.waNumber.trim()
+    if (requiresContact) {
+      if (nextAccount.length < 3 || nextAccount.length > 120) {
+        throw new BadRequestError('Akun tujuan wajib diisi (3-120 karakter)')
+      }
+      const wa = normalizeWaNumber(nextWa)
+      if (!wa) throw new BadRequestError('Nomor WA tidak valid (format 08..)')
+      nextWa = wa
+    } else if (contactTouched && nextWa) {
+      nextWa = normalizeWaNumber(nextWa) ?? ''
+    }
+
+    const priceChanged = nextAmount !== prevAmount
+    const contactChanged =
+      nextAccount !== (full.customerAccount ?? '') || nextWa !== (full.waNumber ?? '')
+    if (priceChanged || contactChanged) {
+      const updateData: Record<string, any> = {}
+      if (priceChanged) updateData.amount = parseInt(nextAmount, 10)
+      if (contactChanged) {
+        updateData.customer_account = nextAccount
+        updateData.wa_number = nextWa
+      }
+      const { error: uerr } = await supabaseAdmin
+        .from(ORDERS)
+        .update(updateData)
+        .eq('public_id', publicId)
+      if (uerr) throw new Error(uerr.message)
+    }
+
+    const paid = await this.transitionStatus(publicId, 'approve')
+
+    if ((pay.fulfillmentType ?? 'vault') !== 'on_demand' && pay.variantId) {
+      const got = await allocateCredential(pay.variantId, pay.id)
+      if (got) {
+        await this.setVaultItem(pay.id, got.id)
+        const delivered = await this.transitionStatus(publicId, 'deliver')
+        return { order: delivered, allocated: true, priceChanged, contactChanged, prevAmount }
+      }
+    }
+    return { order: paid, allocated: false, priceChanged, contactChanged, prevAmount }
   },
 }

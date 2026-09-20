@@ -142,7 +142,7 @@ export default function VaultList({ variants, fetchedAt, initialVariantId, onVar
       v.showToast(
         out.skipped.length === 0
           ? `${verb}: ${out.processed} kredensial`
-          : `${verb} ${out.processed} dari ${out.scanned} — ${out.skipped.length} dilewati (${out.skipped[0]!.reason})`,
+          : `${verb} ${out.processed} dari ${out.scanned} - ${out.skipped.length} dilewati (${out.skipped[0]!.reason})`,
         out.processed > 0 ? 'success' : 'error'
       )
     } catch (e: unknown) {
@@ -214,8 +214,8 @@ export default function VaultList({ variants, fetchedAt, initialVariantId, onVar
             </span>
             <div className="flex items-center gap-2">
               <span className="text-[11px] text-[#aeaeb2] ad-num">Terkunci dalam {Math.floor(v.relockIn / 60)}:{String(v.relockIn % 60).padStart(2, '0')}</span>
-              <button onClick={v.relock} title="Kunci ulang" className="ad-btn !px-2"><Lock width={14} height={14} strokeWidth={1.5} /></button>
-              <button onClick={() => v.fetchList()} title="Muat ulang" className="ad-btn !px-2"><Refresh width={14} height={14} strokeWidth={1.5} /></button>
+              <button onClick={v.relock} title="Kunci ulang" className="ad-btn"><Lock width={14} height={14} strokeWidth={1.5} /><span className="text-[11px]">Kunci</span></button>
+              <button onClick={() => v.fetchList()} title="Muat ulang" className="ad-btn"><Refresh width={14} height={14} strokeWidth={1.5} /><span className="text-[11px]">Muat ulang</span></button>
               {/* Mobile: thead (and its select-all) hides below sm. */}
               {v.variantId && (
                 <button onClick={() => selection.toggleAll(pageIds)} className="ad-btn sm:hidden">
@@ -282,37 +282,37 @@ export default function VaultList({ variants, fetchedAt, initialVariantId, onVar
                       {item.orderPublicId ? (
                         <div className="inline-flex items-center gap-1.5">
                           <CopyCell value={item.orderPublicId} display={item.orderPublicId.slice(0, 8)} className="text-xs ad-num text-[#6e6e73]" />
-                          <button onClick={() => navigate(`/admin/orders?status=semua&q=${item.orderPublicId}`)} title="Lihat order" className="ad-btn !px-1.5 text-[#6e6e73]"><ArrowUpRightSquare width={13} height={13} strokeWidth={1.5} /></button>
+                          <button onClick={() => navigate(`/admin/orders?status=semua&q=${item.orderPublicId}`)} title="Lihat order" className="ad-btn"><ArrowUpRightSquare width={13} height={13} strokeWidth={1.5} /><span className="text-[11px]">Order</span></button>
                         </div>
                       ) : <span className="text-xs ad-num text-[#6e6e73]">-</span>}
                     </td>
                     <td className="text-xs ad-num text-[#6e6e73] whitespace-nowrap">{new Date(item.createdAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' })}</td>
                     <td className="text-right">
-                      <div className="flex justify-end gap-1">
-                        <button onClick={() => copy(item.credential)} title="Salin" className="ad-btn !px-2"><Copy width={14} height={14} strokeWidth={1.5} /></button>
+                      <div className="flex flex-wrap items-center justify-end gap-1 *:whitespace-nowrap">
+                        <button onClick={() => copy(item.credential)} title="Salin" className="ad-btn"><Copy width={14} height={14} strokeWidth={1.5} /><span className="text-[10px]">Salin</span></button>
                         {item.status === 'AVAILABLE' && (
                           <>
-                            <button onClick={() => setEditing({ id: item.id, text: item.credential })} title="Edit" className="ad-btn !px-2"><EditPencil width={14} height={14} strokeWidth={1.5} /></button>
-                            <button onClick={() => { setPendingDelete({ id: item.id }); openConfirm('vault-delete') }} title="Hapus" className="ad-btn !px-2"><Trash width={14} height={14} strokeWidth={1.5} /></button>
+                            <button onClick={() => setEditing({ id: item.id, text: item.credential })} title="Edit" className="ad-btn"><EditPencil width={14} height={14} strokeWidth={1.5} /><span className="text-[10px]">Edit</span></button>
+                            <button onClick={() => { setPendingDelete({ id: item.id }); openConfirm('vault-delete') }} title="Hapus" className="ad-btn"><Trash width={14} height={14} strokeWidth={1.5} /><span className="text-[10px]">Hapus</span></button>
                           </>
                         )}
                         {item.status === 'SOLD' && item.orderPublicId && (
                           <>
-                            <button onClick={() => { setPendingRevoke({ id: item.id }); openConfirm('vault-revoke') }} title="Cabut saja" className="ad-btn !px-2"><Prohibition width={14} height={14} strokeWidth={1.5} /></button>
+                            <button onClick={() => { setPendingRevoke({ id: item.id }); openConfirm('vault-revoke') }} title="Cabut saja" className="ad-btn"><Prohibition width={14} height={14} strokeWidth={1.5} /><span className="text-[10px]">Cabut</span></button>
                             {item.fulfillmentType === 'on_demand' ? (
-                              <button onClick={() => { setPendingRotate({ orderId: item.orderPublicId! }); setRotateFallback({ orderId: item.orderPublicId!, message: 'ON_DEMAND_REQUIRES_CREDENTIAL' }); setPendingRotate(null) }} title="Ganti kredensial" className="ad-btn ad-btn-dark !px-2"><Redo width={14} height={14} strokeWidth={1.5} /></button>
+                              <button onClick={() => { setPendingRotate({ orderId: item.orderPublicId! }); setRotateFallback({ orderId: item.orderPublicId!, message: 'ON_DEMAND_REQUIRES_CREDENTIAL' }); setPendingRotate(null) }} title="Ganti kredensial" className="ad-btn ad-btn-dark"><Redo width={14} height={14} strokeWidth={1.5} /><span className="text-[10px]">Ganti</span></button>
                             ) : (
-                              <button onClick={() => { setPendingRotate({ orderId: item.orderPublicId! }); openConfirm('vault-rotate') }} title="Cabut + ganti" className="ad-btn ad-btn-dark !px-2"><Redo width={14} height={14} strokeWidth={1.5} /></button>
+                              <button onClick={() => { setPendingRotate({ orderId: item.orderPublicId! }); openConfirm('vault-rotate') }} title="Cabut + ganti" className="ad-btn ad-btn-dark"><Redo width={14} height={14} strokeWidth={1.5} /><span className="text-[10px]">Ganti</span></button>
                             )}
                           </>
                         )}
                         {item.status === 'AVAILABLE' && item.orderPublicId && (
                           <>
-                            <button onClick={() => { setPendingRevoke({ id: item.id }); openConfirm('vault-revoke') }} title="Cabut saja" className="ad-btn !px-2"><Prohibition width={14} height={14} strokeWidth={1.5} /></button>
+                            <button onClick={() => { setPendingRevoke({ id: item.id }); openConfirm('vault-revoke') }} title="Cabut saja" className="ad-btn"><Prohibition width={14} height={14} strokeWidth={1.5} /><span className="text-[10px]">Cabut</span></button>
                             {item.fulfillmentType === 'on_demand' ? (
-                              <button onClick={() => { setPendingRotate({ orderId: item.orderPublicId! }); setRotateFallback({ orderId: item.orderPublicId!, message: 'ON_DEMAND_REQUIRES_CREDENTIAL' }); setPendingRotate(null) }} title="Ganti kredensial" className="ad-btn ad-btn-dark !px-2"><Redo width={14} height={14} strokeWidth={1.5} /></button>
+                              <button onClick={() => { setPendingRotate({ orderId: item.orderPublicId! }); setRotateFallback({ orderId: item.orderPublicId!, message: 'ON_DEMAND_REQUIRES_CREDENTIAL' }); setPendingRotate(null) }} title="Ganti kredensial" className="ad-btn ad-btn-dark"><Redo width={14} height={14} strokeWidth={1.5} /><span className="text-[10px]">Ganti</span></button>
                             ) : (
-                              <button onClick={() => { setPendingRotate({ orderId: item.orderPublicId! }); openConfirm('vault-rotate') }} title="Cabut + ganti" className="ad-btn ad-btn-dark !px-2"><Redo width={14} height={14} strokeWidth={1.5} /></button>
+                              <button onClick={() => { setPendingRotate({ orderId: item.orderPublicId! }); openConfirm('vault-rotate') }} title="Cabut + ganti" className="ad-btn ad-btn-dark"><Redo width={14} height={14} strokeWidth={1.5} /><span className="text-[10px]">Ganti</span></button>
                             )}
                           </>
                         )}

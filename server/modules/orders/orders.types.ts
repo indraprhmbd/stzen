@@ -13,7 +13,8 @@ export interface Order {
   paymentRef: string | null
   paymentProvider: string | null
   // Buyer delivery contact (storefront checkout; '' when the variant did
-  // not require delivery info). Display-only for admin, never edited.
+  // not require delivery info). Admin-editable pre-PAID via the manual
+  // review form (approve-manual), frozen after.
   customerAccount: string
   waNumber: string
   amount: string
