@@ -48,7 +48,7 @@
         "PAYMENT_SUMOPOD_BASE_URL": "https://api-pay.sumopod.com/api/v1",
         "PAYMENT_SUMOPOD_METHOD_CODE": "QRIS",
         "PAYMENT_DUITKU_BASE_URL": "",
-        "NOTIFY_PROVIDERS": ""
+        "NOTIFY_PROVIDERS": "gcal"
       },
       "routes": [{ "pattern": "api.stzen.web.id", "custom_domain": true }],
       // Supabase keepalive: 1 request/day keeps the free-tier DB unpaused.

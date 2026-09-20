@@ -20,6 +20,9 @@ export default function Profile() {
     { to: '/how-to-order', label: t.footer.howToOrder },
     { to: '/payment-methods', label: t.footer.paymentMethods },
     { to: '/faq', label: t.footer.faq },
+    { to: '/syarat-ketentuan', label: t.footer.terms },
+    { to: '/kebijakan-privasi', label: t.footer.privacy },
+    { to: '/pengembalian-dana', label: t.footer.refunds },
   ]
 
   return (

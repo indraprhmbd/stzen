@@ -140,12 +140,12 @@ export default function Footer() {
             &copy; {year} {brand.name}. {t.footer.rights}.
           </p>
           <div className="flex items-center gap-3">
-            <a href="#" className="text-[9px] font-bold uppercase text-white/50 hover:text-primary transition-colors">Terms</a>
-            <a href="#" className="text-[9px] font-bold uppercase text-white/50 hover:text-primary transition-colors">Privacy</a>
-            <a href="#" className="text-[9px] font-bold uppercase text-white/50 hover:text-primary transition-colors">Refunds</a>
+            <Link to="/syarat-ketentuan" className="text-[9px] font-bold uppercase text-white/50 hover:text-primary transition-colors">{t.footer.terms}</Link>
+            <Link to="/kebijakan-privasi" className="text-[9px] font-bold uppercase text-white/50 hover:text-primary transition-colors">{t.footer.privacy}</Link>
+            <Link to="/pengembalian-dana" className="text-[9px] font-bold uppercase text-white/50 hover:text-primary transition-colors">{t.footer.refunds}</Link>
             <span className="text-white/10">|</span>
             <a
-              href="https://langitkode.my.id"
+              href="https://langitkode.id"
               target="_blank"
               rel="noopener noreferrer"
               className="text-[9px] font-black uppercase tracking-wider text-white/50 hover:text-primary transition-colors"

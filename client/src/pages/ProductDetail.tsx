@@ -693,6 +693,11 @@ export default function ProductDetail() {
                     {settings.termsBody}
                   </div>
                 </details>
+                <div className="flex flex-wrap gap-x-3 gap-y-1">
+                  <Link to="/syarat-ketentuan" className="text-[10px] font-black uppercase underline underline-offset-2 text-neutral/70 hover:text-neutral">{t.footer.terms}</Link>
+                  <Link to="/kebijakan-privasi" className="text-[10px] font-black uppercase underline underline-offset-2 text-neutral/70 hover:text-neutral">{t.footer.privacy}</Link>
+                  <Link to="/pengembalian-dana" className="text-[10px] font-black uppercase underline underline-offset-2 text-neutral/70 hover:text-neutral">{t.footer.refunds}</Link>
+                </div>
                 <label className="flex items-start gap-2 cursor-pointer">
                   <input
                     type="checkbox"

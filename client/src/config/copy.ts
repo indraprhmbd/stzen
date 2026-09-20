@@ -1,3 +1,6 @@
+export interface LegalSection { h: string; p: string[] }
+export interface LegalDoc { title: string; desc: string; updated: string; sections: LegalSection[] }
+
 export interface Copy {
   nav: { home: string; shop: string; myOrders: string; admin: string; profile: string }
   auth: {
@@ -14,7 +17,7 @@ export interface Copy {
   howItWorks: { title: string; steps: { num: string; title: string; desc: string }[] }
   whyUs: { title: string; items: { title: string; desc: string }[] }
   testimonials: { title: string; items: { quote: string; name: string; product: string }[] }
-  footer: { rights: string; howToOrder: string; paymentMethods: string; faq: string; myOrders: string }
+  footer: { rights: string; howToOrder: string; paymentMethods: string; faq: string; myOrders: string; terms: string; privacy: string; refunds: string }
   filter: { all: string }
   dashboard: { title: string; subtitle: string; tabs: string[]; noOrders: string; selectOrder: string; payNow: string; contactWa: string; cancelOrder: string; viewCredentials: string; receipt: string; reportIssue: string; cancelConfirm: string; paymentVerified: string; accountDelivered: string; paymentFailed: string; orderCancelled: string; loadMore: string }
   profile: { title: string; guest: string; guestHint: string; language: string; quickLinks: string; signOutTitle: string; signOutDesc: string; cancel: string; confirmSignOut: string }
@@ -27,6 +30,7 @@ export interface Copy {
     paymentMethods: { title: string; desc: string; methods: { name: string; detail: string; badge: string }[] }
     faq: { title: string; desc: string; items: { q: string; a: string }[] }
   }
+  legal: { terms: LegalDoc; privacy: LegalDoc; refunds: LegalDoc }
   admin: {
     sidebar: { overview: string; products: string; orders: string }
     overview: { title: string; totalProducts: string; totalStock: string; pendingOrders: string; revenue: string; recentOrders: string; lowStock: string; noData: string }
@@ -131,7 +135,7 @@ const id: Copy = {
       { quote: 'Garansinya beneran, akun error diganti tanpa drama.', name: 'Putri H.', product: 'Viu Premium' },
     ],
   },
-  footer: { rights: 'Hak cipta dilindungi', howToOrder: 'Cara Pesan', paymentMethods: 'Metode Pembayaran', faq: 'FAQ', myOrders: 'Pesanan Saya' },
+  footer: { rights: 'Hak cipta dilindungi', howToOrder: 'Cara Pesan', paymentMethods: 'Metode Pembayaran', faq: 'FAQ', myOrders: 'Pesanan Saya', terms: 'Syarat & Ketentuan', privacy: 'Kebijakan Privasi', refunds: 'Pengembalian Dana' },
   filter: { all: 'Semua' },
   dashboard: { title: 'PEMBELIAN AKTIF', subtitle: 'Lihat dan kelola pesanan kredensialmu', tabs: ['Semua', 'Menunggu', 'Dibayar', 'Dikirim', 'Ditolak', 'Refund'], noOrders: 'Belum ada pesanan', selectOrder: 'Pilih pesanan yang sudah dikirim untuk melihat kredensial', payNow: 'BAYAR', contactWa: 'HUBUNGI WA', cancelOrder: 'BATAL', viewCredentials: 'KREDENSIAL', receipt: 'STRUK', reportIssue: 'LAPOR', cancelConfirm: 'Batalkan order ini? Order PENDING yang belum dibayar akan dihapus.', paymentVerified: 'Pembayaran terverifikasi', accountDelivered: 'Akun terkirim, cek kredensial', paymentFailed: 'Pembayaran gagal', orderCancelled: 'Order dibatalkan', loadMore: 'MUAT LEBIH BANYAK' },
   payment: { waiting: 'Menunggu Pembayaran', paid: 'Pembayaran Berhasil', failed: 'Pembayaran Gagal', cancelled: 'Pembayaran Dibatalkan', waitingHint: 'Selesaikan QRIS di tab pembayaran, status terupdate otomatis…', paidHint: 'Lunas, akun sedang disiapkan, cek dashboard.', deliveredHint: 'Akun sudah terkirim, cek kredensial di dashboard.', failedHint: 'Order masih PENDING, ulangi pembayaran dari dashboard.', toDashboard: 'Ke Dashboard' },
@@ -171,6 +175,54 @@ const id: Copy = {
         { q: 'Apakah data saya aman?', a: 'Semua kredensial terenkripsi AES-256. Data kamu tidak pernah disimpan dalam bentuk plain text.' },
         { q: 'Bisa beli untuk orang lain?', a: 'Bisa. Setelah checkout, kredensial bisa kamu bagikan ke orang lain. Tapi akun tetap atas nama kamu.' },
         { q: 'Bagaimana cara cek status pesanan?', a: 'Login ke Dashboard, lihat tab Pesanan Saya. Status update secara real-time.' },
+      ],
+    },
+  },
+  legal: {
+    terms: {
+      title: 'SYARAT & KETENTUAN',
+      desc: 'Aturan main belanja di STZen. Dengan menyelesaikan checkout, kamu dianggap membaca dan menyetujui seluruh isi halaman ini.',
+      updated: 'Diperbarui: September 2026',
+      sections: [
+        { h: '1. Penyelenggara', p: ['STZen (stzen.web.id) adalah toko akun digital premium. Kontak dukungan: WhatsApp 0882-0034-57148, Telegram @stzen_bot, email akieera.store@gmail.com.'] },
+        { h: '2. Bentuk Produk', p: ['Yang kamu beli adalah hak akses ke akun digital selama masa berlaku paket, bukan kepemilikan akun. Kredensial tetap milik penyedia layanan aslinya dan tunduk pada aturan mereka (misalnya batas perangkat).', 'Detail tiap produk (durasi, jumlah profil, aturan pakai) tertera di halaman produk dan mengikat seperti bagian dari dokumen ini.'] },
+        { h: '3. Harga', p: ['Harga tertera dalam Rupiah dan bersifat final sebelum biaya layanan. Pembayaran QRIS otomatis dikenai biaya layanan yang ditanggung pembeli dan ditampilkan sebelum kamu membayar.', 'Harga dapat berubah sewaktu-waktu; harga yang berlaku adalah harga saat kamu checkout.'] },
+        { h: '4. Pembayaran', p: ['QRIS otomatis diverifikasi oleh gerbang pembayaran. Transfer manual wajib dikonfirmasi via WhatsApp beserta ID pesanan.', 'Pesanan PENDING yang belum dibayar dapat dibatalkan kapan saja oleh kamu dari dashboard.'] },
+        { h: '5. Pengiriman', p: ['Kredensial dikirim instan ke dashboard kamu setelah pembayaran terkonfirmasi. Buka Pesanan Saya, pilih pesanan berstatus Dikirim, lalu tekan Kredensial.', 'Pastikan kamu bisa login ke akun STZen sebelum membayar. Kami tidak bertanggung jawab atas keterlambatan akibat email yang salah ketik atau akun yang tidak bisa diakses.'] },
+        { h: '6. Kewajiban Pembeli', p: ['Dilarang mengubah email, password, atau PIN profil tanpa izin tertulis dari kami.', 'Dilarang menjual kembali, menyewakan, atau membagikan kredensial di luar ketentuan paket yang kamu beli.', 'Pelanggaran dapat berujung pada pencabutan akses tanpa pengembalian dana, setelah peringatan satu kali via kontak pesanan.'] },
+        { h: '7. Kendala & Garansi', p: ['Kredensial tidak berfungsi saat diterima? Laporkan maksimal 1x24 jam via WhatsApp dengan menyertakan ID pesanan. Kami mengganti kredensial terlebih dahulu; refund diberikan bila stok pengganti habis atau pengganti ikut bermasalah.', 'Garansi penggantian 30 hari sejak pengiriman untuk kendala yang bukan akibat pelanggaran pasal 6.'] },
+        { h: '8. Batasan Tanggung Jawab', p: ['Tanggung jawab kami maksimal sebesar nilai pesanan yang bersangkutan.', 'Kami tidak bertanggung jawab atas perubahan sepihak dari penyedia layanan asli (reset password massal, pemblokiran wilayah, penutupan layanan) di luar kendali kami. Dalam kasus tersebut kami bantu semaksimal mungkin, termasuk penggantian selama stok tersedia.'] },
+        { h: '9. Perubahan & Hukum', p: ['Dokumen ini dapat diperbarui sewaktu-waktu; tanggal pembaruan selalu tertera di atas dan versi terbaru yang berlaku.', 'Tunduk pada hukum Republik Indonesia. Sengketa diselesaikan musyawarah dulu; bila buntu, melalui jalur hukum yang berlaku.'] },
+      ],
+    },
+    privacy: {
+      title: 'KEBIJAKAN PRIVASI',
+      desc: 'Penjelasan UU PDP No. 27 Tahun 2022: data apa yang kami kumpulkan, untuk apa, dan hak-hak kamu atas datamu. Ditulis dalam Bahasa Indonesia dengan bahasa sederhana.',
+      updated: 'Diperbarui: September 2026',
+      sections: [
+        { h: '1. Pengelola Data', p: ['Pengelola data pribadi (data controller) adalah STZen, stzen.web.id. Kontak pengelola: WhatsApp 0882-0034-57148, email akieera.store@gmail.com.'] },
+        { h: '2. Data yang Dikumpulkan', p: ['Email akun, nomor WhatsApp yang kamu isi saat checkout, ID dan referensi pembayaran, serta riwayat pesananmu.', 'Kredensial produk (username/password akun digital) adalah barang dagangan, bukan data pribadimu. Kredensial disimpan terenkripsi AES-256 dan tidak pernah dalam bentuk teks polos.'] },
+        { h: '3. Tujuan & Dasar Pemrosesan', p: ['Memenuhi pesananmu (dasar: pelaksanaan kontrak), layanan pelanggan dan garansi (kontrak), serta keamanan dan pencegahan penipuan (kepentingan sah).', 'Kami tidak memakai datamu untuk iklan pihak ketiga dan tidak menjual datamu ke siapa pun.'] },
+        { h: '4. Pihak yang Menerima Data', p: ['Penyedia infrastruktur: Supabase (basis data, Singapura), Cloudflare (hosting dan keamanan), Sumopod (gerbang pembayaran QRIS).', 'Masing-masing hanya menerima data yang mereka butuhkan untuk fungsinya, terikat kontrak pemrosesan data.'] },
+        { h: '5. Penyimpanan & Penghapusan', p: ['Data pesanan disimpan selama akunmu aktif, ditambah arsip transaksi sesuai kewajiban perpajakan dan pembukuan.', 'Kamu bisa meminta penghapusan data kapan saja via kontak di pasal 1; data yang wajib diarsip menurut hukum dikecualikan sampai masa arsipnya habis.'] },
+        { h: '6. Hak-Hak Kamu', p: ['Akses, koreksi, penghapusan, dan penarikan persetujuan atas datamu. Ajukan via WhatsApp atau email dengan menyebut email akunmu.', 'Kami merespons maksimal 3x24 jam. Bila tidak puas, kamu berhak mengadu ke Kementerian Komunikasi dan Digital (Komdigi).'] },
+        { h: '7. Transfer Lintas Negara', p: ['Server dan layanan kami berada di Singapura dan Amerika Serikat. Dengan memakai layanan ini, kamu memahami datamu diproses di luar Indonesia dengan perlindungan setara melalui kontrak dan enkripsi.'] },
+        { h: '8. Keamanan & Insiden', p: ['Enkripsi AES-256 untuk kredensial, koneksi HTTPS menyeluruh, akses admin berlapis peran.', 'Bila terjadi insiden kebocoran data pribadimu, kami memberitahumu dan melapor ke otoritas maksimal 3x24 jam sejak kami mengetahuinya.'] },
+        { h: '9. Anak di Bawah Umur', p: ['Layanan ini untuk pengguna yang cakap hukum. Pengguna di bawah umur wajib memakai layanan dengan persetujuan orang tua atau wali.'] },
+        { h: '10. Perubahan', p: ['Kebijakan ini dapat diperbarui mengikuti perubahan layanan atau peraturan. Perubahan material diumumkan lewat pengumuman toko sebelum berlaku.'] },
+      ],
+    },
+    refunds: {
+      title: 'KEBIJAKAN PENGEMBALIAN DANA',
+      desc: 'Prinsip kami: pesanan yang terkirim dan berfungsi bersifat final. Pesanan yang cacat kami ganti dulu; refund bila penggantian gagal.',
+      updated: 'Diperbarui: September 2026',
+      sections: [
+        { h: '1. Prinsip', p: ['Akses digital tidak bisa dikembalikan seperti barang fisik. Karena itu pesanan yang sudah terkirim dan berfungsi tidak dapat di-refund.', 'Pengecualian satu-satunya: pesanan yang cacat (pasal 2). Untuk itu berlaku ganti-dulu-baru-refund.'] },
+        { h: '2. Yang Berhak Diganti atau Di-refund', p: ['Kredensial mati atau tidak bisa login saat pertama diterima, dilaporkan maksimal 1x24 jam.', 'Pembayaran ganda (double charge) untuk pesanan yang sama.', 'Pembayaran terkonfirmasi tetapi kredensial tidak kunjung terkirim.'] },
+        { h: '3. Yang Tidak Berhak', p: ['Kredensial sudah berfungsi normal.', 'Berubah pikiran setelah kredensial terkirim.', 'Akun diblokir akibat pelanggaran Syarat & Ketentuan pasal 6.', 'Laporan melewati batas waktu 1x24 jam tanpa alasan yang dapat diverifikasi.'] },
+        { h: '4. Cara Mengajukan', p: ['Hubungi WhatsApp 0882-0034-57148 atau email akieera.store@gmail.com dengan ID pesanan, deskripsi kendala, dan tangkapan layar bila ada.', 'Kami merespons maksimal 1x24 jam. Simpan ID pesananmu; tanpa ID, verifikasi bisa tertunda.'] },
+        { h: '5. Metode & Waktu Refund', p: ['Refund dikembalikan ke kanal pembayaran asal; untuk transfer manual via transfer bank ke rekening yang kamu tunjuk.', 'Diproses maksimal 7 hari kerja setelah disetujui. Waktu sampai ke rekeningmu mengikuti bank masing-masing.'] },
+        { h: '6. Bukti Pengiriman', p: ['Setiap pengiriman kredensial tercatat (waktu, status). Log ini menjadi dasar verifikasi sengketa: klaim tidak terkirim gugur bila log menunjukkan pengiriman berhasil dan kredensial berfungsi.'] },
       ],
     },
   },
@@ -278,7 +330,7 @@ const en: Copy = {
       { quote: 'Warranty is real, faulty account replaced no questions asked.', name: 'Putri H.', product: 'Viu Premium' },
     ],
   },
-  footer: { rights: 'All rights reserved', howToOrder: 'How to Order', paymentMethods: 'Payment Methods', faq: 'FAQ', myOrders: 'My Orders' },
+  footer: { rights: 'All rights reserved', howToOrder: 'How to Order', paymentMethods: 'Payment Methods', faq: 'FAQ', myOrders: 'My Orders', terms: 'Terms & Conditions', privacy: 'Privacy Policy', refunds: 'Refund Policy' },
   filter: { all: 'All' },
   profile: { title: 'ACCOUNT', guest: 'Not signed in', guestHint: 'Sign in to track orders and view credentials', language: 'LANGUAGE', quickLinks: 'SHORTCUTS', signOutTitle: 'SIGN OUT?', signOutDesc: 'You need to sign in again to track orders and view credentials.', cancel: 'CANCEL', confirmSignOut: 'YES, SIGN OUT' },
   dashboard: { title: 'MY ACTIVE PURCHASES', subtitle: 'View and manage your credential orders', tabs: ['All', 'Pending', 'Paid', 'Delivered', 'Rejected', 'Refunded'], noOrders: 'No orders found', selectOrder: 'Select a delivered order to view credentials', payNow: 'PAY', contactWa: 'CONTACT WA', cancelOrder: 'CANCEL', viewCredentials: 'CREDENTIALS', receipt: 'RECEIPT', reportIssue: 'REPORT', cancelConfirm: 'Cancel this order? Unpaid PENDING orders will be deleted.', paymentVerified: 'Payment verified', accountDelivered: 'Account delivered, check credentials', paymentFailed: 'Payment failed', orderCancelled: 'Order cancelled', loadMore: 'LOAD MORE' },
@@ -318,6 +370,54 @@ const en: Copy = {
         { q: 'Is my data safe?', a: 'All credentials are AES-256 encrypted. Your data is never stored in plain text.' },
         { q: 'Can I buy for someone else?', a: 'Yes. After checkout, you can share the credentials. But the account remains under your name.' },
         { q: 'How do I check my order status?', a: 'Log in to Dashboard, check the My Orders tab. Status updates in real-time.' },
+      ],
+    },
+  },
+  legal: {
+    terms: {
+      title: 'TERMS & CONDITIONS',
+      desc: 'The ground rules for shopping at STZen. By completing checkout, you acknowledge reading and agreeing to this entire page.',
+      updated: 'Updated: September 2026',
+      sections: [
+        { h: '1. Operator', p: ['STZen (stzen.web.id) is a premium digital-accounts store. Support: WhatsApp 0882-0034-57148, Telegram @stzen_bot, email akieera.store@gmail.com.'] },
+        { h: '2. Product Form', p: ['What you buy is access rights to a digital account for the package duration, not account ownership. Credentials remain the property of the original service provider and follow their rules (e.g. device limits).', 'Each product page details (duration, profiles, usage rules) bind as part of this document.'] },
+        { h: '3. Pricing', p: ['Prices are in IDR and final before service fees. Automatic QRIS payments carry a buyer-paid service fee shown before you pay.', 'Prices may change anytime; the price at checkout applies.'] },
+        { h: '4. Payment', p: ['Automatic QRIS is verified by the payment gateway. Manual transfers must be confirmed via WhatsApp with your order ID.', 'Unpaid PENDING orders can be cancelled anytime from your dashboard.'] },
+        { h: '5. Delivery', p: ['Credentials are delivered instantly to your dashboard once payment is confirmed. Open My Orders, pick the Delivered order, press Credentials.', 'Make sure you can log in to your STZen account before paying. We are not liable for delays caused by mistyped emails or inaccessible accounts.'] },
+        { h: '6. Buyer Duties', p: ['Do not change the email, password, or profile PIN without our written permission.', 'Do not resell, rent out, or share credentials beyond your package terms.', 'Violations may lead to access revocation without refund, after one warning via the order contact.'] },
+        { h: '7. Issues & Warranty', p: ['Credentials dead on arrival? Report within 24 hours via WhatsApp with your order ID. We replace first; refund follows if replacement stock runs out or the replacement fails too.', '30-day replacement warranty from delivery for issues not caused by section 6 violations.'] },
+        { h: '8. Liability Cap', p: ['Our liability is capped at the value of the order in question.', 'We are not liable for unilateral changes by the original service provider (mass password resets, region blocks, shutdowns) beyond our control. We help as far as possible, including replacement while stock lasts.'] },
+        { h: '9. Changes & Law', p: ['This document may be updated anytime; the update date above always applies and the newest version governs.', 'Governed by the laws of the Republic of Indonesia. Disputes are settled by deliberation first.'] },
+      ],
+    },
+    privacy: {
+      title: 'PRIVACY POLICY',
+      desc: 'Our Law No. 27 of 2022 (UU PDP) notice: what we collect, why, and your rights over your data. The Indonesian version governs in case of divergence.',
+      updated: 'Updated: September 2026',
+      sections: [
+        { h: '1. Data Controller', p: ['The personal-data controller is STZen, stzen.web.id. Contact: WhatsApp 0882-0034-57148, email akieera.store@gmail.com.'] },
+        { h: '2. Data Collected', p: ['Account email, the WhatsApp number you enter at checkout, payment IDs and references, and your order history.', 'Product credentials (digital-account usernames/passwords) are merchandise, not your personal data. They are stored AES-256 encrypted, never in plain text.'] },
+        { h: '3. Purposes & Basis', p: ['Fulfilling your orders (basis: contract performance), customer service and warranty (contract), security and fraud prevention (legitimate interest).', 'We never use your data for third-party ads and never sell it.'] },
+        { h: '4. Recipients', p: ['Infrastructure providers: Supabase (database, Singapore), Cloudflare (hosting and security), Sumopod (QRIS payment gateway).', 'Each receives only the data its function needs, bound by data-processing contracts.'] },
+        { h: '5. Retention & Deletion', p: ['Order data is kept while your account is active, plus transaction archives as tax and bookkeeping duties require.', 'You may request deletion anytime via the section 1 contacts; legally mandated archives are exempt until their retention lapses.'] },
+        { h: '6. Your Rights', p: ['Access, correction, deletion, and consent withdrawal over your data. File via WhatsApp or email quoting your account email.', 'We respond within 3x24 hours. Unsatisfied? You may complain to the Ministry of Communication and Digital Affairs (Komdigi).'] },
+        { h: '7. Cross-Border Transfer', p: ['Our servers and services sit in Singapore and the United States. By using this service you understand your data is processed outside Indonesia with equivalent protection via contracts and encryption.'] },
+        { h: '8. Security & Incidents', p: ['AES-256 for credentials, HTTPS everywhere, role-layered admin access.', 'If your personal data is breached, we notify you and report to the authority within 3x24 hours of learning about it.'] },
+        { h: '9. Minors', p: ['This service is for legally capable users. Minors must use it with parent or guardian consent.'] },
+        { h: '10. Changes', p: ['This policy may be updated as the service or regulations change. Material changes are announced via store notice before taking effect.'] },
+      ],
+    },
+    refunds: {
+      title: 'REFUND POLICY',
+      desc: 'Our principle: delivered-and-working orders are final. Defective orders are replaced first; refunded if replacement fails.',
+      updated: 'Updated: September 2026',
+      sections: [
+        { h: '1. Principle', p: ['Digital access cannot be returned like physical goods. Orders delivered and working cannot be refunded.', 'The sole exception: defective orders (section 2). Replace-first-then-refund applies.'] },
+        { h: '2. Eligible for Replace or Refund', p: ['Credentials dead or unloginnable on first receipt, reported within 24 hours.', 'Double charges for the same order.', 'Confirmed payment but credentials never delivered.'] },
+        { h: '3. Not Eligible', p: ['Credentials already working normally.', 'Change of mind after delivery.', 'Accounts blocked for Terms section 6 violations.', 'Reports past the 24-hour window without verifiable cause.'] },
+        { h: '4. How to File', p: ['WhatsApp 0882-0034-57148 or email akieera.store@gmail.com with order ID, issue description, and screenshots if any.', 'We respond within 24 hours. Keep your order ID; verification stalls without it.'] },
+        { h: '5. Refund Method & Timing', p: ['Refunds return via the original payment channel; manual transfers via bank transfer to your named account.', 'Processed within 7 business days of approval. Bank arrival times vary.'] },
+        { h: '6. Delivery Evidence', p: ['Every credential delivery is logged (time, status). Logs ground dispute verification: never-delivered claims fail where logs show successful, working delivery.'] },
       ],
     },
   },

@@ -10,6 +10,9 @@ const ProductDetail = lazy(() => import('./pages/ProductDetail'))
 const HowToOrder = lazy(() => import('./pages/HowToOrder'))
 const PaymentMethods = lazy(() => import('./pages/PaymentMethods'))
 const FAQ = lazy(() => import('./pages/FAQ'))
+const Terms = lazy(() => import('./pages/legal/Terms'))
+const Privacy = lazy(() => import('./pages/legal/Privacy'))
+const Refunds = lazy(() => import('./pages/legal/Refunds'))
 const Login = lazy(() => import('./pages/Login'))
 const SignUp = lazy(() => import('./pages/SignUp'))
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'))
@@ -51,6 +54,9 @@ function App() {
           <Route path="/how-to-order" element={<HowToOrder />} />
           <Route path="/payment-methods" element={<PaymentMethods />} />
           <Route path="/faq" element={<FAQ />} />
+          <Route path="/syarat-ketentuan" element={<Terms />} />
+          <Route path="/kebijakan-privasi" element={<Privacy />} />
+          <Route path="/pengembalian-dana" element={<Refunds />} />
           <Route path="/auth/callback" element={<AuthCallback />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<SignUp />} />
