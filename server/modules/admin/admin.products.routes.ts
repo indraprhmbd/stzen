@@ -2,7 +2,7 @@ import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import { supabaseAdmin } from '../../shared/db'
 import { type AuthEnv } from '../../shared/middleware/auth'
-import { productsService, basisBulkService } from '../products/products.service'
+import { productsService, basisBulkService, productStatusService } from '../products/products.service'
 import { vaultService } from '../vault/vault.service'
 import { generatePublicId } from '../../shared/lib/publicId'
 import { appendAudit } from '../../shared/lib/audit'
@@ -10,6 +10,7 @@ import {
   ProductCreateSchema,
   ProductUpdateSchema,
   BulkStockSchema,
+  BulkStatusSchema,
   BulkImportPreviewSchema,
   BulkImportCommitSchema,
 } from '../products/products.schema'
@@ -70,6 +71,14 @@ export const adminProductRoutes = new Hono<AdminProductEnv>()
       }
       throw e
     }
+  })
+
+  // Checkbox bulk: activate/deactivate up to 20 induk; unknown ids and
+  // already-target rows skip with reasons instead of failing the batch.
+  .post('/bulk/status', zValidator('json', BulkStatusSchema), async (c) => {
+    const { action, ids } = c.req.valid('json')
+    const user = c.get('user')
+    return c.json(await productStatusService.setActive(ids, action === 'activate', { sub: user.sub, email: user.email }))
   })
 
   .post('/', zValidator('json', ProductCreateSchema), async (c) => {

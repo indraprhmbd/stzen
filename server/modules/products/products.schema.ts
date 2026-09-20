@@ -54,8 +54,18 @@ export const BulkImportCommitSchema = BulkImportPreviewSchema.extend({
   batchKey: z.string().uuid('batchKey harus UUID'),
 })
 
+// ─── Bulk Status Schemas ──────────────────────────────────────────────────
+// Checkbox selection: activate/deactivate up to 20 rows per call. Skip
+// reasons (unknown id, already in target state) ride the result object.
+
+export const BulkStatusSchema = z.object({
+  action: z.enum(['activate', 'deactivate']),
+  ids: z.array(z.string().min(1)).min(1).max(20),
+})
+
 // ─── Inferred Types ─────────────────────────────────────────────────────────
 
 export type ProductCreate = z.infer<typeof ProductCreateSchema>
 export type ProductUpdate = z.infer<typeof ProductUpdateSchema>
 export type BulkStock = z.infer<typeof BulkStockSchema>
+export type BulkStatus = z.infer<typeof BulkStatusSchema>

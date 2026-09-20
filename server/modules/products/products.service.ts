@@ -993,3 +993,120 @@ export const basisBulkService = {
     return result
   },
 }
+
+// ─── Bulk Status (checkbox selection: activate/deactivate) ────────────────
+// Sequential per-id updates, one update-audit row per success, per-id skip
+// reasons — same shape as orders bulkApprove. Default runners hit the DB
+// and mirror the single PUT audit rows; tests inject run/audit stubs.
+
+export interface BulkStatusActor {
+  sub: string
+  email?: string | null
+}
+
+export interface BulkStatusDeps {
+  run?: (id: string, active: boolean) => Promise<{ publicId: string; name: string }>
+  audit?: (row: { publicId: string; name: string }, actor: BulkStatusActor) => Promise<void>
+}
+
+export interface BulkStatusResult {
+  scanned: number
+  updated: number
+  skipped: { id: string; reason: string }[]
+}
+
+async function runBulkStatus(
+  ids: string[],
+  active: boolean,
+  actor: BulkStatusActor,
+  deps: BulkStatusDeps,
+): Promise<BulkStatusResult> {
+  const run = deps.run!
+  const audit = deps.audit!
+  const skipped: { id: string; reason: string }[] = []
+  let updated = 0
+  for (const id of ids) {
+    try {
+      const row = await run(id, active)
+      await audit(row, actor)
+      updated++
+    } catch (e: unknown) {
+      skipped.push({ id, reason: e instanceof Error ? e.message : 'Gagal' })
+    }
+  }
+  return { scanned: ids.length, updated, skipped }
+}
+
+async function setProductActive(id: string, active: boolean): Promise<{ publicId: string; name: string }> {
+  const { data: rows, error } = await supabaseAdmin
+    .from('products')
+    .select('id, name, is_active')
+    .eq('public_id', id)
+    .limit(1)
+  if (error) throw new Error(error.message)
+  const row = rows?.[0]
+  if (!row) throw new NotFoundError('Induk tidak ditemukan')
+  if (row.is_active === active) throw new BadRequestError(active ? 'Sudah aktif' : 'Sudah nonaktif')
+  const { error: updateError } = await supabaseAdmin
+    .from('products')
+    .update({ is_active: active, updated_at: new Date().toISOString() })
+    .eq('public_id', id)
+  if (updateError) throw new Error(updateError.message)
+  // Cascade mirrors single PUT /:id: children follow the parent.
+  await supabaseAdmin
+    .from('product_variants')
+    .update({ is_active: active })
+    .eq('product_id', row.id)
+  return { publicId: id, name: row.name ?? '' }
+}
+
+async function setVariantActive(id: string, active: boolean): Promise<{ publicId: string; name: string }> {
+  const { data: rows, error } = await supabaseAdmin
+    .from('product_variants')
+    .select('id, name, is_active')
+    .eq('public_id', id)
+    .limit(1)
+  if (error) throw new Error(error.message)
+  const row = rows?.[0]
+  if (!row) throw new NotFoundError('Varian tidak ditemukan')
+  if (row.is_active === active) throw new BadRequestError(active ? 'Sudah aktif' : 'Sudah nonaktif')
+  const { error: updateError } = await supabaseAdmin
+    .from('product_variants')
+    .update({ is_active: active, updated_at: new Date().toISOString() })
+    .eq('public_id', id)
+  if (updateError) throw new Error(updateError.message)
+  return { publicId: id, name: row.name ?? '' }
+}
+
+function auditBulkStatus(action: 'product:update' | 'variant:update', label: string) {
+  return (row: { publicId: string; name: string }, actor: BulkStatusActor): Promise<void> => {
+    return appendAudit({
+      action,
+      resourceType: action === 'product:update' ? 'product' : 'variant',
+      resourcePublicId: row.publicId,
+      resourceName: row.name,
+      snapshotText: `${label} ${row.name} diperbarui oleh ${actor.email ?? actor.sub} ${new Date().toLocaleString('id-ID')}`,
+      actorId: actor.sub,
+      actorEmail: actor.email ?? null,
+      actorType: 'admin',
+    }).catch(() => {})
+  }
+}
+
+export const productStatusService = {
+  async setActive(ids: string[], active: boolean, actor: BulkStatusActor, deps: BulkStatusDeps = {}): Promise<BulkStatusResult> {
+    return runBulkStatus(ids, active, actor, {
+      run: deps.run ?? setProductActive,
+      audit: deps.audit ?? auditBulkStatus('product:update', 'Produk'),
+    })
+  },
+}
+
+export const variantStatusService = {
+  async setActive(ids: string[], active: boolean, actor: BulkStatusActor, deps: BulkStatusDeps = {}): Promise<BulkStatusResult> {
+    return runBulkStatus(ids, active, actor, {
+      run: deps.run ?? setVariantActive,
+      audit: deps.audit ?? auditBulkStatus('variant:update', 'Varian'),
+    })
+  },
+}

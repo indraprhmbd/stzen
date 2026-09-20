@@ -5,8 +5,8 @@ import { supabaseAdmin } from '../../shared/db'
 import { type AuthEnv } from '../../shared/middleware/auth'
 import { generatePublicId } from '../../shared/lib/publicId'
 import { generateSku, composeVariantName } from '../../shared/lib/sku'
-import { BulkStockSchema, BulkImportPreviewSchema, BulkImportCommitSchema } from '../products/products.schema'
-import { varianBulkService } from '../products/products.service'
+import { BulkStockSchema, BulkStatusSchema, BulkImportPreviewSchema, BulkImportCommitSchema } from '../products/products.schema'
+import { varianBulkService, variantStatusService } from '../products/products.service'
 import { stokBulkService } from '../vault/vault.service'
 import { vaultService } from '../vault/vault.service'
 import { appendAudit } from '../../shared/lib/audit'
@@ -73,6 +73,14 @@ export const adminVariantRoutes = new Hono<VariantEnv>()
       }
       throw e
     }
+  })
+
+  // Checkbox bulk: activate/deactivate up to 20 varian; unknown ids and
+  // already-target rows skip with reasons instead of failing the batch.
+  .post('/bulk/status', zValidator('json', BulkStatusSchema), async (c) => {
+    const { action, ids } = c.req.valid('json')
+    const user = c.get('user')
+    return c.json(await variantStatusService.setActive(ids, action === 'activate', { sub: user.sub, email: user.email }))
   })
 
   .get('/bulk-stock/template', async (c) => {
