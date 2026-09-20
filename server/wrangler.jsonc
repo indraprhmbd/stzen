@@ -42,7 +42,10 @@
         "CORS_ALLOWED_ORIGINS": "https://stzen.web.id",
         "PAYMENT_APP_BASE_URL": "https://stzen.web.id",
         "ADMIN_APP_BASE_URL": "https://stzen.web.id",
-        "PAYMENT_ACTIVE_PROVIDER": "manual",
+        "PAYMENT_ACTIVE_PROVIDER": "sumopod",
+        // Live SumoPod endpoint (default in code is sandbox). VERIFY against
+        // SumoPod dashboard before first prod deploy - wrong URL fails invoices.
+        "PAYMENT_SUMOPOD_BASE_URL": "https://api-pay.sumopod.com/api/v1",
         "PAYMENT_SUMOPOD_METHOD_CODE": "QRIS",
         "PAYMENT_DUITKU_BASE_URL": "",
         "NOTIFY_PROVIDERS": ""
