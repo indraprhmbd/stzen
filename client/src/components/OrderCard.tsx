@@ -1,4 +1,5 @@
-import { memo } from 'react'
+import { memo, useState } from 'react'
+import { Copy, Check, Xmark, Notes, WarningTriangle } from 'iconoir-react'
 import { useBrand } from '../hooks/useBrand'
 import { useCopy } from '../hooks/useCopy'
 import { formatIdNumber } from '../lib/format'
@@ -15,6 +16,8 @@ interface Order {
 
 interface OrderCardProps {
   order: Order
+  /** QRIS fee, display-only (buyer-paid on top of base). 0/undefined = base only. */
+  fee?: number
   onViewCredentials?: (id: string) => void
   onReport?: (id: string) => void
   onReceipt?: (id: string) => void
@@ -55,86 +58,138 @@ function getStatusConfig(status: Order['status']) {
   }
 }
 
-function OrderCard({ order, onViewCredentials, onReport, onReceipt, onPay, onContactWa, paying, onCancel }: OrderCardProps) {
+function OrderCard({ order, fee, onViewCredentials, onReport, onReceipt, onPay, onContactWa, paying, onCancel }: OrderCardProps) {
   const brand = useBrand()
   const { t, lang } = useCopy()
   const statusConfig = getStatusConfig(order.status)
-  const amount = formatIdNumber(order.amount, lang === 'id' ? 'id-ID' : 'en-US')
+  const locale = lang === 'id' ? 'id-ID' : 'en-US'
+  const amount = formatIdNumber(order.amount, locale)
+  const showFee = (fee ?? 0) > 0
+  const total = formatIdNumber(Number(order.amount) + (fee ?? 0), locale)
+  const [copied, setCopied] = useState(false)
+
+  function copyId() {
+    const done = () => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    }
+    // clipboard API needs secure context (missing on mobile LAN-IP);
+    // fall back to execCommand so the tap always does something.
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(order.id).then(done, () => {})
+      return
+    }
+    try {
+      const ta = document.createElement('textarea')
+      ta.value = order.id
+      ta.style.position = 'fixed'
+      ta.style.opacity = '0'
+      document.body.appendChild(ta)
+      ta.select()
+      document.execCommand('copy')
+      document.body.removeChild(ta)
+      done()
+    } catch {
+      /* noop */
+    }
+  }
 
   return (
-    <div className="bg-white border-[3px] border-black shadow-brutal-sm p-3" style={{ contentVisibility: 'auto', containIntrinsicSize: 'auto 120px' }}>
-      {/* Row 1: status + name + amount */}
-      <div className="flex items-center gap-2">
-        <span className={`shrink-0 border-2 border-black font-black text-[10px] uppercase px-1.5 py-px ${statusConfig.className}`}>
+    <div className="bg-white border-comic shadow-comic flex flex-col p-2.5 min-w-0" style={{ contentVisibility: 'auto', containIntrinsicSize: 'auto 180px' }}>
+      {/* Title */}
+      <h3
+        className="font-black text-xs uppercase tracking-tight text-black leading-tight line-clamp-2 min-h-8"
+        style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+      >
+        {order.productName}
+      </h3>
+      {/* Pills */}
+      <div className="flex flex-wrap items-center gap-1 mt-1 mb-1 max-h-9 overflow-hidden">
+        <span className={`w-fit rounded-full border border-black text-[7px] uppercase px-1.5 py-px tracking-wide ${statusConfig.className}`}>
           {statusConfig.label}
         </span>
-        <h3
-          className="flex-1 min-w-0 truncate font-black text-sm uppercase tracking-tight text-black"
-          style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+        {order.paymentProvider && (
+          <span className="w-fit rounded-full border border-black text-black text-[7px] uppercase px-1.5 py-px tracking-wide">
+            {order.paymentProvider === 'sumopod' ? 'QRIS' : order.paymentProvider}
+          </span>
+        )}
+      </div>
+      {/* Meta */}
+      <div className="flex items-center gap-1 font-mono text-[10px] text-zinc-500 min-w-0">
+        <span className="truncate">{formatIdDate(order.createdAt)}</span>
+        <button
+          onClick={copyId}
+          title="Salin ID pesanan"
+          className="shrink-0 inline-flex items-center gap-0.5 -m-1 p-1 hover:text-black"
         >
-          {order.productName}
-        </h3>
-        <span className="shrink-0 font-mono font-black text-xs text-black">
-          {brand.storefront.currencySymbol}{amount}
+          #{order.id.slice(0, 8).toUpperCase()}
+          {copied ? <Check width={10} height={10} strokeWidth={2.5} /> : <Copy width={10} height={10} strokeWidth={2} />}
+        </button>
+      </div>
+
+      {/* Price */}
+      <div className="mt-auto pt-2 flex items-end justify-between gap-1">
+        <span className="font-black text-lg text-black whitespace-nowrap" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+          {brand.storefront.currencySymbol}{showFee ? total : amount}
         </span>
       </div>
 
-      {/* Row 2: meta + actions */}
-      <div className="flex items-center gap-2 mt-2">
-        <span className="font-mono text-[10px] text-zinc-500 truncate">
-          {formatIdDate(order.createdAt)} · #{order.id.slice(0, 8).toUpperCase()}
-        </span>
-        <div className="ml-auto flex shrink-0 gap-1.5">
-          {order.status === 'PENDING' && order.paymentProvider === 'manual' && onContactWa && (
-            <button
-              className="bg-primary text-black border-2 border-black shadow-brutal-sm btn-brutal-interactive font-black uppercase text-[10px] px-2 py-1"
-              onClick={() => onContactWa?.(order.id)}
-            >
-              {t.dashboard.contactWa}
-            </button>
-          )}
-          {order.status === 'PENDING' && order.paymentProvider !== 'manual' && onPay && (
-            <button
-              className="bg-primary text-black border-2 border-black shadow-brutal-sm btn-brutal-interactive font-black uppercase text-[10px] px-2 py-1 disabled:opacity-50"
-              onClick={() => onPay?.(order.id)}
-              disabled={paying}
-            >
-              {paying ? '…' : t.dashboard.payNow}
-            </button>
-          )}
-          {order.status === 'DELIVERED' && onViewCredentials && (
-            <button
-              className="bg-primary text-black border-2 border-black shadow-brutal-sm btn-brutal-interactive font-black uppercase text-[10px] px-2 py-1"
-              onClick={() => onViewCredentials?.(order.id)}
-            >
-              {t.dashboard.viewCredentials}
-            </button>
-          )}
-          {order.status === 'PENDING' && onCancel && (
-            <button
-              className="bg-white text-black border-2 border-black shadow-brutal-sm btn-brutal-interactive font-black uppercase text-[10px] px-2 py-1"
-              onClick={() => onCancel?.(order.id)}
-            >
-              {t.dashboard.cancelOrder}
-            </button>
-          )}
-          {onReceipt && (
-            <button
-              className="bg-white text-black border-2 border-black shadow-brutal-sm btn-brutal-interactive font-black uppercase text-[10px] px-2 py-1"
-              onClick={() => onReceipt?.(order.id)}
-            >
-              {t.dashboard.receipt}
-            </button>
-          )}
-          {onReport && (
-            <button
-              className="bg-error text-white border-2 border-black shadow-brutal-sm btn-brutal-interactive font-black uppercase text-[10px] px-2 py-1"
-              onClick={() => onReport?.(order.id)}
-            >
-              {t.dashboard.reportIssue}
-            </button>
-          )}
-        </div>
+      {/* Primary CTA: full-width */}
+      {order.status === 'PENDING' && order.paymentProvider === 'manual' && onContactWa && (
+        <button
+          className="mt-1.5 w-full border-2 border-black font-black text-[10px] uppercase px-2.5 py-2 bg-primary text-black btn-comic-interactive"
+          style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+          onClick={() => onContactWa?.(order.id)}
+        >
+          {t.dashboard.contactWa}
+        </button>
+      )}
+      {order.status === 'PENDING' && order.paymentProvider !== 'manual' && onPay && (
+        <button
+          className="mt-1.5 w-full border-2 border-black font-black text-[10px] uppercase px-2.5 py-2 bg-primary text-black btn-comic-interactive disabled:opacity-50"
+          style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+          onClick={() => onPay?.(order.id)}
+          disabled={paying}
+        >
+          {paying ? '…' : t.dashboard.payNow}
+        </button>
+      )}
+      {order.status === 'DELIVERED' && onViewCredentials && (
+        <button
+          className="mt-1.5 w-full border-2 border-black font-black text-[10px] uppercase px-2.5 py-1 bg-primary text-black btn-comic-interactive"
+          style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+          onClick={() => onViewCredentials?.(order.id)}
+        >
+          {t.dashboard.viewCredentials}
+        </button>
+      )}
+
+      {/* Secondary actions: single line, struk right */}
+      <div className="flex items-center gap-1 mt-1.5 flex-nowrap">
+        {order.status === 'PENDING' && onCancel && (
+          <button
+            className="inline-flex items-center gap-0.5 border border-black bg-white text-black font-bold uppercase text-[8px] px-1 py-0.5 whitespace-nowrap"
+            onClick={() => onCancel?.(order.id)}
+          >
+            <Xmark width={10} height={10} strokeWidth={2.5} />{t.dashboard.cancelOrder}
+          </button>
+        )}
+        {onReport && (
+          <button
+            className="inline-flex items-center gap-0.5 border border-black bg-error text-white font-bold uppercase text-[8px] px-1 py-0.5 whitespace-nowrap transition-colors hover:brightness-110 active:translate-x-[1px] active:translate-y-[1px]"
+            onClick={() => onReport?.(order.id)}
+          >
+            <WarningTriangle width={10} height={10} strokeWidth={2} />{t.dashboard.reportIssue}
+          </button>
+        )}
+        {onReceipt && (
+          <button
+            className="ml-auto inline-flex items-center gap-0.5 border border-black bg-white text-black font-bold uppercase text-[8px] px-1 py-0.5 whitespace-nowrap transition-colors hover:bg-black hover:text-white"
+            onClick={() => onReceipt?.(order.id)}
+          >
+            <Notes width={10} height={10} strokeWidth={2} />{t.dashboard.receipt}
+          </button>
+        )}
       </div>
     </div>
   )

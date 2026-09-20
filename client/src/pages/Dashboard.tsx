@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { Link } from 'react-router-dom'
-import { Box, Lock } from 'iconoir-react'
+import { Box, Lock, Copy, Xmark, WarningTriangle } from 'iconoir-react'
 import { useAuth } from '../hooks/useAuth'
 import { useBrand } from '../hooks/useBrand'
 import { usePublicSettings } from '../hooks/usePublicSettings'
@@ -249,10 +249,18 @@ const { t } = useCopy()
     if (order) window.open(getWhatsAppUrl(order), '_blank')
   }, [support.whatsapp, brand.support.whatsappNumber, user, t])
 
+  // QRIS fee is buyer-paid on top of base and never stored (revenue =
+  // net). Recompute display-only from public settings, mirroring the
+  // pre-purchase breakdown in ProductDetail.
+  const qrisFee = useCallback((o: Order) => {
+    if (o.paymentProvider !== 'sumopod') return 0
+    return Math.ceil(Number(o.amount) * support.sumopodFeePct) + support.sumopodFeeFixed
+  }, [support.sumopodFeePct, support.sumopodFeeFixed])
+
   const handleReceipt = useCallback((orderId: string) => {
     const order = ordersRef.current.find((o) => o.id === orderId)
-    if (order) printReceipt(order)
-  }, [])
+    if (order) printReceipt(order, qrisFee(order))
+  }, [qrisFee])
 
   return (
     <Layout>
@@ -324,20 +332,18 @@ const { t } = useCopy()
           </div>
 
           {loading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4" aria-busy="true">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="bg-white border-[3px] border-black p-3 animate-pulse">
-                  <div className="flex items-center gap-2">
-                    <div className="h-5 w-16 bg-neutral/20" />
-                    <div className="h-4 flex-1 bg-neutral/20" />
-                    <div className="h-4 w-14 bg-neutral/20" />
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2" aria-busy="true">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className="bg-white border-comic p-2.5 animate-pulse">
+                  <div className="h-4 bg-neutral/20" />
+                  <div className="flex gap-1 mt-1.5">
+                    <div className="h-4 w-14 bg-neutral/20 rounded-full" />
+                    <div className="h-4 w-12 bg-neutral/20 rounded-full" />
                   </div>
-                  <div className="flex items-center gap-2 mt-2">
-                    <div className="h-3 w-32 bg-neutral/20" />
-                    <div className="ml-auto flex gap-1.5">
-                      <div className="h-6 w-14 bg-neutral/20" />
-                      <div className="h-6 w-14 bg-neutral/20" />
-                    </div>
+                  <div className="h-3 w-24 bg-neutral/20 mt-1.5" />
+                  <div className="flex items-end justify-between mt-3">
+                    <div className="h-6 w-20 bg-neutral/20" />
+                    <div className="h-7 w-16 bg-neutral/20" />
                   </div>
                 </div>
               ))}
@@ -349,11 +355,12 @@ const { t } = useCopy()
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 items-start">
                 {filteredOrders.map((order) => (
                   <OrderCard
                     key={order.id}
                     order={order}
+                    fee={qrisFee(order)}
                     onViewCredentials={order.status === 'DELIVERED' ? handleViewCredentials : undefined}
                     onPay={order.status === 'PENDING' && order.paymentProvider !== 'manual' ? handlePay : undefined}
                     onContactWa={order.status === 'PENDING' && order.paymentProvider === 'manual' ? handleContactWa : undefined}
@@ -409,10 +416,12 @@ const { t } = useCopy()
                   </div>
                 )}
                 <div className="flex gap-2">
-                  <button onClick={() => handleCopy(credentials.credentials)} className="flex-1 btn btn-primary border-2 border-black font-black text-xs uppercase py-2.5 btn-comic-interactive">
+                  <button onClick={() => handleCopy(credentials.credentials)} className="flex-1 inline-flex items-center justify-center gap-1.5 btn btn-primary border-2 border-black font-black text-xs uppercase py-2.5 btn-comic-interactive">
+                    <Copy width={14} height={14} strokeWidth={2} />
                     Salin
                   </button>
-                  <button onClick={() => selectedOrder && window.open(getWhatsAppUrl(selectedOrder), '_blank')} className="flex-1 bg-error text-white font-black text-xs uppercase border-2 border-black py-2.5 btn-brutal-interactive">
+                  <button onClick={() => selectedOrder && window.open(getWhatsAppUrl(selectedOrder), '_blank')} className="flex-1 inline-flex items-center justify-center gap-1.5 bg-error text-white font-black text-xs uppercase border-2 border-black py-2.5 btn-brutal-interactive">
+                    <WarningTriangle width={14} height={14} strokeWidth={2} />
                     Lapor
                   </button>
                 </div>
@@ -421,7 +430,8 @@ const { t } = useCopy()
               <div className="text-sm font-bold text-neutral/50 text-center py-6">Tidak ada data.</div>
             )}
             <form method="dialog">
-              <button className="w-full bg-white text-black font-black text-xs uppercase border-2 border-black py-2.5 hover:bg-black hover:text-white transition-colors">
+              <button className="w-full inline-flex items-center justify-center gap-1.5 bg-white text-black font-black text-xs uppercase border-2 border-black py-2.5 hover:bg-black hover:text-white transition-colors">
+                <Xmark width={14} height={14} strokeWidth={2.5} />
                 Tutup
               </button>
             </form>
