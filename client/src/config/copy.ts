@@ -181,14 +181,14 @@ const id: Copy = {
   legal: {
     terms: {
       title: 'SYARAT & KETENTUAN',
-      desc: 'Aturan main belanja di STZen. Dengan menyelesaikan checkout, kamu dianggap membaca dan menyetujui seluruh isi halaman ini.',
+      desc: 'Aturan main belanja di stzen. Dengan menyelesaikan checkout, kamu dianggap membaca dan menyetujui seluruh isi halaman ini.',
       updated: 'Diperbarui: September 2026',
       sections: [
-        { h: '1. Penyelenggara', p: ['STZen (stzen.web.id) adalah toko akun digital premium. Kontak dukungan: WhatsApp 0882-0034-57148, Telegram @stzen_bot, email akieera.store@gmail.com.'] },
+        { h: '1. Penyelenggara', p: ['stzen (stzen.web.id) adalah toko akun digital premium. Kontak dukungan: WhatsApp 0882-0034-57148, Telegram @stzen_bot, email akieera.store@gmail.com.'] },
         { h: '2. Bentuk Produk', p: ['Yang kamu beli adalah hak akses ke akun digital selama masa berlaku paket, bukan kepemilikan akun. Kredensial tetap milik penyedia layanan aslinya dan tunduk pada aturan mereka (misalnya batas perangkat).', 'Detail tiap produk (durasi, jumlah profil, aturan pakai) tertera di halaman produk dan mengikat seperti bagian dari dokumen ini.'] },
         { h: '3. Harga', p: ['Harga tertera dalam Rupiah dan bersifat final sebelum biaya layanan. Pembayaran QRIS otomatis dikenai biaya layanan yang ditanggung pembeli dan ditampilkan sebelum kamu membayar.', 'Harga dapat berubah sewaktu-waktu; harga yang berlaku adalah harga saat kamu checkout.'] },
         { h: '4. Pembayaran', p: ['QRIS otomatis diverifikasi oleh gerbang pembayaran. Transfer manual wajib dikonfirmasi via WhatsApp beserta ID pesanan.', 'Pesanan PENDING yang belum dibayar dapat dibatalkan kapan saja oleh kamu dari dashboard.'] },
-        { h: '5. Pengiriman', p: ['Kredensial dikirim instan ke dashboard kamu setelah pembayaran terkonfirmasi. Buka Pesanan Saya, pilih pesanan berstatus Dikirim, lalu tekan Kredensial.', 'Pastikan kamu bisa login ke akun STZen sebelum membayar. Kami tidak bertanggung jawab atas keterlambatan akibat email yang salah ketik atau akun yang tidak bisa diakses.'] },
+        { h: '5. Pengiriman', p: ['Kredensial dikirim instan ke dashboard kamu setelah pembayaran terkonfirmasi. Buka Pesanan Saya, pilih pesanan berstatus Dikirim, lalu tekan Kredensial.', 'Pastikan kamu bisa login ke akun stzen sebelum membayar. Kami tidak bertanggung jawab atas keterlambatan akibat email yang salah ketik atau akun yang tidak bisa diakses.'] },
         { h: '6. Kewajiban Pembeli', p: ['Dilarang mengubah email, password, atau PIN profil tanpa izin tertulis dari kami.', 'Dilarang menjual kembali, menyewakan, atau membagikan kredensial di luar ketentuan paket yang kamu beli.', 'Pelanggaran dapat berujung pada pencabutan akses tanpa pengembalian dana, setelah peringatan satu kali via kontak pesanan.'] },
         { h: '7. Kendala & Garansi', p: ['Kredensial tidak berfungsi saat diterima? Laporkan maksimal 1x24 jam via WhatsApp dengan menyertakan ID pesanan. Kami mengganti kredensial terlebih dahulu; refund diberikan bila stok pengganti habis atau pengganti ikut bermasalah.', 'Garansi penggantian 30 hari sejak pengiriman untuk kendala yang bukan akibat pelanggaran pasal 6.'] },
         { h: '8. Batasan Tanggung Jawab', p: ['Tanggung jawab kami maksimal sebesar nilai pesanan yang bersangkutan.', 'Kami tidak bertanggung jawab atas perubahan sepihak dari penyedia layanan asli (reset password massal, pemblokiran wilayah, penutupan layanan) di luar kendali kami. Dalam kasus tersebut kami bantu semaksimal mungkin, termasuk penggantian selama stok tersedia.'] },
@@ -200,7 +200,7 @@ const id: Copy = {
       desc: 'Penjelasan UU PDP No. 27 Tahun 2022: data apa yang kami kumpulkan, untuk apa, dan hak-hak kamu atas datamu. Ditulis dalam Bahasa Indonesia dengan bahasa sederhana.',
       updated: 'Diperbarui: September 2026',
       sections: [
-        { h: '1. Pengelola Data', p: ['Pengelola data pribadi (data controller) adalah STZen, stzen.web.id. Kontak pengelola: WhatsApp 0882-0034-57148, email akieera.store@gmail.com.'] },
+        { h: '1. Pengelola Data', p: ['Pengelola data pribadi (data controller) adalah stzen, stzen.web.id. Kontak pengelola: WhatsApp 0882-0034-57148, email akieera.store@gmail.com.'] },
         { h: '2. Data yang Dikumpulkan', p: ['Email akun, nomor WhatsApp yang kamu isi saat checkout, ID dan referensi pembayaran, serta riwayat pesananmu.', 'Kredensial produk (username/password akun digital) adalah barang dagangan, bukan data pribadimu. Kredensial disimpan terenkripsi AES-256 dan tidak pernah dalam bentuk teks polos.'] },
         { h: '3. Tujuan & Dasar Pemrosesan', p: ['Memenuhi pesananmu (dasar: pelaksanaan kontrak), layanan pelanggan dan garansi (kontrak), serta keamanan dan pencegahan penipuan (kepentingan sah).', 'Kami tidak memakai datamu untuk iklan pihak ketiga dan tidak menjual datamu ke siapa pun.'] },
         { h: '4. Pihak yang Menerima Data', p: ['Penyedia infrastruktur: Supabase (basis data, Singapura), Cloudflare (hosting dan keamanan), Sumopod (gerbang pembayaran QRIS).', 'Masing-masing hanya menerima data yang mereka butuhkan untuk fungsinya, terikat kontrak pemrosesan data.'] },
@@ -376,14 +376,14 @@ const en: Copy = {
   legal: {
     terms: {
       title: 'TERMS & CONDITIONS',
-      desc: 'The ground rules for shopping at STZen. By completing checkout, you acknowledge reading and agreeing to this entire page.',
+      desc: 'The ground rules for shopping at stzen. By completing checkout, you acknowledge reading and agreeing to this entire page.',
       updated: 'Updated: September 2026',
       sections: [
-        { h: '1. Operator', p: ['STZen (stzen.web.id) is a premium digital-accounts store. Support: WhatsApp 0882-0034-57148, Telegram @stzen_bot, email akieera.store@gmail.com.'] },
+        { h: '1. Operator', p: ['stzen (stzen.web.id) is a premium digital-accounts store. Support: WhatsApp 0882-0034-57148, Telegram @stzen_bot, email akieera.store@gmail.com.'] },
         { h: '2. Product Form', p: ['What you buy is access rights to a digital account for the package duration, not account ownership. Credentials remain the property of the original service provider and follow their rules (e.g. device limits).', 'Each product page details (duration, profiles, usage rules) bind as part of this document.'] },
         { h: '3. Pricing', p: ['Prices are in IDR and final before service fees. Automatic QRIS payments carry a buyer-paid service fee shown before you pay.', 'Prices may change anytime; the price at checkout applies.'] },
         { h: '4. Payment', p: ['Automatic QRIS is verified by the payment gateway. Manual transfers must be confirmed via WhatsApp with your order ID.', 'Unpaid PENDING orders can be cancelled anytime from your dashboard.'] },
-        { h: '5. Delivery', p: ['Credentials are delivered instantly to your dashboard once payment is confirmed. Open My Orders, pick the Delivered order, press Credentials.', 'Make sure you can log in to your STZen account before paying. We are not liable for delays caused by mistyped emails or inaccessible accounts.'] },
+        { h: '5. Delivery', p: ['Credentials are delivered instantly to your dashboard once payment is confirmed. Open My Orders, pick the Delivered order, press Credentials.', 'Make sure you can log in to your stzen account before paying. We are not liable for delays caused by mistyped emails or inaccessible accounts.'] },
         { h: '6. Buyer Duties', p: ['Do not change the email, password, or profile PIN without our written permission.', 'Do not resell, rent out, or share credentials beyond your package terms.', 'Violations may lead to access revocation without refund, after one warning via the order contact.'] },
         { h: '7. Issues & Warranty', p: ['Credentials dead on arrival? Report within 24 hours via WhatsApp with your order ID. We replace first; refund follows if replacement stock runs out or the replacement fails too.', '30-day replacement warranty from delivery for issues not caused by section 6 violations.'] },
         { h: '8. Liability Cap', p: ['Our liability is capped at the value of the order in question.', 'We are not liable for unilateral changes by the original service provider (mass password resets, region blocks, shutdowns) beyond our control. We help as far as possible, including replacement while stock lasts.'] },
@@ -395,7 +395,7 @@ const en: Copy = {
       desc: 'Our Law No. 27 of 2022 (UU PDP) notice: what we collect, why, and your rights over your data. The Indonesian version governs in case of divergence.',
       updated: 'Updated: September 2026',
       sections: [
-        { h: '1. Data Controller', p: ['The personal-data controller is STZen, stzen.web.id. Contact: WhatsApp 0882-0034-57148, email akieera.store@gmail.com.'] },
+        { h: '1. Data Controller', p: ['The personal-data controller is stzen, stzen.web.id. Contact: WhatsApp 0882-0034-57148, email akieera.store@gmail.com.'] },
         { h: '2. Data Collected', p: ['Account email, the WhatsApp number you enter at checkout, payment IDs and references, and your order history.', 'Product credentials (digital-account usernames/passwords) are merchandise, not your personal data. They are stored AES-256 encrypted, never in plain text.'] },
         { h: '3. Purposes & Basis', p: ['Fulfilling your orders (basis: contract performance), customer service and warranty (contract), security and fraud prevention (legitimate interest).', 'We never use your data for third-party ads and never sell it.'] },
         { h: '4. Recipients', p: ['Infrastructure providers: Supabase (database, Singapore), Cloudflare (hosting and security), Sumopod (QRIS payment gateway).', 'Each receives only the data its function needs, bound by data-processing contracts.'] },
