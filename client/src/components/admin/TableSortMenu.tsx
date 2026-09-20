@@ -29,15 +29,17 @@ export default function TableSortMenu({ columns, sortKey, sortDir, onSort }: Tab
   }
 
   return (
-    <details className="relative inline-block sm:hidden">
-      <summary aria-label="Urutkan tabel" className="ad-btn list-none [&::-webkit-details-marker]:hidden">
+    <details className="relative inline-block sm:hidden group">
+      <summary aria-label="Urutkan tabel" className="ad-btn list-none [&::-webkit-details-marker]:hidden group-open:before:content-[''] group-open:before:fixed group-open:before:inset-0 group-open:before:z-40 group-open:before:bg-black/20">
         <Sort width={15} height={15} strokeWidth={1.5} />
         {active ? active.label : 'Urutkan'}
         {active && sortDir === 'asc' && <SortUp width={14} height={14} strokeWidth={1.5} />}
         {active && sortDir === 'desc' && <SortDown width={14} height={14} strokeWidth={1.5} />}
       </summary>
+      {/* Bottom sheet: fixed to viewport so .ad-card{overflow:hidden} can
+          never clip it and right-anchoring can never push it off-screen. */}
       <ul
-        className="absolute right-0 top-full z-30 mt-1 w-56 max-w-[calc(100vw-2rem)] rounded-[14px] border border-[#e8e8ed] bg-white p-2 text-[#1d1d1f]"
+        className="fixed inset-x-4 bottom-20 top-auto z-[60] max-h-[60vh] overflow-y-auto rounded-[14px] border border-[#e8e8ed] bg-white p-2 text-[#1d1d1f]"
         style={{ boxShadow: '0 12px 48px rgb(0 0 0 / 0.12)' }}
       >
         {sortable.map((c) => {

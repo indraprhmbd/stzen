@@ -183,7 +183,7 @@ export default function BasisPanel({ products, variants, onCreate, onEdit, onDel
         <div className="text-2xl max-sm:text-lg font-semibold leading-none ad-num">{loading ? '-' : new Set(products.map((p) => p.category)).size}</div>
         <div className="text-[11px] font-semibold tracking-wider uppercase text-[#6e6e73] mt-1">Kategori</div>
       </div>
-      <div className="ml-auto flex items-center gap-2">
+      <div className="ml-auto flex max-w-full items-center gap-2 overflow-x-auto *:shrink-0">
         <TableSortMenu columns={basisColumns} sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
         {/* Mobile: thead (and its select-all) hides below sm, so the page
             toggle lives here instead. */}

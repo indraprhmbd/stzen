@@ -40,6 +40,7 @@ export function useVaultManager(variants: Variant[], sortKey: string, sortDir: '
   const [expiresAt, setExpiresAt] = useState<number>(0)
   const [variantId, setVariantId] = useState('')
   const [page, setPage] = useState(0)
+  const [limit, setLimitState] = useState(25)
   const [q, setQ] = useState('')
   const debouncedQ = useDebounce(q, 300)
   // Sort state lives in the URL (useTableSort server mode, owned by the
@@ -94,7 +95,7 @@ export function useVaultManager(variants: Variant[], sortKey: string, sortDir: '
     if (!token || !variantId) return
     setLoading(true); setError(null)
     try {
-      const query: { variant: string; page?: number; q?: string; sort?: string; sortDir?: string } = { variant: variantId, page, sort: sortKey, sortDir }
+      const query: { variant: string; page?: number; limit?: number; q?: string; sort?: string; sortDir?: string } = { variant: variantId, page, limit, sort: sortKey, sortDir }
       if (debouncedQ) query.q = debouncedQ
       const res = await authedApiRequest(
         (c) => c.api.v1.admin.vault.$get({ query }),
@@ -110,7 +111,7 @@ export function useVaultManager(variants: Variant[], sortKey: string, sortDir: '
     if (!token || !variantId) return
     const id = ++fetchRef.current
     fetchList().then(() => { if (id !== fetchRef.current) return })
-  }, [token, variantId, page, debouncedQ, sortKey, sortDir])
+  }, [token, variantId, page, limit, debouncedQ, sortKey, sortDir])
 
   // Re-lock on tab/page visibility hidden (soft: only if token present)
   useEffect(() => {
@@ -193,6 +194,10 @@ export function useVaultManager(variants: Variant[], sortKey: string, sortDir: '
     setVariantId(id); setPage(0); setQ(''); setData(null)
   }
 
+  function setLimit(n: number) {
+    setLimitState(n); setPage(0)
+  }
+
   const isUnlocked = !!token && Date.now() < expiresAt
   const vaultOptions = variants
     .map((v) => ({ value: v.id, groupLabel: v.baseName, label: v.name, sublabel: `${v.sku} · ${v.fulfillmentType === 'on_demand' ? 'on demand' : `${v.stockCount} stok`}` }))
@@ -203,7 +208,7 @@ export function useVaultManager(variants: Variant[], sortKey: string, sortDir: '
     // variant
     variantId, setVariantId: setVariantAndReset, vaultOptions,
     // list
-    data, loading, error, page, setPage, q, setQ,
+    data, loading, error, page, setPage, limit, setLimit, q, setQ,
     // actions
     actionLoading, editCred, deleteCred, revokeCred, rotateCred, bulkVault,
     fetchList, toast, showToast,

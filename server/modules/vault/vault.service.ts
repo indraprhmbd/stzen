@@ -94,8 +94,8 @@ export const vaultService = {
     return decrypt(key, payload)
   },
 
-  async listByVariant(variantPublicId: string, page: number, orderQuery?: string, sort?: string, sortDir?: string) {
-    const limit = 50
+  async listByVariant(variantPublicId: string, page: number, orderQuery?: string, sort?: string, sortDir?: string, limitParam?: number) {
+    const limit = Math.min(Math.max(limitParam || 25, 10), 100)
     const offset = Math.max(0, page) * limit
 
     const { data: variants, error } = await supabaseAdmin

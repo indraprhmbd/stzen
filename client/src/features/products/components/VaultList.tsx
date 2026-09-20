@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import SearchableSelect from '../../../components/admin/SearchableSelect'
 import DataTable from '../../../components/admin/DataTable'
+import TablePagination from '../../../components/admin/TablePagination'
 import TableSortMenu from '../../../components/admin/TableSortMenu'
 import CopyCell from '../../../components/admin/CopyCell'
 import StatusChip from '../../../components/admin/StatusChip'
@@ -13,7 +14,7 @@ import { useRowSelection } from '../../../hooks/useRowSelection'
 import { SelectableRow, SelectAllCheckbox } from '../../../components/admin/RowSelection'
 import { authedApiRequest } from '../../../lib/api'
 import type { Variant } from '../types'
-import { Lock, LockSlash, Refresh, Copy, EditPencil, Trash, Prohibition, Redo, Search, NavArrowLeft, NavArrowRight, Plus, ArrowUpRightSquare, Download } from 'iconoir-react'
+import { Lock, LockSlash, Refresh, Copy, EditPencil, Trash, Prohibition, Redo, Search, Plus, ArrowUpRightSquare, Download } from 'iconoir-react'
 import BulkImportDialog, { stokBulkConfig } from './BulkImportDialog'
 
 interface Props { variants: Variant[]; fetchedAt: number | null; initialVariantId?: string | null; onVariantSelected?: () => void; /** Prefill order search (orders deep-link: jump straight to that order's credential). */ initialOrderId?: string | null; /** Open import dialog on preselect (create flow). Deep-links only preselect. */ autoImport?: boolean }
@@ -126,7 +127,7 @@ export default function VaultList({ variants, fetchedAt, initialVariantId, onVar
   // the shared guard). Clears on variant/search/page/sort change.
   const selection = useRowSelection()
   const pageIds = useMemo(() => items.map((item) => item.id), [items])
-  useEffect(() => { selection.clear() }, [v.variantId, v.q, v.page, sortKey, sortDir])
+  useEffect(() => { selection.clear() }, [v.variantId, v.q, v.page, v.limit, sortKey, sortDir])
   const [bulkBusy, setBulkBusy] = useState(false)
   const [pendingBulk, setPendingBulk] = useState<'delete' | 'revoke' | null>(null)
 
@@ -207,13 +208,13 @@ export default function VaultList({ variants, fetchedAt, initialVariantId, onVar
           </div>
 
           {/* ── Status bar ──────────────────────────────────────── */}
-          <div className="flex items-center justify-between text-[12px] text-[#6e6e73]">
+          <div className="flex flex-wrap items-center justify-between gap-2 text-[12px] text-[#6e6e73]">
             <span className="ad-num">
               {v.loading ? 'Memuat...' : v.error ?? `${items.length} kredensial`}
               {fetchedAt && !v.loading && <span className="text-[#aeaeb2]"> · {new Date(fetchedAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</span>}
             </span>
-            <div className="flex items-center gap-2">
-              <span className="text-[11px] text-[#aeaeb2] ad-num">Terkunci dalam {Math.floor(v.relockIn / 60)}:{String(v.relockIn % 60).padStart(2, '0')}</span>
+            <span className="text-[11px] text-[#aeaeb2] ad-num ml-auto">Terkunci dalam {Math.floor(v.relockIn / 60)}:{String(v.relockIn % 60).padStart(2, '0')}</span>
+            <div className="flex max-w-full items-center justify-start gap-2 overflow-x-auto *:shrink-0">
               <button onClick={v.relock} title="Kunci ulang" className="ad-btn"><Lock width={14} height={14} strokeWidth={1.5} /><span className="text-[11px]">Kunci</span></button>
               <button onClick={() => v.fetchList()} title="Muat ulang" className="ad-btn"><Refresh width={14} height={14} strokeWidth={1.5} /><span className="text-[11px]">Muat ulang</span></button>
               {/* Mobile: thead (and its select-all) hides below sm. */}
@@ -321,14 +322,14 @@ export default function VaultList({ variants, fetchedAt, initialVariantId, onVar
                   </SelectableRow>
                 ))}
               </DataTable>
-              {/* Pagination */}
-              <div className="flex items-center justify-between px-4 py-3 border-t border-[#f1f1f4]">
-                <span className="text-xs ad-num text-[#6e6e73]">{v.data?.total ?? 0} total</span>
-                <div className="flex gap-1.5">
-                  <button onClick={() => v.setPage((p) => Math.max(0, p - 1))} disabled={v.page === 0} className="ad-btn !px-2.5"><NavArrowLeft width={15} height={15} strokeWidth={1.5} /></button>
-                  <button onClick={() => v.setPage((p) => p + 1)} disabled={!v.data?.hasMore} className="ad-btn !px-2.5"><NavArrowRight width={15} height={15} strokeWidth={1.5} /></button>
-                </div>
-              </div>
+              <TablePagination
+                total={v.data?.total ?? 0}
+                limit={v.limit}
+                offset={v.page * v.limit}
+                onLimitChange={v.setLimit}
+                onOffsetChange={(off) => v.setPage(Math.floor(off / v.limit))}
+                unit="kredensial"
+              />
             </div>
           )}
 

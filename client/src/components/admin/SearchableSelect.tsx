@@ -55,12 +55,16 @@ export default function SearchableSelect({
     )
   }, [options, query])
 
-  // Reset search + highlight whenever the panel opens
+  // Reset search + highlight whenever the panel opens. Autofocus only on
+  // fine-pointer devices - on touch screens focusing pops the keyboard and
+  // covers the option list.
   useEffect(() => {
     if (open) {
       setQuery('')
       setActiveIndex(Math.max(0, options.findIndex((o) => o.value === value)))
-      requestAnimationFrame(() => inputRef.current?.focus())
+      if (window.matchMedia('(pointer: fine)').matches) {
+        requestAnimationFrame(() => inputRef.current?.focus())
+      }
     }
   }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
 
