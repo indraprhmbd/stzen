@@ -130,15 +130,15 @@ export default function Orders() {
   // Server-side sort: URL params drive API query
   const { sortKey, sortDir, toggleSort } = useTableSort([], { urlKey: 'sort', defaultKey: 'createdAt', defaultDir: 'desc' })
 
-  const { data, loading, error, fetchedAt, refetch: fetchOrders } = useAdminQuery(async () => {
+  const { data, loading, error, fetchedAt, refetch: fetchOrders } = useAdminQuery(async (signal) => {
     const query: Record<string, string> = { limit: String(limit), offset: String(offset) }
     if (activeTab.statuses) query.status = activeTab.statuses
     if (tab === 'butuh-tindakan') query.oldest = '1'
     if (q) query.q = q
     if (sortKey) { query.sort = sortKey; query.sortDir = sortDir ?? 'desc' }
-    const res = await authedApiRequest((c) => c.api.v1.admin.orders.$get({ query }))
+    const res = await authedApiRequest((c) => c.api.v1.admin.orders.$get({ query }), { signal })
     return (await res.json()) as any as { orders: AdminOrder[]; total: number; counts: Record<string, number> }
-  }, [tab, q, offset, limit, sortKey, sortDir])
+  }, [tab, q, offset, limit, sortKey, sortDir], { keepPreviousData: true })
   const orders = data?.orders ?? []
   const total = data?.total ?? 0
   const counts = data?.counts ?? { ALL: 0 }

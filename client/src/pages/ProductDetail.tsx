@@ -2,7 +2,7 @@ import { useEffect, useState, useRef, useCallback, lazy, Suspense } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { apiV1, apiV1Signal, authedApiRequest } from '../lib/api'
 import { initiatePayment, deleteOrder } from '../lib/pay'
-import { getCachedDetail, prefetchList } from '../lib/prefetch'
+import { getCachedDetail, prefetchList, setCachedDetail } from '../lib/prefetch'
 import { useToast } from '../hooks/useToast'
 import ToastStack from '../components/Toast'
 import { usePublicSettings, refreshPublicSettings } from '../hooks/usePublicSettings'
@@ -99,6 +99,7 @@ export default function ProductDetail() {
         const data = (await res.json()) as Product
         if (!active) return
         setProduct(data)
+        setCachedDetail(id, data)
         // Fetch related products (same category). Plain object: hono/client
         // serializes query via Object.entries, which drops URLSearchParams.
         client.products.$get({ query: { category: data.category, limit: '4' } }).then(async (relRes) => {

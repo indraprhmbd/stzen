@@ -25,10 +25,10 @@ const LABELS: Record<string, { group: string; label: string; hint?: string; type
 const GROUP_ORDER = ['Toko', 'Pembayaran', 'Checkout', 'Operasional']
 
 export default function Settings() {
-  const { data, loading, error, fetchedAt, refetch } = useAdminQuery(async () => {
-    const res = await authedApiRequest((c) => c.api.v1.admin.settings.$get())
+  const { data, loading, error, fetchedAt, refetch } = useAdminQuery(async (signal) => {
+    const res = await authedApiRequest((c) => c.api.v1.admin.settings.$get(), { signal })
     return (await res.json()) as { keys: readonly string[]; values: Record<string, string> }
-  }, [])
+  }, [], { keepPreviousData: true })
   const [draft, setDraft] = useState<Record<string, string> | null>(null)
   const [savingGroup, setSavingGroup] = useState<string | null>(null)
   const [msg, setMsg] = useState<{ group: string; text: string } | null>(null)

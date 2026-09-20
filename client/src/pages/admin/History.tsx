@@ -49,14 +49,14 @@ export default function History() {
 
   const { sortKey, sortDir, toggleSort } = useTableSort([], { urlKey: 'sort', defaultKey: 'createdAt', defaultDir: 'desc' })
 
-  const { data, loading, error, fetchedAt, refetch: fetchLogs } = useAdminQuery(async () => {
+  const { data, loading, error, fetchedAt, refetch: fetchLogs } = useAdminQuery(async (signal) => {
     const params: Record<string, string> = { limit: String(limit), offset: String(offset) }
     if (type !== 'all') params.type = type
     if (actor !== 'all') params.actor = actor
     if (q) params.q = q
     if (sortKey) { params.sort = sortKey; params.sortDir = sortDir ?? 'desc' }
     const res = await authedApiRequest((c) =>
-      (c.api.v1.admin.history as unknown as { $get: (a: { query: Record<string, string> }) => Promise<Response> }).$get({ query: params })
+      (c.api.v1.admin.history as unknown as { $get: (a: { query: Record<string, string> }) => Promise<Response> }).$get({ query: params }), { signal }
     )
     const json = (await res.json()) as { data?: Log[]; total?: number } | Log[]
     // drizzle execute returns different shapes
@@ -67,7 +67,7 @@ export default function History() {
       return { logs: json, total: json.length }
     }
     return { logs: [], total: 0 }
-  }, [type, actor, q, offset, limit, sortKey, sortDir])
+  }, [type, actor, q, offset, limit, sortKey, sortDir], { keepPreviousData: true })
   const logs = data?.logs ?? []
   const total = data?.total ?? 0
 

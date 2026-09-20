@@ -14,7 +14,7 @@ interface QueryOpts {
   keepPreviousData?: boolean
 }
 
-export function useAdminQuery<T>(fn: () => Promise<T>, deps: unknown[] = [], opts: QueryOpts = {}): QueryState<T> {
+export function useAdminQuery<T>(fn: (signal: AbortSignal) => Promise<T>, deps: unknown[] = [], opts: QueryOpts = {}): QueryState<T> {
   const { keepPreviousData = false } = opts
   const [data, setData] = useState<T | null>(null)
   const [loading, setLoading] = useState(true)
@@ -24,17 +24,22 @@ export function useAdminQuery<T>(fn: () => Promise<T>, deps: unknown[] = [], opt
 
   useEffect(() => {
     let cancelled = false
+    // Abort the in-flight request on dep change: fast tab/sort/page switches
+    // no longer waste a full request whose response gets discarded anyway.
+    const controller = new AbortController()
     ;(async () => {
       setError(null)
       setLoading(true)
       if (!keepPreviousData) setData(null)
       try {
-        const result = await fn()
+        const result = await fn(controller.signal)
         if (!cancelled) {
           setData(result)
           setFetchedAt(Date.now())
         }
       } catch (e: unknown) {
+        // Aborts are expected churn, not errors.
+        if (cancelled || (e instanceof DOMException && e.name === 'AbortError')) return
         if (!cancelled) setError(e instanceof Error ? e.message : 'Gagal memuat')
       } finally {
         if (!cancelled) setLoading(false)
@@ -42,6 +47,7 @@ export function useAdminQuery<T>(fn: () => Promise<T>, deps: unknown[] = [], opt
     })()
     return () => {
       cancelled = true
+      controller.abort()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nonce, keepPreviousData, ...deps])

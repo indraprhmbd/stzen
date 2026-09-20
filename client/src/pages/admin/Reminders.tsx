@@ -74,20 +74,20 @@ export default function Reminders() {
   const [bulkBusy, setBulkBusy] = useState(false)
   const { toasts, showToast, dismissToast } = useToast()
 
-  const { data, loading, error, fetchedAt, refetch } = useAdminQuery(async () => {
+  const { data, loading, error, fetchedAt, refetch } = useAdminQuery(async (signal) => {
     const params: Record<string, string> = { limit: String(limit), offset: String(offset) }
     if (stateFilter !== 'all') params.state = stateFilter
     if (committedQ) params.q = committedQ
     if (sortKey) { params.sort = sortKey; params.sortDir = sortDir ?? 'desc' }
     const res = await authedApiRequest((c) =>
-      c.api.v1.admin.reminders.preview.$get({ query: params })
+      c.api.v1.admin.reminders.preview.$get({ query: params }), { signal }
     )
     if (!res.ok) {
       const err = (await res.json().catch(() => ({}))) as { error?: string }
       throw new Error(err.error || `Gagal (${res.status})`)
     }
     return (await res.json()) as { rows: PreviewRow[]; total: number }
-  }, [stateFilter, committedQ, offset, limit, sortKey, sortDir])
+  }, [stateFilter, committedQ, offset, limit, sortKey, sortDir], { keepPreviousData: true })
   const rows = data?.rows ?? []
   const total = data?.total ?? 0
 

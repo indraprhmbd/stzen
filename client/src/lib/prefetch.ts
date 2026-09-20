@@ -18,6 +18,10 @@ const DATA_TTL_MS = 60_000
 // On insert-at + delete-before-reinsert, Map iteration order = LRU order.
 const DATA_CACHE_MAX = 50
 const dataCache = new Map<string, { at: number; data: unknown }>()
+// Request coalescing: concurrent hovers on the same uncached key share one
+// flight instead of fanning out duplicate requests.
+const inflightDetail = new Map<string, Promise<unknown>>()
+const inflightList = new Map<string, Promise<unknown>>()
 
 function cacheSetLru(map: Map<string, { at: number; data: unknown }>, key: string, data: unknown, max: number) {
   map.delete(key)
@@ -32,15 +36,28 @@ function cacheSetLru(map: Map<string, { at: number; data: unknown }>, key: strin
 export function prefetchDetailData(id: string): Promise<unknown> {
   const hit = dataCache.get(id)
   if (hit && Date.now() - hit.at < DATA_TTL_MS) return Promise.resolve(hit.data)
-  return apiV1.products[':id']
-    .$get({ param: { id } })
-    .then(async (res) => {
-      if (!res.ok) return null
-      const data = await res.json()
-      cacheSetLru(dataCache, id, data, DATA_CACHE_MAX)
-      return data
-    })
-    .catch(() => null)
+  if (!inflightDetail.has(id)) {
+    inflightDetail.set(id, apiV1.products[':id']
+      .$get({ param: { id } })
+      .then(async (res) => {
+        if (!res.ok) return null
+        const data = await res.json()
+        cacheSetLru(dataCache, id, data, DATA_CACHE_MAX)
+        return data
+      })
+      .catch(() => null)
+      .finally(() => {
+        inflightDetail.delete(id)
+      }))
+  }
+  return inflightDetail.get(id) as Promise<unknown>
+}
+
+// Write-through for the detail page itself: without this the cache is only
+// ever populated by card hover-prefetch, so direct nav / back-nav always
+// misses. Same shape the page renders, so instant-paint stays type-safe.
+export function setCachedDetail(id: string, data: unknown): void {
+  cacheSetLru(dataCache, id, data, DATA_CACHE_MAX)
 }
 
 export function getCachedDetail<T>(id: string): T | null {
@@ -58,9 +75,15 @@ const LIST_CACHE_MAX = 40
 const listCache = new Map<string, { at: number; data: unknown }>()
 
 export function listKey(query: Record<string, string | string[]>): string {
+  // Normalized: same tags in different click-order / case hit the same entry
+  // instead of duplicating cache rows + network requests.
+  const norm = (v: string | string[]): string =>
+    Array.isArray(v)
+      ? [...v].map((s) => s.toUpperCase()).sort().join(',')
+      : v
   return Object.keys(query)
     .sort()
-    .map((k) => `${k}=${query[k]}`)
+    .map((k) => `${k}=${norm(query[k] as string | string[])}`)
     .join('&')
 }
 
@@ -76,11 +99,15 @@ export function setCachedList(key: string, data: unknown): void {
 
 export function prefetchList(query: Record<string, string | string[]>): void {
   const key = listKey(query)
-  if (getCachedList(key)) return
-  apiV1.products
+  if (getCachedList(key) || inflightList.has(key)) return
+  const p = apiV1.products
     .$get({ query })
     .then(async (res) => {
       if (res.ok) setCachedList(key, await res.json())
     })
     .catch(() => {})
+    .finally(() => {
+      inflightList.delete(key)
+    })
+  inflightList.set(key, p)
 }

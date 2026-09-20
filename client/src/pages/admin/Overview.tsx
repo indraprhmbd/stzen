@@ -88,10 +88,10 @@ export default function Overview() {
     return () => cancelAnimationFrame(id)
   }, [])
   const rangeLabel = range === '1d' ? '1 hari' : range === '7d' ? '7 hari' : range === '90d' ? '90 hari' : '30 hari'
-  const { data, loading, error, fetchedAt, refetch: fetchAll } = useAdminQuery(async () => {
+  const { data, loading, error, fetchedAt, refetch: fetchAll } = useAdminQuery(async (signal) => {
     // Composite: one round trip (stats + analytics + recent orders +
     // low-stock). Server guarantees the shape; normalize defensively.
-    const res = await authedApiRequest((c) => c.api.v1.admin.overview.$get({ query: { range } }))
+    const res = await authedApiRequest((c) => c.api.v1.admin.overview.$get({ query: { range } }), { signal })
     const j = (await res.json()) as {
       stats: Stats
       analytics: { dailySales: unknown[]; byStatus: unknown[]; byCategory: unknown[]; topProducts: unknown[] }
@@ -103,12 +103,12 @@ export default function Overview() {
       analytics: j.analytics,
       orders: (Array.isArray(j.orders) ? j.orders : []).slice(0, 5),
     }
-  }, [range])
+  }, [range], { keepPreviousData: true })
   // Separate query so widget paging/sorting never refetches tiles+charts.
-  const { data: lsData, loading: lsLoading } = useAdminQuery(async () => {
+  const { data: lsData, loading: lsLoading } = useAdminQuery(async (signal) => {
     const res = await authedApiRequest((c) => c.api.v1.admin.stats['low-stock'].$get({
       query: { page: String(lsPage), limit: String(LS_LIMIT), sortDir: lsDir },
-    }))
+    }), { signal })
     const j = (await res.json()) as {
       rows: LowStockVariant[]
       outOfStock: number
@@ -127,7 +127,7 @@ export default function Overview() {
       totalPages: j.totalPages ?? 1,
       byProduct: Array.isArray(j.byProduct) ? j.byProduct : [],
     }
-  }, [lsPage, lsDir])
+  }, [lsPage, lsDir], { keepPreviousData: true })
   const stats = data?.stats ?? null
   const analytics = data?.analytics ?? null
 
