@@ -1,5 +1,6 @@
 import { Children, Fragment, isValidElement, cloneElement, useMemo, type ReactNode, type ReactElement } from 'react'
 import { NavArrowDown } from 'iconoir-react'
+import { SelectableRow } from './RowSelection'
 import EmptyState from './EmptyState'
 
 export interface Column {
@@ -33,7 +34,8 @@ interface DataTableProps {
 // cell content in <div className="ad-scrollx"> (see admin-soft.css).
 
 // Recursively walks table rows (through Fragments, e.g. Products' grouped
-// variant rows) and stamps each <td> with data-label="<column label>". Pure
+// variant rows, and SelectableRow wrappers) and stamps each <td> with
+// data-label="<column label>". Pure
 // data attribute - zero extra DOM nodes, zero JS on the row-render call
 // sites. app.css turns this into a labeled-card layout below the sm
 // breakpoint, no per-page markup duplication needed.
@@ -44,6 +46,14 @@ function withMobileLabels(children: ReactNode, labels: string[]): ReactNode {
     if (child.type === Fragment) {
       const frag = child as ReactElement<{ children?: ReactNode }>
       return cloneElement(frag, undefined, withMobileLabels(frag.props.children, labels))
+    }
+
+    // SelectableRow renders its own <tr> with a leading checkbox <td>:
+    // consume the empty select label so body cells align with columns.
+    if (child.type === SelectableRow) {
+      const sel = child as ReactElement<{ children?: ReactNode }>
+      const bodyLabels = labels[0] === '' ? labels.slice(1) : labels
+      return cloneElement(sel, undefined, withMobileLabels(sel.props.children, bodyLabels))
     }
 
     if (child.type === 'tr') {
