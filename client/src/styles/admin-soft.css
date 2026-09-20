@@ -258,6 +258,16 @@
   transition: none !important;
 }
 
+/* Viewport-capped dialog boxes: Daisy base allows max-height:100vh, so a
+   tall form (manual order, deliver, vault unlock) fills the viewport
+   edge-to-edge and the mobile browser chrome covers the bottom actions.
+   Cap with dvh so every admin dialog scrolls internally (Daisy already sets
+   overflow-y:auto on .modal-box) with reachable top/bottom breathing room.
+   Dialogs with their own tighter cap (90vh) are unaffected. */
+.admin-soft dialog.modal .modal-box {
+  max-height: calc(100dvh - 3rem);
+}
+
 /* Horizontal-scroll cell content. Wrap long cell text in
    <div className="ad-scrollx"> so the cell scrolls internally while the
    column header stays fixed - no truncation, desktop + mobile. */
