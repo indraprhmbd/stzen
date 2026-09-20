@@ -3,8 +3,13 @@ import DataTable from '../../../components/admin/DataTable'
 import CopyCell from '../../../components/admin/CopyCell'
 import TableSortMenu from '../../../components/admin/TableSortMenu'
 import StatusChip from '../../../components/admin/StatusChip'
+import ConfirmDialog, { openConfirm } from '../../../components/admin/ConfirmDialog'
 import { SkeletonRows } from '../../../components/admin/TableSkeleton'
 import { useTableSort, sortByKey } from '../../../hooks/useTableSort'
+import { useRowSelection } from '../../../hooks/useRowSelection'
+import { SelectableRow, SelectAllCheckbox } from '../../../components/admin/RowSelection'
+import AdminBulkBar from '../../../components/admin/AdminBulkBar'
+import { authedApiRequest } from '../../../lib/api'
 import { Plus, EditPencil, Trash, Download } from 'iconoir-react'
 import BulkImportDialog, { basisBulkConfig } from './BulkImportDialog'
 import type { Product, Variant } from '../types'
@@ -123,6 +128,50 @@ export default function BasisPanel({ products, variants, onCreate, onEdit, onDel
   const { sortKey, sortDir, toggleSort } = useTableSort([], { urlKey: 'sort_basis', defaultKey: 'name', defaultDir: 'asc' })
   const sorted = useMemo(() => sortByKey(rows, sortKey, sortDir), [rows, sortKey, sortDir])
 
+  // Uniform bulk selection: checkbox column always visible, row-body clicks
+  // toggle only once armed. No pagination/filter on this tab; selection
+  // survives refresh and clears after each bulk action (unmount clears on
+  // tab switch).
+  const selection = useRowSelection()
+  const pageIds = useMemo(() => sorted.map((p) => p.id), [sorted])
+  const [bulkBusy, setBulkBusy] = useState(false)
+  const [pendingBulk, setPendingBulk] = useState<'activate' | 'deactivate' | null>(null)
+
+  async function runBulkStatus(action: 'activate' | 'deactivate') {
+    const ids = selection.selected.slice(0, 20)
+    if (bulkBusy || ids.length === 0) return
+    setBulkBusy(true)
+    setPendingBulk(null)
+    try {
+      const res = await authedApiRequest((c) =>
+        c.api.v1.admin.products.bulk.status.$post({ json: { action, ids } })
+      )
+      const out = (await res.json()) as { scanned: number; updated: number; skipped: { id: string; reason: string }[] }
+      const verb = action === 'activate' ? 'Diaktifkan' : 'Dinonaktifkan'
+      selection.clear()
+      onImported()
+      notify(
+        out.skipped.length === 0
+          ? `${verb}: ${out.updated} induk`
+          : `${verb} ${out.updated} dari ${out.scanned} — ${out.skipped.length} dilewati (${out.skipped[0]!.reason})`,
+        out.updated > 0 ? 'success' : 'error'
+      )
+    } catch (e: unknown) {
+      notify(e instanceof Error ? e.message : 'Gagal memproses massal', 'error')
+    } finally {
+      setBulkBusy(false)
+    }
+  }
+
+  function askBulkStatus(action: 'activate' | 'deactivate') {
+    if (action === 'deactivate') {
+      setPendingBulk(action)
+      openConfirm('basis-bulk-status')
+    } else {
+      void runBulkStatus(action)
+    }
+  }
+
   return (
     <>
     <div className="ad-card-flat p-4 max-sm:px-3 flex flex-wrap items-center gap-4 max-sm:gap-3">
@@ -136,11 +185,38 @@ export default function BasisPanel({ products, variants, onCreate, onEdit, onDel
       </div>
       <div className="ml-auto flex items-center gap-2">
         <TableSortMenu columns={basisColumns} sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+        {/* Mobile: thead (and its select-all) hides below sm, so the page
+            toggle lives here instead. */}
+        <button onClick={() => selection.toggleAll(pageIds)} className="ad-btn shrink-0 sm:hidden">
+          {selection.headerState(pageIds) === 'all' ? 'Batal pilih' : 'Pilih semua'}
+        </button>
         <button onClick={() => setShowImport(true)} className="ad-btn shrink-0 max-sm:px-3"><Download width={15} height={15} strokeWidth={1.5} />Impor</button>
         <button onClick={onCreate} className="ad-btn shrink-0 max-sm:px-3"><Plus width={15} height={15} strokeWidth={1.5} />Induk</button>
       </div>
     </div>
     <BulkImportDialog config={basisBulkConfig} open={showImport} onClose={() => setShowImport(false)} onDone={onImported} notify={notify} />
+    <ConfirmDialog
+      id="basis-bulk-status"
+      title="Nonaktifkan induk terpilih?"
+      message={pendingBulk ? `"${selection.count} induk terpilih disembunyikan dari katalog (varian ikut nonaktif)."` : ''}
+      confirmLabel="Ya, nonaktifkan"
+      onConfirm={() => pendingBulk && void runBulkStatus(pendingBulk)}
+    />
+    <AdminBulkBar
+      count={selection.count}
+      onClear={selection.clear}
+      headerCheckboxId="basis-select-all"
+      actions={
+        <>
+          <button onClick={() => askBulkStatus('activate')} disabled={bulkBusy} className="ad-btn w-full sm:w-auto">
+            {bulkBusy ? 'Memproses...' : `Aktifkan (${selection.count})`}
+          </button>
+          <button onClick={() => askBulkStatus('deactivate')} disabled={bulkBusy} className="ad-btn ad-btn-danger w-full sm:w-auto">
+            {bulkBusy ? 'Memproses...' : `Nonaktifkan (${selection.count})`}
+          </button>
+        </>
+      }
+    />
     <div className="ad-card">
       <DataTable
         columns={basisColumns}
@@ -149,10 +225,24 @@ export default function BasisPanel({ products, variants, onCreate, onEdit, onDel
         sortKey={sortKey}
         sortDir={sortDir}
         onSort={toggleSort}
+        selectHeader={
+          <SelectAllCheckbox
+            id="basis-select-all"
+            label="Pilih semua induk di halaman ini"
+            state={selection.headerState(pageIds)}
+            onToggle={() => selection.toggleAll(pageIds)}
+          />
+        }
       >
         {loading ? <SkeletonRows rows={5} cols={10} /> : sorted.map((p) => {
           return (
-          <tr key={p.id}>
+          <SelectableRow
+            key={p.id}
+            id={p.id}
+            selection={selection}
+            pageIds={pageIds}
+            selectLabel={`Pilih induk ${p.name}`}
+          >
             <td>
               <div className="text-[13px] font-medium">{p.name}</div>
               <CopyCell value={p.id} display={p.id.slice(0, 8)} className="text-[11px] ad-num text-[#aeaeb2]" />
@@ -166,7 +256,7 @@ export default function BasisPanel({ products, variants, onCreate, onEdit, onDel
             <td className="text-xs ad-num text-[#6e6e73]">{p.rentangLabel}</td>
             <td><StatusChip tone={p.isActive ? 'green' : 'zinc'}>{p.isActive ? 'AKTIF' : 'NONAKTIF'}</StatusChip></td>
             <td className="text-right"><div className="flex justify-end gap-1.5"><button onClick={() => onEdit(p)} className="ad-btn"><EditPencil width={14} height={14} strokeWidth={1.5} />Edit</button><button onClick={() => onDelete(p)} className="ad-btn ad-btn-danger"><Trash width={14} height={14} strokeWidth={1.5} />Hapus</button></div></td>
-          </tr>
+          </SelectableRow>
           )
         })}
       </DataTable>

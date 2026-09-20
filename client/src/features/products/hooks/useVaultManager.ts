@@ -160,6 +160,18 @@ export function useVaultManager(variants: Variant[], sortKey: string, sortDir: '
     finally { setActionLoading(null) }
   }
 
+  // Checkbox bulk: delete (AVAILABLE + untouched only) or revoke. Returns
+  // the skip-reason result; caller toasts + clears selection + refreshes.
+  async function bulkVault(action: 'delete' | 'revoke', ids: string[]) {
+    const res = await authedApiRequest(
+      (c) => c.api.v1.admin.vault.bulk.$post({ json: { action, ids } }),
+      { headers: { 'X-Vault-Token': token! } }
+    )
+    const out = await res.json() as { scanned: number; processed: number; skipped: { id: string; reason: string }[] }
+    await fetchList()
+    return out
+  }
+
   async function rotateCred(orderId: string, opts?: { credential?: string; fallbackVariantId?: string }) {
     setActionLoading(orderId)
     setRotateError(null)
@@ -193,7 +205,7 @@ export function useVaultManager(variants: Variant[], sortKey: string, sortDir: '
     // list
     data, loading, error, page, setPage, q, setQ,
     // actions
-    actionLoading, editCred, deleteCred, revokeCred, rotateCred,
+    actionLoading, editCred, deleteCred, revokeCred, rotateCred, bulkVault,
     fetchList, toast, showToast,
     rotateError, setRotateError,
   }

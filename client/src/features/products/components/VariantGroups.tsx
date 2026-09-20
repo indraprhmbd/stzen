@@ -1,10 +1,15 @@
-import { Fragment, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 import DataTable from '../../../components/admin/DataTable'
 import TableSortMenu from '../../../components/admin/TableSortMenu'
 import CopyCell from '../../../components/admin/CopyCell'
 import StatusChip, { type ChipTone } from '../../../components/admin/StatusChip'
+import ConfirmDialog, { openConfirm } from '../../../components/admin/ConfirmDialog'
 import { SkeletonRows } from '../../../components/admin/TableSkeleton'
 import { useTableSort, sortByKey } from '../../../hooks/useTableSort'
+import { useRowSelection } from '../../../hooks/useRowSelection'
+import { SelectableRow, SelectAllCheckbox } from '../../../components/admin/RowSelection'
+import AdminBulkBar from '../../../components/admin/AdminBulkBar'
+import { authedApiRequest } from '../../../lib/api'
 import { NavArrowDown, Plus, Expand, Collapse, EditPencil, Trash, Key, Download } from 'iconoir-react'
 import BulkImportDialog, { varianBulkConfig } from './BulkImportDialog'
 import type { Variant, VariantGroup } from '../types'
@@ -57,6 +62,57 @@ export default function VariantGroups({ groups, filteredCount, collapsedGroups, 
 
   const allCollapsed = groups.length > 0 && groups.every((g) => collapsedGroups[g.key] ?? true)
 
+  // Uniform bulk selection. pageIds cover expanded visible rows only
+  // (collapsed items are unrendered; the anchor fallback covers drift).
+  // Clears whenever the filtered set changes (search/filter/refresh).
+  const selection = useRowSelection()
+  const pageIds = useMemo(() => {
+    const ids: string[] = []
+    for (const g of sortedGroups) {
+      if (collapsedGroups[g.key] ?? true) continue
+      for (const v of g.items) ids.push(v.id)
+    }
+    return ids
+  }, [sortedGroups, collapsedGroups])
+  useEffect(() => { selection.clear() }, [groups])
+  const [bulkBusy, setBulkBusy] = useState(false)
+  const [pendingBulk, setPendingBulk] = useState<'activate' | 'deactivate' | null>(null)
+
+  async function runBulkStatus(action: 'activate' | 'deactivate') {
+    const ids = selection.selected.slice(0, 20)
+    if (bulkBusy || ids.length === 0) return
+    setBulkBusy(true)
+    setPendingBulk(null)
+    try {
+      const res = await authedApiRequest((c) =>
+        c.api.v1.admin.variants.bulk.status.$post({ json: { action, ids } })
+      )
+      const out = (await res.json()) as { scanned: number; updated: number; skipped: { id: string; reason: string }[] }
+      const verb = action === 'activate' ? 'Diaktifkan' : 'Dinonaktifkan'
+      selection.clear()
+      onImported()
+      notify(
+        out.skipped.length === 0
+          ? `${verb}: ${out.updated} varian`
+          : `${verb} ${out.updated} dari ${out.scanned} — ${out.skipped.length} dilewati (${out.skipped[0]!.reason})`,
+        out.updated > 0 ? 'success' : 'error'
+      )
+    } catch (e: unknown) {
+      notify(e instanceof Error ? e.message : 'Gagal memproses massal', 'error')
+    } finally {
+      setBulkBusy(false)
+    }
+  }
+
+  function askBulkStatus(action: 'activate' | 'deactivate') {
+    if (action === 'deactivate') {
+      setPendingBulk(action)
+      openConfirm('varian-bulk-status')
+    } else {
+      void runBulkStatus(action)
+    }
+  }
+
   function toggleAll() {
     const next = !allCollapsed
     setCollapsedGroups((s) => {
@@ -68,7 +124,13 @@ export default function VariantGroups({ groups, filteredCount, collapsedGroups, 
 
   function renderVariantRow(v: Variant) {
     return (
-      <tr key={v.id}>
+      <SelectableRow
+        key={v.id}
+        id={v.id}
+        selection={selection}
+        pageIds={pageIds}
+        selectLabel={`Pilih varian ${v.name}`}
+      >
         <td>
           <div className="text-[13px] font-medium">{v.name}</div>
         </td>
@@ -83,7 +145,7 @@ export default function VariantGroups({ groups, filteredCount, collapsedGroups, 
             {onOpenVault && <button onClick={() => onOpenVault(v)} title="Lihat stok vault" aria-label="Lihat stok vault" className="ad-btn !px-2.5"><Key width={15} height={15} strokeWidth={1.5} /></button>}
           </div>
         </td>
-      </tr>
+      </SelectableRow>
     )
   }
 
@@ -93,6 +155,10 @@ export default function VariantGroups({ groups, filteredCount, collapsedGroups, 
           wrap the row overflows left and the sort menu opens off-screen. */}
       <div className="ad-card-head flex-wrap" style={{ justifyContent: 'flex-end' }}>
         <TableSortMenu columns={variantColumns} sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+        {/* Mobile: thead (and its select-all) hides below sm. */}
+        <button onClick={() => selection.toggleAll(pageIds)} className="ad-btn sm:hidden">
+          {selection.headerState(pageIds) === 'all' ? 'Batal pilih' : 'Pilih semua'}
+        </button>
         <span className="hidden sm:inline">
         <button onClick={toggleAll} className="ad-btn" title={allCollapsed ? 'Buka semua' : 'Tutup semua'}>
           {allCollapsed
@@ -105,6 +171,28 @@ export default function VariantGroups({ groups, filteredCount, collapsedGroups, 
         <button onClick={() => onCreateVariant()} className="ad-btn ad-btn-dark"><Plus width={15} height={15} strokeWidth={1.5} />Varian</button>
       </div>
       <BulkImportDialog config={varianBulkConfig} open={showImport} onClose={() => setShowImport(false)} onDone={onImported} notify={notify} />
+      <ConfirmDialog
+        id="varian-bulk-status"
+        title="Nonaktifkan varian terpilih?"
+        message={pendingBulk ? `"${selection.count} varian terpilih disembunyikan dari katalog."` : ''}
+        confirmLabel="Ya, nonaktifkan"
+        onConfirm={() => pendingBulk && void runBulkStatus(pendingBulk)}
+      />
+      <AdminBulkBar
+        count={selection.count}
+        onClear={selection.clear}
+        headerCheckboxId="varian-select-all"
+        actions={
+          <>
+            <button onClick={() => askBulkStatus('activate')} disabled={bulkBusy} className="ad-btn w-full sm:w-auto">
+              {bulkBusy ? 'Memproses...' : `Aktifkan (${selection.count})`}
+            </button>
+            <button onClick={() => askBulkStatus('deactivate')} disabled={bulkBusy} className="ad-btn ad-btn-danger w-full sm:w-auto">
+              {bulkBusy ? 'Memproses...' : `Nonaktifkan (${selection.count})`}
+            </button>
+          </>
+        }
+      />
       <DataTable
         columns={variantColumns}
         empty={!loading && filteredCount === 0}
@@ -112,13 +200,21 @@ export default function VariantGroups({ groups, filteredCount, collapsedGroups, 
         sortKey={sortKey}
         sortDir={sortDir}
         onSort={toggleSort}
+        selectHeader={
+          <SelectAllCheckbox
+            id="varian-select-all"
+            label="Pilih semua varian terlihat di halaman ini"
+            state={selection.headerState(pageIds)}
+            onToggle={() => selection.toggleAll(pageIds)}
+          />
+        }
       >
         {loading ? <SkeletonRows rows={5} cols={6} /> : sortedGroups.map((g) => {
           const collapsed = collapsedGroups[g.key] ?? true
           return (
           <Fragment key={g.key}>
             <tr onClick={() => setCollapsedGroups((s) => ({ ...s, [g.key]: !collapsed }))} className="cursor-pointer bg-white">
-              <td colSpan={5}>
+              <td colSpan={6}>
                 <span className="inline-flex items-center gap-2">
                   <NavArrowDown width={15} height={15} strokeWidth={1.5} className={`text-[#6e6e73] transition-transform ${collapsed ? '-rotate-90' : ''}`} />
                   <span className="text-[13px] text-[#1d1d1f]">{g.label} ({g.items.length})</span>
@@ -131,7 +227,7 @@ export default function VariantGroups({ groups, filteredCount, collapsedGroups, 
             {!collapsed && g.items.map((v) => renderVariantRow(v))}
             {!collapsed && (
               <tr className="bg-white">
-                <td colSpan={6} className="text-center">
+                <td colSpan={7} className="text-center">
                   <button
                     onClick={() => setCollapsedGroups((s) => ({ ...s, [g.key]: true }))}
                     className="text-[11px] font-semibold text-[#6e6e73] hover:text-[#1d1d1f] inline-flex items-center gap-1.5"

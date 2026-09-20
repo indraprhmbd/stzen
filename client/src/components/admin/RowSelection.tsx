@@ -24,7 +24,7 @@ export function SelectableRow({ id, selection, pageIds, selectLabel, children, c
       aria-selected={on}
       onClick={(e) => {
         if (selection.mode !== 'armed') return
-        if ((e.target as HTMLElement).closest('a,input,button,label,summary')) return
+        if ((e.target as HTMLElement).closest('a,input,button,label,summary,pre')) return
         selection.toggle(id, { range: e.shiftKey, pageIds })
       }}
       className={`${selection.mode === 'armed' ? 'cursor-pointer' : ''} ${on ? 'bg-[#f5f5f7]' : ''} ${className ?? ''}`}

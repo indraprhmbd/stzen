@@ -6,8 +6,11 @@ import TableSortMenu from '../../../components/admin/TableSortMenu'
 import CopyCell from '../../../components/admin/CopyCell'
 import StatusChip from '../../../components/admin/StatusChip'
 import ConfirmDialog, { openConfirm } from '../../../components/admin/ConfirmDialog'
+import AdminBulkBar from '../../../components/admin/AdminBulkBar'
 import { useVaultManager } from '../hooks/useVaultManager'
 import { useTableSort } from '../../../hooks/useTableSort'
+import { useRowSelection } from '../../../hooks/useRowSelection'
+import { SelectableRow, SelectAllCheckbox } from '../../../components/admin/RowSelection'
 import { authedApiRequest } from '../../../lib/api'
 import type { Variant } from '../types'
 import { Lock, LockSlash, Refresh, Copy, EditPencil, Trash, Prohibition, Redo, Search, NavArrowLeft, NavArrowRight, Plus, ArrowUpRightSquare, Download } from 'iconoir-react'
@@ -118,6 +121,42 @@ export default function VaultList({ variants, fetchedAt, initialVariantId, onVar
   const sold = counts['SOLD'] ?? 0
   const revoked = counts['REVOKED'] ?? 0
 
+  // Uniform bulk selection: checkbox column always visible, row-body clicks
+  // toggle only once armed (credential <pre> taps stay text-selectable via
+  // the shared guard). Clears on variant/search/page/sort change.
+  const selection = useRowSelection()
+  const pageIds = useMemo(() => items.map((item) => item.id), [items])
+  useEffect(() => { selection.clear() }, [v.variantId, v.q, v.page, sortKey, sortDir])
+  const [bulkBusy, setBulkBusy] = useState(false)
+  const [pendingBulk, setPendingBulk] = useState<'delete' | 'revoke' | null>(null)
+
+  async function runBulkVault(action: 'delete' | 'revoke') {
+    const ids = selection.selected.slice(0, 20)
+    if (bulkBusy || ids.length === 0) return
+    setBulkBusy(true)
+    setPendingBulk(null)
+    try {
+      const out = await v.bulkVault(action, ids)
+      const verb = action === 'delete' ? 'Dihapus' : 'Dicabut'
+      selection.clear()
+      v.showToast(
+        out.skipped.length === 0
+          ? `${verb}: ${out.processed} kredensial`
+          : `${verb} ${out.processed} dari ${out.scanned} — ${out.skipped.length} dilewati (${out.skipped[0]!.reason})`,
+        out.processed > 0 ? 'success' : 'error'
+      )
+    } catch (e: unknown) {
+      v.showToast(e instanceof Error ? e.message : 'Gagal memproses massal', 'error')
+    } finally {
+      setBulkBusy(false)
+    }
+  }
+
+  function askBulkVault(action: 'delete' | 'revoke') {
+    setPendingBulk(action)
+    openConfirm(action === 'delete' ? 'vault-bulk-delete' : 'vault-bulk-revoke')
+  }
+
   return (
     <div className="flex flex-col gap-4">
       {/* ── Unlock banner (retry fallback; vault opens itself) ─────── */}
@@ -177,9 +216,34 @@ export default function VaultList({ variants, fetchedAt, initialVariantId, onVar
               <span className="text-[11px] text-[#aeaeb2] ad-num">Terkunci dalam {Math.floor(v.relockIn / 60)}:{String(v.relockIn % 60).padStart(2, '0')}</span>
               <button onClick={v.relock} title="Kunci ulang" className="ad-btn !px-2"><Lock width={14} height={14} strokeWidth={1.5} /></button>
               <button onClick={() => v.fetchList()} title="Muat ulang" className="ad-btn !px-2"><Refresh width={14} height={14} strokeWidth={1.5} /></button>
+              {/* Mobile: thead (and its select-all) hides below sm. */}
+              {v.variantId && (
+                <button onClick={() => selection.toggleAll(pageIds)} className="ad-btn sm:hidden">
+                  {selection.headerState(pageIds) === 'all' ? 'Batal pilih' : 'Pilih semua'}
+                </button>
+              )}
               {v.variantId && <TableSortMenu columns={vaultColumns} sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />}
             </div>
           </div>
+
+          {/* ── Bulk bar ──────────────────────────────────────────── */}
+          {v.variantId && (
+            <AdminBulkBar
+              count={selection.count}
+              onClear={selection.clear}
+              headerCheckboxId="vault-select-all"
+              actions={
+                <>
+                  <button onClick={() => askBulkVault('delete')} disabled={bulkBusy} className="ad-btn ad-btn-danger w-full sm:w-auto">
+                    {bulkBusy ? 'Memproses...' : `Hapus (${selection.count})`}
+                  </button>
+                  <button onClick={() => askBulkVault('revoke')} disabled={bulkBusy} className="ad-btn w-full sm:w-auto">
+                    {bulkBusy ? 'Memproses...' : `Cabut (${selection.count})`}
+                  </button>
+                </>
+              }
+            />
+          )}
 
           {/* ── List ────────────────────────────────────────────── */}
           {v.variantId && !v.error && (
@@ -191,9 +255,23 @@ export default function VaultList({ variants, fetchedAt, initialVariantId, onVar
                 sortKey={sortKey}
                 sortDir={sortDir}
                 onSort={toggleSort}
+                selectHeader={
+                  <SelectAllCheckbox
+                    id="vault-select-all"
+                    label="Pilih semua kredensial di halaman ini"
+                    state={selection.headerState(pageIds)}
+                    onToggle={() => selection.toggleAll(pageIds)}
+                  />
+                }
               >
                 {items.map((item) => (
-                  <tr key={item.id}>
+                  <SelectableRow
+                    key={item.id}
+                    id={item.id}
+                    selection={selection}
+                    pageIds={pageIds}
+                    selectLabel={`Pilih kredensial ${item.id.slice(0, 8)}`}
+                  >
                     <td>
                       <pre className="font-mono text-xs text-[#1d1d1f] whitespace-pre-wrap break-all max-w-[320px] select-all leading-relaxed">{item.credential}</pre>
                     </td>
@@ -240,7 +318,7 @@ export default function VaultList({ variants, fetchedAt, initialVariantId, onVar
                         )}
                       </div>
                     </td>
-                  </tr>
+                  </SelectableRow>
                 ))}
               </DataTable>
               {/* Pagination */}
@@ -272,6 +350,20 @@ export default function VaultList({ variants, fetchedAt, initialVariantId, onVar
           {/* ── Confirm dialogs ─────────────────────────────────── */}
           <ConfirmDialog id="vault-delete" title="Hapus kredensial?" message="Kredensial AVAILABLE akan dihapus permanen." confirmLabel="Ya, hapus" onConfirm={() => { if (pendingDelete) v.deleteCred(pendingDelete.id); setPendingDelete(null) }} />
           <ConfirmDialog id="vault-revoke" title="Cabut kredensial?" message="Kredensial SOLD akan ditandai REVOKED tanpa penggantian." confirmLabel="Ya, cabut" onConfirm={() => { if (pendingRevoke) v.revokeCred(pendingRevoke.id); setPendingRevoke(null) }} />
+          <ConfirmDialog
+            id="vault-bulk-delete"
+            title="Hapus kredensial terpilih?"
+            message={pendingBulk === 'delete' ? `${selection.count} kredensial AVAILABLE yang belum pernah dialokasikan akan dihapus permanen. Baris SOLD/terikat order dilewati.` : ''}
+            confirmLabel="Ya, hapus"
+            onConfirm={() => pendingBulk === 'delete' && void runBulkVault('delete')}
+          />
+          <ConfirmDialog
+            id="vault-bulk-revoke"
+            title="Cabut kredensial terpilih?"
+            message={pendingBulk === 'revoke' ? `${selection.count} kredensial SOLD/AVAILABLE terpilih ditandai REVOKED tanpa penggantian.` : ''}
+            confirmLabel="Ya, cabut"
+            onConfirm={() => pendingBulk === 'revoke' && void runBulkVault('revoke')}
+          />
           <ConfirmDialog id="vault-rotate" title="Ganti kredensial?" message="Kredensial lama dicabut, yang baru dialokasikan ke order yang sama. Pelanggan akan melihat kredensial baru di dashboard." confirmLabel="Ya, ganti" onConfirm={async () => {
             if (!pendingRotate) return
             setPendingRotate(null)
