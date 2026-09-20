@@ -3,7 +3,7 @@ import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
 import { type AuthEnv } from '../../shared/middleware/auth'
 import { ForbiddenError } from '../../shared/errors/http'
-import { vaultService } from '../vault/vault.service'
+import { vaultService, vaultBulkService } from '../vault/vault.service'
 import { mintUnlockToken, verifyUnlockToken } from '../../shared/lib/unlockToken'
 
 // ─── Admin Vault Routes ─────────────────────────────────────────────────────
@@ -25,6 +25,13 @@ const CredentialSchema = z.object({
 const ReplaceSchema = z.object({
   credential: z.string().max(5000).optional(),
   fallbackVariantId: z.string().optional(),
+})
+
+// Checkbox bulk: delete (AVAILABLE + never allocated only) or revoke
+// (SOLD/AVAILABLE flip to REVOKED). Unlock-guarded like the single rows.
+const VaultBulkSchema = z.object({
+  action: z.enum(['delete', 'revoke']),
+  ids: z.array(z.string().min(1)).min(1).max(20),
 })
 
 async function unlockGuard(c: { req: { header: (n: string) => string | undefined }; get: (k: 'user') => { sub: string } }) {
@@ -72,6 +79,17 @@ export const adminVaultRoutes = new Hono<AuthEnv>()
     await unlockGuard(c)
     const user = c.get('user')
     return c.json(await vaultService.revoke(c.req.param('id'), { sub: user.sub, email: user.email }))
+  })
+
+  // POST /bulk - checkbox bulk delete/revoke (unlock required)
+  .post('/bulk', zValidator('json', VaultBulkSchema), async (c) => {
+    await unlockGuard(c)
+    const user = c.get('user')
+    const { action, ids } = c.req.valid('json')
+    const actor = { sub: user.sub, email: user.email }
+    return c.json(action === 'delete'
+      ? await vaultBulkService.remove(ids, actor)
+      : await vaultBulkService.revokeMany(ids, actor))
   })
 
   // POST /replace/:orderId - rotate: revoke delivered, allocate next

@@ -719,3 +719,122 @@ export const stokBulkService = {
     return result
   },
 }
+
+// ─── Bulk Actions (checkbox selection: delete + revoke) ───────────────────
+// Sequential per-id mutations, one audit row per success, per-id skip
+// reasons — same shape as orders bulkApprove. Delete is hard-delete but
+// gated to AVAILABLE rows never allocated to any order (allocated_at null
+// AND no referencing order); everything else is a status flip, never a
+// delete. Default runners hit the DB; tests inject run/audit stubs.
+
+export interface VaultBulkActor {
+  sub: string
+  email?: string | null
+}
+
+export interface VaultBulkDeps {
+  run?: (id: string) => Promise<{ id: string }>
+  audit?: (row: { id: string }, actor: VaultBulkActor) => Promise<void>
+}
+
+export interface VaultBulkResult {
+  scanned: number
+  processed: number
+  skipped: { id: string; reason: string }[]
+}
+
+async function runVaultBulk(
+  ids: string[],
+  actor: VaultBulkActor,
+  deps: VaultBulkDeps,
+): Promise<VaultBulkResult> {
+  const run = deps.run!
+  const audit = deps.audit!
+  const skipped: { id: string; reason: string }[] = []
+  let processed = 0
+  for (const id of ids) {
+    try {
+      const row = await run(id)
+      await audit(row, actor)
+      processed++
+    } catch (e: unknown) {
+      skipped.push({ id, reason: e instanceof Error ? e.message : 'Gagal' })
+    }
+  }
+  return { scanned: ids.length, processed, skipped }
+}
+
+async function fetchVaultRow(id: string): Promise<any> {
+  const { data: item, error } = await supabaseAdmin
+    .from(VAULT_ITEMS)
+    .select('id, status, allocated_at')
+    .eq('id', id)
+    .limit(1)
+  if (error) throw new Error(error.message)
+  const row = item?.[0]
+  if (!row) throw new NotFoundError('Kredensial tidak ditemukan')
+  return row
+}
+
+async function deleteUntouched(id: string): Promise<{ id: string }> {
+  const row = await fetchVaultRow(id)
+  if (row.status !== 'AVAILABLE') throw new ConflictError('Hanya AVAILABLE yang bisa dihapus')
+  // Untouched = never allocated: no timestamp AND no order pointing at it.
+  if (row.allocated_at) throw new ConflictError('Sudah pernah dialokasikan')
+  const { data: refs, error: refError } = await supabaseAdmin
+    .from(ORDERS)
+    .select('id')
+    .eq('vault_item_id', id)
+    .limit(1)
+  if (refError) throw new Error(refError.message)
+  if (refs && refs.length > 0) throw new ConflictError('Terikat order')
+  const { error: deleteError } = await supabaseAdmin
+    .from(VAULT_ITEMS)
+    .delete()
+    .eq('id', id)
+  if (deleteError) throw new Error(deleteError.message)
+  return { id }
+}
+
+async function revokeOne(id: string): Promise<{ id: string }> {
+  const row = await fetchVaultRow(id)
+  const status = row.status
+  // Mirrors single POST /:id/revoke: delivered or available flip to REVOKED.
+  if (status !== 'SOLD' && status !== 'AVAILABLE') throw new ConflictError('Hanya SOLD atau AVAILABLE yang bisa dicabut')
+  const { error: updateError } = await supabaseAdmin
+    .from(VAULT_ITEMS)
+    .update({ status: 'REVOKED' })
+    .eq('id', id)
+  if (updateError) throw new Error(updateError.message)
+  return { id }
+}
+
+function auditVaultBulk(action: 'vault:delete' | 'vault:revoke', verb: string) {
+  return (row: { id: string }, actor: VaultBulkActor): Promise<void> => {
+    return appendAudit({
+      action,
+      resourceType: 'stock',
+      resourcePublicId: row.id,
+      snapshotText: `Kredensial vault ${verb} oleh ${actor.email ?? actor.sub}`,
+      actorId: actor.sub,
+      actorEmail: actor.email ?? null,
+      actorType: 'admin',
+    }).catch(() => {})
+  }
+}
+
+export const vaultBulkService = {
+  async remove(ids: string[], actor: VaultBulkActor, deps: VaultBulkDeps = {}): Promise<VaultBulkResult> {
+    return runVaultBulk(ids, actor, {
+      run: deps.run ?? deleteUntouched,
+      audit: deps.audit ?? auditVaultBulk('vault:delete', 'dihapus'),
+    })
+  },
+
+  async revokeMany(ids: string[], actor: VaultBulkActor, deps: VaultBulkDeps = {}): Promise<VaultBulkResult> {
+    return runVaultBulk(ids, actor, {
+      run: deps.run ?? revokeOne,
+      audit: deps.audit ?? auditVaultBulk('vault:revoke', 'dicabut'),
+    })
+  },
+}
