@@ -52,7 +52,7 @@ function Markdown({ source, className }: Props) {
           em: ({ children }) => <em className="italic">{children}</em>,
           del: ({ children }) => <del className="opacity-60">{children}</del>,
           table: TableWrapper,
-          th: ({ children }) => <th className="border border-black bg-neutral text-primary font-black px-2 py-1 text-left">{children}</th>,
+          th: ({ children }) => <th className="border border-black bg-primary text-neutral font-black px-2 py-1 text-left">{children}</th>,
           td: ({ children }) => <td className="border border-black px-2 py-1">{children}</td>,
           code: ({ children }) => <code className="font-mono text-[13px] bg-black/5 px-1 rounded-sm">{children}</code>,
           pre: ({ children }) => <pre className="font-mono text-[13px] bg-black/5 border-2 border-black p-2 overflow-x-auto mb-2.5">{children}</pre>,
