@@ -123,7 +123,7 @@ export default function VariantDialog({ products, form: v, onImportNow }: Props)
             <div className="bg-[#f5f5f7] rounded-[10px] px-3 py-2">
               <span className="ad-label">PREVIEW</span>
               <div className="text-sm font-medium text-[#1d1d1f] mt-1">
-                {products.find((p) => p.id === v.vProductId)?.name ?? 'Induk'}{v.vDuration ? ` - ${v.vDuration} ${unitLabel[v.vDurationUnit]}` : ''}{v.vAccountType ? ` - ${v.vAccountType}` : ''}{v.vConditions ? ` (${v.vConditions})` : ''}
+                {products.find((p) => p.id === v.vProductId)?.name ?? 'Induk'}{v.vAccountType ? ` ${v.vAccountType}` : ''}{v.vDuration ? ` ${v.vDuration} ${unitLabel[v.vDurationUnit]}` : ''}{v.vConditions ? ` (${v.vConditions})` : ''}
               </div>
             </div>
           )}
