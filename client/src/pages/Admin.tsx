@@ -157,7 +157,7 @@ export default function Admin() {
     <Layout>
       {/* Header */}
       <div className="mb-6">
-        <div className="bg-surface-container border-[3px] border-on-surface shadow-3d-subtle p-5">
+        <div className="bg-surface-container border-[3px] border-panel-dark shadow-3d-subtle p-5">
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-3">
               <div className="w-1 h-10 bg-primary-container" />
@@ -177,7 +177,7 @@ export default function Admin() {
               </div>
             </div>
             <button
-              className="bg-primary-container text-black border-[3px] border-on-surface shadow-brutal btn-brutal-interactive font-black uppercase text-sm px-4 py-2"
+              className="bg-primary-container text-black border-[3px] border-panel-dark shadow-brutal btn-brutal-interactive font-black uppercase text-sm px-4 py-2"
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
               onClick={openCreateModal}
             >
@@ -191,8 +191,8 @@ export default function Admin() {
       <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
         {/* Left: Product Form */}
         <div className="md:col-span-5">
-          <div className="bg-surface-container border-[3px] border-on-surface shadow-brutal p-4">
-            <h2 className="font-bold uppercase text-on-surface border-b-[3px] border-on-surface pb-2 mb-4 text-sm" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+          <div className="bg-surface-container border-[3px] border-panel-dark shadow-brutal p-4">
+            <h2 className="font-bold uppercase text-on-surface border-b-[3px] border-panel-dark pb-2 mb-4 text-sm" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
               Product Management
             </h2>
 
@@ -209,36 +209,36 @@ export default function Admin() {
                 {products.map((p) => (
                   <div
                     key={p.id}
-                    className="bg-surface-container-low border-[2px] border-on-surface p-3 flex items-center justify-between"
+                    className="bg-surface-container-low border-[2px] border-panel-dark p-3 flex items-center justify-between"
                   >
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="font-bold text-sm text-on-surface truncate">{p.name}</span>
                         {p.badge && (
-                          <span className="badge badge-sm bg-secondary text-white font-black border-[2px] border-on-surface -rotate-1 text-[10px]">
+                          <span className="badge badge-sm bg-secondary text-white font-black border-[2px] border-panel-dark -rotate-1 text-[10px]">
                             {p.badge}
                           </span>
                         )}
                       </div>
                       <div className="flex items-center gap-2 mt-1">
                         <span className="font-mono text-xs text-on-surface-variant">${p.price}</span>
-                        <span className={`badge badge-sm border-[2px] border-on-surface font-mono font-bold text-[10px] ${p.stockCount > 0 ? 'bg-primary-container text-black' : 'bg-error text-white'}`}>
+                        <span className={`badge badge-sm border-[2px] border-panel-dark font-mono font-bold text-[10px] ${p.stockCount > 0 ? 'bg-primary-container text-black' : 'bg-error text-white'}`}>
                           {p.stockCount}
                         </span>
-                        <span className={`badge badge-sm border-[2px] border-on-surface font-bold text-[10px] ${p.isActive ? 'bg-primary-container text-black' : 'bg-surface-container-highest text-on-surface-variant'}`}>
+                        <span className={`badge badge-sm border-[2px] border-panel-dark font-bold text-[10px] ${p.isActive ? 'bg-primary-container text-black' : 'bg-surface-container-highest text-on-surface-variant'}`}>
                           {p.isActive ? 'ACTIVE' : 'INACTIVE'}
                         </span>
                       </div>
                     </div>
                     <div className="flex gap-1 ml-2">
                       <button
-                        className="bg-primary-container text-black border-[2px] border-on-surface shadow-brutal-sm btn-brutal-interactive font-bold uppercase text-[10px] px-2 py-1"
+                        className="bg-primary-container text-black border-[2px] border-panel-dark shadow-brutal-sm btn-brutal-interactive font-bold uppercase text-[10px] px-2 py-1"
                         onClick={() => openEditModal(p)}
                       >
                         EDIT
                       </button>
                       <button
-                        className="bg-error text-white border-[2px] border-on-surface shadow-brutal-sm btn-brutal-interactive font-bold uppercase text-[10px] px-2 py-1"
+                        className="bg-error text-white border-[2px] border-panel-dark shadow-brutal-sm btn-brutal-interactive font-bold uppercase text-[10px] px-2 py-1"
                         onClick={() => handleDelete(p.id)}
                       >
                         DEL
@@ -253,8 +253,8 @@ export default function Admin() {
 
         {/* Right: Bulk Import */}
         <div className="md:col-span-7">
-          <div className="bg-surface-container border-[3px] border-on-surface shadow-brutal p-4">
-            <h2 className="font-bold uppercase text-on-surface border-b-[3px] border-on-surface pb-2 mb-4 text-sm" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+          <div className="bg-surface-container border-[3px] border-panel-dark shadow-brutal p-4">
+            <h2 className="font-bold uppercase text-on-surface border-b-[3px] border-panel-dark pb-2 mb-4 text-sm" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
               Bulk Stock Import
             </h2>
 
@@ -264,7 +264,7 @@ export default function Admin() {
                 TARGET PRODUCT
               </label>
               <select
-                className="w-full bg-surface-container-low border-[3px] border-on-surface font-bold text-sm text-on-surface shadow-brutal-sm px-3 py-2"
+                className="w-full bg-surface-container-low border-[3px] border-panel-dark font-bold text-sm text-on-surface shadow-brutal-sm px-3 py-2"
                 value={stockProductId}
                 onChange={(e) => setStockProductId(e.target.value)}
               >
@@ -278,7 +278,7 @@ export default function Admin() {
             </div>
 
             {/* Terminal textarea */}
-            <div className="bg-on-surface border-[3px] border-secondary-container p-3 min-h-[300px]">
+            <div className="bg-panel-dark border-[3px] border-secondary-container p-3 min-h-[300px]">
               <label className="font-mono text-xs text-primary-container uppercase mb-2 block">
                 RAW CREDENTIAL DATA [FORMAT: USER:PASS]
               </label>
@@ -293,7 +293,7 @@ export default function Admin() {
             {/* Import button */}
             <div className="mt-4 flex justify-end">
               <button
-                className="bg-secondary-container text-black border-[3px] border-on-surface px-6 py-3 shadow-3d-pop btn-brutal-interactive font-bold uppercase text-sm"
+                className="bg-secondary-container text-black border-[3px] border-panel-dark px-6 py-3 shadow-3d-pop btn-brutal-interactive font-bold uppercase text-sm"
                 style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                 onClick={handleBulkImport}
                 disabled={!stockProductId || !stockText.trim()}
@@ -307,7 +307,7 @@ export default function Admin() {
 
       {/* Product Create/Edit Modal */}
       <dialog id="product_modal" className="modal">
-        <div className="modal-box border-[4px] border-neutral shadow-brutal-lg rounded-sm">
+        <div className="modal-box border-[4px] border-panel-dark shadow-brutal-lg rounded-sm">
           <h3
             className="font-black text-lg uppercase text-neutral"
             style={{ fontFamily: "'Space Grotesk', sans-serif" }}
@@ -319,7 +319,7 @@ export default function Admin() {
               type="text"
               placeholder="PRODUCT NAME"
               required
-              className="w-full bg-base-100 border-[3px] border-neutral font-mono text-xs text-neutral placeholder:text-neutral/50 focus:outline-none focus:border-primary px-3 py-2 shadow-brutal-sm"
+              className="w-full bg-base-100 border-[3px] border-panel-dark font-mono text-xs text-neutral placeholder:text-neutral/50 focus:outline-none focus:border-primary px-3 py-2 shadow-brutal-sm"
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
             />
@@ -327,7 +327,7 @@ export default function Admin() {
               type="text"
               placeholder="CATEGORY"
               required
-              className="w-full bg-base-100 border-[3px] border-neutral font-mono text-xs text-neutral placeholder:text-neutral/50 focus:outline-none focus:border-primary px-3 py-2 shadow-brutal-sm"
+              className="w-full bg-base-100 border-[3px] border-panel-dark font-mono text-xs text-neutral placeholder:text-neutral/50 focus:outline-none focus:border-primary px-3 py-2 shadow-brutal-sm"
               value={form.category}
               onChange={(e) => setForm({ ...form, category: e.target.value })}
             />
@@ -335,25 +335,25 @@ export default function Admin() {
               type="text"
               placeholder="PRICE (e.g. 9.99)"
               required
-              className="w-full bg-base-100 border-[3px] border-neutral font-mono text-xs text-neutral placeholder:text-neutral/50 focus:outline-none focus:border-primary px-3 py-2 shadow-brutal-sm"
+              className="w-full bg-base-100 border-[3px] border-panel-dark font-mono text-xs text-neutral placeholder:text-neutral/50 focus:outline-none focus:border-primary px-3 py-2 shadow-brutal-sm"
               value={form.price}
               onChange={(e) => setForm({ ...form, price: e.target.value })}
             />
             <input
               type="text"
               placeholder="BADGE (optional)"
-              className="w-full bg-base-100 border-[3px] border-neutral font-mono text-xs text-neutral placeholder:text-neutral/50 focus:outline-none focus:border-primary px-3 py-2 shadow-brutal-sm"
+              className="w-full bg-base-100 border-[3px] border-panel-dark font-mono text-xs text-neutral placeholder:text-neutral/50 focus:outline-none focus:border-primary px-3 py-2 shadow-brutal-sm"
               value={form.badge}
               onChange={(e) => setForm({ ...form, badge: e.target.value })}
             />
             <textarea
-              className="w-full bg-base-100 border-[3px] border-neutral font-mono text-xs text-neutral placeholder:text-neutral/50 focus:outline-none focus:border-primary px-3 py-2 shadow-brutal-sm"
+              className="w-full bg-base-100 border-[3px] border-panel-dark font-mono text-xs text-neutral placeholder:text-neutral/50 focus:outline-none focus:border-primary px-3 py-2 shadow-brutal-sm"
               placeholder="DESCRIPTION (optional)"
               value={form.description}
               onChange={(e) => setForm({ ...form, description: e.target.value })}
             />
             <textarea
-              className="w-full bg-base-100 border-[3px] border-neutral font-mono text-xs text-neutral placeholder:text-neutral/50 focus:outline-none focus:border-primary px-3 py-2 shadow-brutal-sm"
+              className="w-full bg-base-100 border-[3px] border-panel-dark font-mono text-xs text-neutral placeholder:text-neutral/50 focus:outline-none focus:border-primary px-3 py-2 shadow-brutal-sm"
               placeholder="USAGE INSTRUCTIONS (optional, shown to buyer after purchase)"
               value={form.instructions}
               onChange={(e) => setForm({ ...form, instructions: e.target.value })}
@@ -370,13 +370,13 @@ export default function Admin() {
             <div className="modal-action">
               <button
                 type="submit"
-                className="bg-primary-container border-[3px] border-neutral shadow-brutal btn-brutal-interactive font-black uppercase text-sm text-neutral px-4 py-2"
+                className="bg-primary-container border-[3px] border-panel-dark shadow-brutal btn-brutal-interactive font-black uppercase text-sm text-neutral px-4 py-2"
               >
                 {editingId ? 'UPDATE' : 'CREATE'}
               </button>
               <button
                 type="button"
-                className="bg-base-100 border-[3px] border-neutral shadow-brutal-sm btn-brutal-interactive font-bold uppercase text-sm text-neutral px-4 py-2"
+                className="bg-base-100 border-[3px] border-panel-dark shadow-brutal-sm btn-brutal-interactive font-bold uppercase text-sm text-neutral px-4 py-2"
                 onClick={() =>
                   (document.getElementById('product_modal') as HTMLDialogElement)?.close()
                 }
@@ -395,7 +395,7 @@ export default function Admin() {
       {toast && (
         <div className="toast toast-end">
           <div
-            className={`border-[3px] border-neutral shadow-brutal-sm font-bold text-sm ${
+            className={`border-[3px] border-panel-dark shadow-brutal-sm font-bold text-sm ${
               toast.type === 'success' ? 'bg-success text-neutral' : 'bg-error text-neutral'
             } px-4 py-3`}
           >

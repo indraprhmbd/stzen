@@ -13,7 +13,7 @@ export default function Footer() {
   const year = new Date().getFullYear()
 
   return (
-    <footer className="bg-neutral border-t-4 border-primary mt-auto">
+    <footer className="bg-panel-dark border-t-4 border-primary mt-auto">
       <div className="w-full max-w-7xl mx-auto px-4 py-6">
         {/* Top: Brand + Social */}
         <div className="flex flex-col md:flex-row items-center md:items-start justify-between gap-4 mb-5">

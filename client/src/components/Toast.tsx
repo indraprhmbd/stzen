@@ -9,7 +9,7 @@ export interface ToastData {
 const STYLES: Record<ToastType, { box: string; icon: string }> = {
   success: { box: 'bg-primary text-black border-black', icon: 'check_circle' },
   error: { box: 'bg-error text-white border-black', icon: 'error' },
-  info: { box: 'bg-neutral text-white border-black', icon: 'info' },
+  info: { box: 'bg-panel-dark text-white border-black', icon: 'info' },
 }
 
 // ─── Toast Stack ────────────────────────────────────────────────────────────

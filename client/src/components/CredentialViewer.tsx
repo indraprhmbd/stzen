@@ -7,7 +7,7 @@ interface CredentialViewerProps {
 
 export default function CredentialViewer({ credentials, instructions, onCopy, onReport }: CredentialViewerProps) {
   return (
-    <div className="bg-on-surface border-[4px] border-secondary-container shadow-3d-pop rounded-sm p-5 relative overflow-hidden">
+    <div className="bg-panel-dark border-[4px] border-secondary-container shadow-3d-pop rounded-sm p-5 relative overflow-hidden">
       {/* Decorative corner dots */}
       <div className="absolute top-2 left-2 w-3 h-3 bg-primary-container border-2 border-black rounded-full" />
       <div className="absolute top-2 right-2 w-3 h-3 bg-primary-container border-2 border-black rounded-full" />

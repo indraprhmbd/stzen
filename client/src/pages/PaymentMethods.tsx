@@ -14,7 +14,7 @@ export default function PaymentMethods() {
       <section className="mb-4">
         <div className="flex items-center gap-2 mb-2">
           <h1
-            className="font-black text-sm uppercase tracking-widest bg-neutral text-white border-2 border-black px-3 py-1 -rotate-1"
+            className="font-black text-sm uppercase tracking-widest bg-panel-dark text-white border-2 border-black px-3 py-1 -rotate-1"
             style={{ fontFamily: "'Space Grotesk', sans-serif" }}
           >
             {title}
@@ -43,7 +43,7 @@ export default function PaymentMethods() {
                   {method.name}
                 </h3>
                 <span
-                  className="bg-neutral text-primary font-black text-[8px] uppercase px-2 py-0.5 border-2 border-black -rotate-1"
+                  className="bg-panel-dark text-primary font-black text-[8px] uppercase px-2 py-0.5 border-2 border-black -rotate-1"
                 >
                   {method.badge}
                 </span>
@@ -98,7 +98,7 @@ export default function PaymentMethods() {
       <section className="mb-4">
         <Link
           to="/products"
-          className="block bg-neutral border-comic shadow-comic p-5 text-center hover:-translate-y-1 transition-all group"
+          className="block bg-panel-dark border-comic shadow-comic p-5 text-center hover:-translate-y-1 transition-all group"
         >
           <span
             className="font-black text-lg uppercase text-primary"

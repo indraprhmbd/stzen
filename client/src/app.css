@@ -74,6 +74,10 @@
   --color-dark-sage: #4E9370;
   --color-forest-green: #3D785A;
   --color-base-sage: #5EAA83;
+  /* Softer dark panel: replaces pure-black surfaces (footer, marquee,
+     chips). Light enough to kill the black-hole feel, dark enough for
+     white + lime text contrast. */
+  --color-panel-dark: #2E3B34;
 
   --color-error: #ba1a1a;
   --color-error-container: #ffdad6;

@@ -99,7 +99,7 @@ export default function AdminOrders() {
     <Layout>
       {/* Header */}
       <div className="mb-6">
-        <div className="bg-surface-container border-[3px] border-on-surface shadow-3d-subtle p-5">
+        <div className="bg-surface-container border-[3px] border-panel-dark shadow-3d-subtle p-5">
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-3">
               <div className="w-1 h-10 bg-tertiary" />
@@ -117,14 +117,14 @@ export default function AdminOrders() {
             </div>
             <div className="flex items-center gap-2">
               <button
-                className="bg-surface-container-high border-[3px] border-on-surface shadow-brutal-sm btn-brutal-interactive font-bold uppercase text-xs text-on-surface px-3 py-1.5"
+                className="bg-surface-container-high border-[3px] border-panel-dark shadow-brutal-sm btn-brutal-interactive font-bold uppercase text-xs text-on-surface px-3 py-1.5"
                 style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                 onClick={() => navigate('/admin')}
               >
                 PRODUCTS
               </button>
               <button
-                className="bg-primary-container text-black border-[3px] border-on-surface shadow-brutal-sm btn-brutal-interactive font-black uppercase text-xs px-3 py-1.5"
+                className="bg-primary-container text-black border-[3px] border-panel-dark shadow-brutal-sm btn-brutal-interactive font-black uppercase text-xs px-3 py-1.5"
                 style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                 onClick={() => signOut()}
               >
@@ -140,7 +140,7 @@ export default function AdminOrders() {
         {(['ALL', 'PENDING', 'PAID', 'DELIVERED', 'REJECTED'] as FilterTab[]).map(
           (tab) => {
             const tabColors: Record<string, string> = {
-              ALL: 'bg-on-surface text-white',
+              ALL: 'bg-panel-dark text-white',
               PENDING: 'bg-warning text-white',
               PAID: 'bg-info text-white',
               DELIVERED: 'bg-primary-container text-black',
@@ -151,7 +151,7 @@ export default function AdminOrders() {
               <button
                 key={tab}
                 className={`
-                  border-[3px] border-on-surface font-bold uppercase text-xs px-3 py-1.5
+                  border-[3px] border-panel-dark font-bold uppercase text-xs px-3 py-1.5
                   transition-all
                   ${isActive
                     ? `${tabColors[tab]} shadow-brutal translate-x-[1px] translate-y-[1px]`
@@ -179,7 +179,7 @@ export default function AdminOrders() {
           <span className="loading loading-spinner loading-lg"></span>
         </div>
       ) : filteredOrders.length === 0 ? (
-        <div className="text-center py-12 bg-surface-container border-[3px] border-on-surface shadow-brutal p-8">
+        <div className="text-center py-12 bg-surface-container border-[3px] border-panel-dark shadow-brutal p-8">
           <span className="text-on-surface-variant/30 mb-2 flex justify-center"><Box width={40} height={40} strokeWidth={1.5} /></span>
           <p className="text-on-surface-variant/50 font-bold">No orders found</p>
         </div>
@@ -190,7 +190,7 @@ export default function AdminOrders() {
             return (
               <div
                 key={order.id}
-                className="bg-surface-container border-[3px] border-on-surface shadow-brutal p-5"
+                className="bg-surface-container border-[3px] border-panel-dark shadow-brutal p-5"
               >
                 <div className="flex justify-between items-start mb-3">
                   <div>
@@ -206,14 +206,14 @@ export default function AdminOrders() {
                   </div>
                   <div className="flex items-center gap-2">
                     <div className={`w-2 h-2 rounded-full ${statusConfig.dot}`} />
-                    <span className={`badge border-[2px] border-on-surface font-bold text-[10px] ${statusConfig.className}`}>
+                    <span className={`badge border-[2px] border-panel-dark font-bold text-[10px] ${statusConfig.className}`}>
                       {statusConfig.label}
                     </span>
                   </div>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mb-4 text-xs font-bold text-on-surface-variant">
-                  <span className="bg-surface-container-high px-2 py-0.5 font-mono text-on-surface border border-on-surface/20">
+                  <span className="bg-surface-container-high px-2 py-0.5 font-mono text-on-surface border border-panel-dark/20">
                     ${order.amount}
                   </span>
                   <span className="font-mono">
@@ -234,7 +234,7 @@ export default function AdminOrders() {
                   {order.status === 'PENDING' && (
                     <>
                       <button
-                        className="bg-primary-container text-black border-[3px] border-on-surface shadow-brutal-sm btn-brutal-interactive font-black uppercase text-[11px] px-3 py-1.5"
+                        className="bg-primary-container text-black border-[3px] border-panel-dark shadow-brutal-sm btn-brutal-interactive font-black uppercase text-[11px] px-3 py-1.5"
                         disabled={actionLoading === order.id}
                         onClick={() => handleAction(order.id, 'approve')}
                       >
@@ -245,7 +245,7 @@ export default function AdminOrders() {
                         )}
                       </button>
                       <button
-                        className="bg-error text-white border-[3px] border-on-surface shadow-brutal-sm btn-brutal-interactive font-black uppercase text-[11px] px-3 py-1.5"
+                        className="bg-error text-white border-[3px] border-panel-dark shadow-brutal-sm btn-brutal-interactive font-black uppercase text-[11px] px-3 py-1.5"
                         disabled={actionLoading === order.id}
                         onClick={() => handleAction(order.id, 'reject')}
                       >
@@ -259,7 +259,7 @@ export default function AdminOrders() {
                   )}
                   {order.status === 'PAID' && (
                     <button
-                      className="bg-secondary-container text-black border-[3px] border-on-surface shadow-brutal-sm btn-brutal-interactive font-black uppercase text-[11px] px-3 py-1.5"
+                      className="bg-secondary-container text-black border-[3px] border-panel-dark shadow-brutal-sm btn-brutal-interactive font-black uppercase text-[11px] px-3 py-1.5"
                       disabled={actionLoading === order.id}
                       onClick={() => handleAction(order.id, 'deliver')}
                     >

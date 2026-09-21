@@ -11,7 +11,7 @@ export default function LegalDoc({ doc }: { doc: LegalDocBody }) {
       <section className="mb-4">
         <div className="flex items-center gap-2 mb-2">
           <h1
-            className="font-black text-sm uppercase tracking-widest bg-neutral text-white border-2 border-black px-3 py-1 -rotate-1"
+            className="font-black text-sm uppercase tracking-widest bg-panel-dark text-white border-2 border-black px-3 py-1 -rotate-1"
             style={{ fontFamily: "'Space Grotesk', sans-serif" }}
           >
             {doc.title}

@@ -9,7 +9,7 @@ export default function Marquee({ items, className = 'mb-6' }: MarqueeProps) {
   const full = `${content}   ///   ${content}   ///   ${content}   ///   ${content}`
 
   return (
-    <div className={`overflow-hidden border-y-[3px] border-on-surface bg-on-surface py-2.5 select-none ${className}`}>
+    <div className={`overflow-hidden border-y-[3px] border-panel-dark bg-panel-dark py-2.5 select-none ${className}`}>
       <div className="animate-marquee whitespace-nowrap flex">
         <span
           className="font-black text-[10px] md:text-xs uppercase tracking-widest text-white mx-4"

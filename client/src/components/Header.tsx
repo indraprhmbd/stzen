@@ -134,7 +134,7 @@ export default function Header() {
 
                   {menuOpen && (
                     <div onPointerDown={(e) => e.stopPropagation()} className="absolute right-0 top-full mt-2 w-52 bg-white border-2 border-black shadow-comic z-50">
-                      <div className="px-3 py-2 border-b-2 border-black bg-neutral">
+                      <div className="px-3 py-2 border-b-2 border-black bg-panel-dark">
                         <p className="font-black text-[9px] uppercase text-white truncate" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
                           {user.email}
                         </p>

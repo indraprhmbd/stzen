@@ -167,7 +167,7 @@ function Catalog() {
       {/* ═══ TESTIMONIALS - comic ═══ */}
       <section className="mb-4">
         <div className="flex items-center gap-2 mb-2">
-          <h2 className="font-black text-xs uppercase tracking-widest bg-neutral text-white border-2 border-black px-2 py-0.5" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+          <h2 className="font-black text-xs uppercase tracking-widest bg-panel-dark text-white border-2 border-black px-2 py-0.5" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
             {t.testimonials.title}
           </h2>
           <div className="flex-1 h-[3px] bg-black" />
@@ -201,7 +201,7 @@ function Catalog() {
       <section className="mb-4">
         <Link
           to="/products"
-          className="block bg-neutral border-comic shadow-comic p-6 md:p-8 relative overflow-hidden hover:-translate-y-1 transition-all group"
+          className="block bg-panel-dark border-comic shadow-comic p-6 md:p-8 relative overflow-hidden hover:-translate-y-1 transition-all group"
         >
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex flex-col items-center md:items-start gap-1">

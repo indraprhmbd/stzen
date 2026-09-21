@@ -265,7 +265,7 @@ const { t } = useCopy()
   return (
     <Layout>
       <div className="mb-6">
-        <div className="bg-surface-container border-[3px] border-on-surface shadow-3d-subtle p-5">
+        <div className="bg-surface-container border-[3px] border-panel-dark shadow-3d-subtle p-5">
           <div className="flex items-center gap-3">
             <div className="w-1 h-10 bg-secondary-container" />
             <div>
@@ -284,7 +284,7 @@ const { t } = useCopy()
       </div>
 
       {!session && (
-        <div className="text-center py-12 bg-surface-container border-[3px] border-on-surface shadow-brutal p-8">
+        <div className="text-center py-12 bg-surface-container border-[3px] border-panel-dark shadow-brutal p-8">
           <span className="text-on-surface-variant/30 mb-3 flex justify-center"><Lock width={48} height={48} strokeWidth={1.5} /></span>
           <p className="font-bold text-on-surface mb-1">
             {user ? 'Loading your orders...' : 'Sign in to view your orders'}
@@ -309,7 +309,7 @@ const { t } = useCopy()
           <div className="sticky top-12 z-30 -mx-4 px-4 py-2 mb-4 flex gap-1.5 flex-nowrap overflow-x-auto md:flex-wrap md:overflow-visible">
             {tabKeys.map((tab, i) => {
               const tabColors: Record<string, string> = {
-                ALL: 'bg-neutral text-white',
+                ALL: 'bg-panel-dark text-white',
                 PENDING: 'bg-warning text-black',
                 PAID: 'bg-info text-black',
                 DELIVERED: 'bg-primary text-black',
@@ -320,7 +320,7 @@ const { t } = useCopy()
               return (
                 <button
                   key={tab}
-                  className={`shrink-0 border-[3px] border-on-surface font-bold uppercase text-[10px] px-2 py-1 md:text-xs md:px-3 md:py-1.5 transition-all ${isActive ? `${tabColors[tab]} shadow-brutal translate-x-[1px] translate-y-[1px]` : 'bg-surface-container text-on-surface shadow-brutal-sm hover:-translate-x-[1px] hover:-translate-y-[1px]'}`}
+                  className={`shrink-0 border-[3px] border-panel-dark font-bold uppercase text-[10px] px-2 py-1 md:text-xs md:px-3 md:py-1.5 transition-all ${isActive ? `${tabColors[tab]} shadow-brutal translate-x-[1px] translate-y-[1px]` : 'bg-surface-container text-on-surface shadow-brutal-sm hover:-translate-x-[1px] hover:-translate-y-[1px]'}`}
                   style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                   onClick={() => handleTabChange(tab)}
                 >
@@ -335,21 +335,21 @@ const { t } = useCopy()
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2" aria-busy="true">
               {Array.from({ length: 8 }).map((_, i) => (
                 <div key={i} className="bg-white border-comic p-2.5 animate-pulse">
-                  <div className="h-4 bg-neutral/20" />
+                  <div className="h-4 bg-panel-dark/20" />
                   <div className="flex gap-1 mt-1.5">
-                    <div className="h-4 w-14 bg-neutral/20 rounded-full" />
-                    <div className="h-4 w-12 bg-neutral/20 rounded-full" />
+                    <div className="h-4 w-14 bg-panel-dark/20 rounded-full" />
+                    <div className="h-4 w-12 bg-panel-dark/20 rounded-full" />
                   </div>
-                  <div className="h-3 w-24 bg-neutral/20 mt-1.5" />
+                  <div className="h-3 w-24 bg-panel-dark/20 mt-1.5" />
                   <div className="flex items-end justify-between mt-3">
-                    <div className="h-6 w-20 bg-neutral/20" />
-                    <div className="h-7 w-16 bg-neutral/20" />
+                    <div className="h-6 w-20 bg-panel-dark/20" />
+                    <div className="h-7 w-16 bg-panel-dark/20" />
                   </div>
                 </div>
               ))}
             </div>
           ) : filteredOrders.length === 0 ? (
-            <div className="text-center py-12 bg-surface-container border-[3px] border-on-surface shadow-brutal p-8">
+            <div className="text-center py-12 bg-surface-container border-[3px] border-panel-dark shadow-brutal p-8">
               <span className="text-on-surface-variant/30 mb-2 flex justify-center"><Box width={40} height={40} strokeWidth={1.5} /></span>
               <p className="text-on-surface-variant/50 font-bold">{t.dashboard.noOrders}</p>
             </div>
@@ -390,7 +390,7 @@ const { t } = useCopy()
       {/* Credentials Popup (receipt style, matches buy-confirm) */}
       <dialog id="credentials_modal" className="modal">
         <div className="modal-box bg-white border-comic shadow-comic rounded-sm p-0 max-w-md">
-          <div className="bg-neutral border-b-[3px] border-black px-5 py-3 text-center">
+          <div className="bg-panel-dark border-b-[3px] border-black px-5 py-3 text-center">
             <h3 className="font-black text-sm uppercase text-primary tracking-widest" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
               Kredensial
             </h3>

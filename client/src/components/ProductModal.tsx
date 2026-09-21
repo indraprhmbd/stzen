@@ -31,7 +31,7 @@ export default function ProductModal({ product, purchasing, onClose, onConfirm }
 
   return (
     <div className="modal modal-open">
-      <div className="modal-box max-w-lg bg-white border-[3px] border-on-surface shadow-3d-pop rounded-md p-0 overflow-hidden">
+      <div className="modal-box max-w-lg bg-white border-[3px] border-panel-dark shadow-3d-pop rounded-md p-0 overflow-hidden">
         {/* Top accent bar */}
         <div className="h-2 bg-primary-container" />
 
@@ -39,7 +39,7 @@ export default function ProductModal({ product, purchasing, onClose, onConfirm }
           {/* Header row */}
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <span className="bg-surface-container-high border border-on-surface/20 font-bold px-2 py-0.5 text-[10px] uppercase text-on-surface-variant">
+              <span className="bg-surface-container-high border border-panel-dark/20 font-bold px-2 py-0.5 text-[10px] uppercase text-on-surface-variant">
                 {product.category}
               </span>
               {product.badge && (
@@ -49,7 +49,7 @@ export default function ProductModal({ product, purchasing, onClose, onConfirm }
               )}
             </div>
             <button
-              className="border-2 border-on-surface bg-white p-1 leading-none hover:bg-surface-container transition-colors"
+              className="border-2 border-panel-dark bg-white p-1 leading-none hover:bg-surface-container transition-colors"
               onClick={onClose}
               aria-label="Close"
             >
@@ -85,7 +85,7 @@ export default function ProductModal({ product, purchasing, onClose, onConfirm }
           )}
 
           {/* How it works */}
-          <div className="bg-surface-container border-2 border-on-surface/20 p-4 mb-5">
+          <div className="bg-surface-container border-2 border-panel-dark/20 p-4 mb-5">
             <p
               className="text-[10px] font-black uppercase text-on-surface-variant mb-2"
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
@@ -101,7 +101,7 @@ export default function ProductModal({ product, purchasing, onClose, onConfirm }
           </div>
 
           {/* Price + Confirm */}
-          <div className="flex items-end justify-between gap-4 pt-4 border-t-[3px] border-on-surface">
+          <div className="flex items-end justify-between gap-4 pt-4 border-t-[3px] border-panel-dark">
             <div>
               <p className="text-[10px] font-bold text-on-surface-variant uppercase mb-0.5">Total</p>
               <span className="font-black text-3xl text-on-surface" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
@@ -110,7 +110,7 @@ export default function ProductModal({ product, purchasing, onClose, onConfirm }
             </div>
             <button
               className={`
-                border-[3px] border-on-surface font-black text-sm uppercase px-6 py-3
+                border-[3px] border-panel-dark font-black text-sm uppercase px-6 py-3
                 btn-brutal-interactive shadow-brutal whitespace-nowrap
                 ${inStock
                   ? 'bg-primary-container text-on-surface'
