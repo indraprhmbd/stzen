@@ -20,7 +20,7 @@ export default function Footer() {
           <Link to="/" className="flex items-center gap-3 group">
             <img src="/logo.svg" alt={brand.name} className="h-10 w-10 shrink-0" />
             <div>
-              <span className="font-black text-sm uppercase text-primary leading-none block" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+              <span className="font-black text-sm uppercase text-white leading-none block" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
                 {brand.name}
               </span>
               <span className="text-[9px] font-bold text-white/60 block mt-0.5" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
@@ -64,39 +64,39 @@ export default function Footer() {
           {/* Shop */}
           <div>
             <h3
-              className="font-black text-[10px] uppercase tracking-wider text-primary mb-2 pb-1.5 border-b-2 border-white/20"
+              className="font-black text-[10px] uppercase tracking-wider text-white mb-2 pb-1.5 border-b-2 border-white/20"
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
             >
               {t.nav.shop}
             </h3>
             <ul className="space-y-1.5">
-              <li><Link to="/products" className="text-[11px] font-bold text-white/70 hover:text-primary transition-colors">{t.products.title}</Link></li>
-              <li><Link to="/products?category=streaming" className="text-[11px] font-bold text-white/70 hover:text-primary transition-colors">Streaming</Link></li>
-              <li><Link to="/products?category=ai+tools" className="text-[11px] font-bold text-white/70 hover:text-primary transition-colors">AI Tools</Link></li>
-              <li><Link to="/products?category=productivity" className="text-[11px] font-bold text-white/70 hover:text-primary transition-colors">Productivity</Link></li>
+              <li><Link to="/products" className="text-[11px] font-bold text-white/70 hover:text-white transition-colors">{t.products.title}</Link></li>
+              <li><Link to="/products?category=streaming" className="text-[11px] font-bold text-white/70 hover:text-white transition-colors">Streaming</Link></li>
+              <li><Link to="/products?category=ai+tools" className="text-[11px] font-bold text-white/70 hover:text-white transition-colors">AI Tools</Link></li>
+              <li><Link to="/products?category=productivity" className="text-[11px] font-bold text-white/70 hover:text-white transition-colors">Productivity</Link></li>
             </ul>
           </div>
 
           {/* Support */}
           <div>
             <h3
-              className="font-black text-[10px] uppercase tracking-wider text-primary mb-2 pb-1.5 border-b-2 border-white/20"
+              className="font-black text-[10px] uppercase tracking-wider text-white mb-2 pb-1.5 border-b-2 border-white/20"
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
             >
               {t.footer.howToOrder}
             </h3>
             <ul className="space-y-1.5">
-              <li><Link to="/how-to-order" className="text-[11px] font-bold text-white/70 hover:text-primary transition-colors">{t.footer.howToOrder}</Link></li>
-              <li><Link to="/payment-methods" className="text-[11px] font-bold text-white/70 hover:text-primary transition-colors">{t.footer.paymentMethods}</Link></li>
-              <li><Link to="/faq" className="text-[11px] font-bold text-white/70 hover:text-primary transition-colors">{t.footer.faq}</Link></li>
-              <li><Link to="/dashboard" className="text-[11px] font-bold text-white/70 hover:text-primary transition-colors">{t.footer.myOrders}</Link></li>
+              <li><Link to="/how-to-order" className="text-[11px] font-bold text-white/70 hover:text-white transition-colors">{t.footer.howToOrder}</Link></li>
+              <li><Link to="/payment-methods" className="text-[11px] font-bold text-white/70 hover:text-white transition-colors">{t.footer.paymentMethods}</Link></li>
+              <li><Link to="/faq" className="text-[11px] font-bold text-white/70 hover:text-white transition-colors">{t.footer.faq}</Link></li>
+              <li><Link to="/dashboard" className="text-[11px] font-bold text-white/70 hover:text-white transition-colors">{t.footer.myOrders}</Link></li>
             </ul>
           </div>
 
           {/* Contact */}
           <div>
             <h3
-              className="font-black text-[10px] uppercase tracking-wider text-primary mb-2 pb-1.5 border-b-2 border-white/20"
+              className="font-black text-[10px] uppercase tracking-wider text-white mb-2 pb-1.5 border-b-2 border-white/20"
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
             >
               HUBUNGI KAMI
@@ -123,7 +123,7 @@ export default function Footer() {
             </ul>
             {/* Payment badge */}
             <div className="mt-2.5 inline-flex items-center gap-1.5 bg-white/5 border-2 border-white/20 px-2 py-1">
-              <svg className="w-3 h-3 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              <svg className="w-3 h-3 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
               <span
                 className="text-[8px] font-black uppercase text-white/60 tracking-wider"
                 style={{ fontFamily: "'Space Grotesk', sans-serif" }}
@@ -140,15 +140,15 @@ export default function Footer() {
             &copy; {year} {brand.name}. {t.footer.rights}.
           </p>
           <div className="flex items-center gap-3">
-            <Link to="/syarat-ketentuan" className="text-[9px] font-bold uppercase text-white/50 hover:text-primary transition-colors">{t.footer.terms}</Link>
-            <Link to="/kebijakan-privasi" className="text-[9px] font-bold uppercase text-white/50 hover:text-primary transition-colors">{t.footer.privacy}</Link>
-            <Link to="/pengembalian-dana" className="text-[9px] font-bold uppercase text-white/50 hover:text-primary transition-colors">{t.footer.refunds}</Link>
+            <Link to="/syarat-ketentuan" className="text-[9px] font-bold uppercase text-white/50 hover:text-white transition-colors">{t.footer.terms}</Link>
+            <Link to="/kebijakan-privasi" className="text-[9px] font-bold uppercase text-white/50 hover:text-white transition-colors">{t.footer.privacy}</Link>
+            <Link to="/pengembalian-dana" className="text-[9px] font-bold uppercase text-white/50 hover:text-white transition-colors">{t.footer.refunds}</Link>
             <span className="text-white/10">|</span>
             <a
               href="https://langitkode.id"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[9px] font-black uppercase tracking-wider text-white/50 hover:text-primary transition-colors"
+              className="text-[9px] font-black uppercase tracking-wider text-white/50 hover:text-white transition-colors"
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
             >
               LangitKode Creative

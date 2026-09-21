@@ -342,7 +342,7 @@ export default function ProductDetail() {
               </span>
             )}
             {isOnDemand && (
-              <span className="bg-neutral text-primary font-black text-xs px-2.5 py-1 border-2 border-black">
+              <span className="bg-neutral text-white font-black text-xs px-2.5 py-1 border-2 border-black">
                 On Demand
               </span>
             )}
@@ -405,7 +405,7 @@ export default function ProductDetail() {
       {related.length > 0 && (
         <section className="mb-4">
           <div className="flex items-center gap-2 mb-2">
-            <h2 className="font-black text-xs uppercase tracking-widest bg-neutral text-primary border-2 border-black px-2 py-0.5 -rotate-1" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+            <h2 className="font-black text-xs uppercase tracking-widest bg-neutral text-white border-2 border-black px-2 py-0.5 -rotate-1" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
               PRODUK TERKAIT
             </h2>
             <div className="flex-1 h-[3px] bg-black" />
@@ -511,7 +511,7 @@ export default function ProductDetail() {
               : navHidden ? 'bottom-5' : 'bottom-[72px]'
           }`}
         >
-          <span className="pointer-events-none absolute right-full top-1/2 -translate-y-1/2 mr-2 whitespace-nowrap bg-neutral text-primary font-black text-xs uppercase px-2.5 py-1.5 border-2 border-black shadow-comic opacity-0 translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-150" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+          <span className="pointer-events-none absolute right-full top-1/2 -translate-y-1/2 mr-2 whitespace-nowrap bg-neutral text-white font-black text-xs uppercase px-2.5 py-1.5 border-2 border-black shadow-comic opacity-0 translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-150" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
             {t.products.askAdmin}
           </span>
           <span className="flex items-center justify-center w-12 h-12 md:w-14 md:h-14 rounded-full bg-[#25D366] border-2 border-black shadow-comic btn-comic-interactive">

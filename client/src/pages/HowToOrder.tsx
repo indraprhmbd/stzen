@@ -12,7 +12,7 @@ export default function HowToOrder() {
       <section className="mb-4">
         <div className="flex items-center gap-2 mb-2">
           <h1
-            className="font-black text-sm uppercase tracking-widest bg-neutral text-primary border-2 border-black px-3 py-1 -rotate-1"
+            className="font-black text-sm uppercase tracking-widest bg-neutral text-white border-2 border-black px-3 py-1 -rotate-1"
             style={{ fontFamily: "'Space Grotesk', sans-serif" }}
           >
             {title}
@@ -29,8 +29,8 @@ export default function HowToOrder() {
         {steps.map((step, i) => {
           const accents = [
             { bg: 'bg-secondary', text: 'text-white', num: 'bg-primary text-neutral' },
-            { bg: 'bg-primary', text: 'text-neutral', num: 'bg-neutral text-primary' },
-            { bg: 'bg-accent', text: 'text-neutral', num: 'bg-neutral text-primary' },
+            { bg: 'bg-primary', text: 'text-neutral', num: 'bg-neutral text-white' },
+            { bg: 'bg-accent', text: 'text-neutral', num: 'bg-neutral text-white' },
             { bg: 'bg-neutral', text: 'text-primary', num: 'bg-primary text-neutral' },
           ]
           const cfg = accents[i % accents.length]!

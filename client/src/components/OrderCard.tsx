@@ -52,9 +52,9 @@ function getStatusConfig(status: Order['status']) {
     case 'REJECTED':
       return { label: 'REJECTED', className: 'bg-error text-white' }
     case 'REFUNDED':
-      return { label: 'REFUNDED', className: 'bg-neutral text-primary' }
+      return { label: 'REFUNDED', className: 'bg-neutral text-white' }
     default:
-      return { label: status, className: 'bg-neutral text-primary' }
+      return { label: status, className: 'bg-neutral text-white' }
   }
 }
 

@@ -79,7 +79,7 @@ export default function Pagination({ currentPage, totalPages, onPrefetchNext }: 
             className={`
               border-2 border-black font-black text-xs px-3 py-1.5 shadow-comic-sm btn-comic-interactive
               ${p === currentPage
-                ? 'bg-neutral text-primary'
+                ? 'bg-neutral text-white'
                 : 'bg-white text-neutral hover:bg-primary hover:text-neutral'
               }
             `}

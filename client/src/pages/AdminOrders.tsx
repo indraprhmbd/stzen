@@ -140,7 +140,7 @@ export default function AdminOrders() {
         {(['ALL', 'PENDING', 'PAID', 'DELIVERED', 'REJECTED'] as FilterTab[]).map(
           (tab) => {
             const tabColors: Record<string, string> = {
-              ALL: 'bg-on-surface text-primary-container',
+              ALL: 'bg-on-surface text-white',
               PENDING: 'bg-warning text-white',
               PAID: 'bg-info text-white',
               DELIVERED: 'bg-primary-container text-black',

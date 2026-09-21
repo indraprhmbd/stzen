@@ -23,7 +23,7 @@ export default function CredentialViewer({ credentials, instructions, onCopy, on
             <div className="w-3 h-3 rounded-full border-2 border-black bg-warning" />
             <div className="w-3 h-3 rounded-full border-2 border-black bg-primary-container" />
           </div>
-          <span className="font-mono text-xs text-primary-container uppercase tracking-widest">
+          <span className="font-mono text-xs text-white uppercase tracking-widest">
             <span className="cursor-blink">_</span> DECRYPTED VAULT PAYLOAD
           </span>
         </div>
@@ -33,7 +33,7 @@ export default function CredentialViewer({ credentials, instructions, onCopy, on
       </div>
 
       {/* Credentials */}
-      <pre className="font-mono text-sm text-primary-container font-bold bg-dark-sage/50 p-4 border border-primary-container/40 select-all overflow-x-auto whitespace-pre-wrap mb-4">
+      <pre className="font-mono text-sm text-white font-bold bg-dark-sage/50 p-4 border border-primary-container/40 select-all overflow-x-auto whitespace-pre-wrap mb-4">
         {credentials}
       </pre>
 

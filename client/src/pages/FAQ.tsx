@@ -14,7 +14,7 @@ export default function FAQ() {
       <section className="mb-4">
         <div className="flex items-center gap-2 mb-2">
           <h1
-            className="font-black text-sm uppercase tracking-widest bg-neutral text-primary border-2 border-black px-3 py-1 -rotate-1"
+            className="font-black text-sm uppercase tracking-widest bg-neutral text-white border-2 border-black px-3 py-1 -rotate-1"
             style={{ fontFamily: "'Space Grotesk', sans-serif" }}
           >
             {title}
@@ -46,7 +46,7 @@ export default function FAQ() {
                   {item.q}
                 </span>
                 <span
-                  className={`shrink-0 w-6 h-6 border-2 border-black flex items-center justify-center font-black text-xs transition-all ${isOpen ? 'bg-neutral text-primary -rotate-45' : 'bg-accent text-neutral rotate-0'}`}
+                  className={`shrink-0 w-6 h-6 border-2 border-black flex items-center justify-center font-black text-xs transition-all ${isOpen ? 'bg-neutral text-white' : 'bg-accent text-neutral rotate-0'}`}
                 >
                   +
                 </span>

@@ -22,7 +22,7 @@ interface FilterBarProps {
 
 // Category-based colors
 const categoryColorMap: Record<string, { active: string; hover: string }> = {
-  all: { active: 'bg-on-surface text-primary-container', hover: 'hover:bg-on-surface/80' },
+  all: { active: 'bg-on-surface text-white', hover: 'hover:bg-on-surface/80' },
   streaming: { active: 'bg-secondary text-white', hover: 'hover:bg-secondary/80' },
   'ai tools': { active: 'bg-primary-container text-black', hover: 'hover:bg-primary-container/80' },
   productivity: { active: 'bg-tertiary text-white', hover: 'hover:bg-tertiary/80' },
@@ -169,14 +169,14 @@ export default function FilterBar({ categories, active, onChange, counts = {}, s
           </select>
           <div className="flex border-comic shadow-comic-sm overflow-hidden shrink-0">
             <button
-              className={`p-1.5 transition-colors ${view === 'grid' ? 'bg-on-surface text-primary-container' : 'bg-surface-container text-on-surface'}`}
+              className={`p-1.5 transition-colors ${view === 'grid' ? 'bg-on-surface text-white' : 'bg-surface-container text-on-surface'}`}
               onClick={() => onViewChange('grid')}
               aria-label="Grid view"
             >
               <span className="material-symbols-outlined text-xs">grid_view</span>
             </button>
             <button
-              className={`p-1.5 transition-colors ${view === 'list' ? 'bg-on-surface text-primary-container' : 'bg-surface-container text-on-surface'}`}
+              className={`p-1.5 transition-colors ${view === 'list' ? 'bg-on-surface text-white' : 'bg-surface-container text-on-surface'}`}
               onClick={() => onViewChange('list')}
               aria-label="List view"
             >
@@ -280,14 +280,14 @@ export default function FilterBar({ categories, active, onChange, counts = {}, s
           </select>
           <div className="flex border-comic shadow-comic-sm overflow-hidden">
             <button
-              className={`p-2 transition-colors ${view === 'grid' ? 'bg-on-surface text-primary-container' : 'bg-surface-container text-on-surface hover:bg-surface-container-high'}`}
+              className={`p-2 transition-colors ${view === 'grid' ? 'bg-on-surface text-white' : 'bg-surface-container text-on-surface hover:bg-surface-container-high'}`}
               onClick={() => onViewChange('grid')}
               aria-label="Grid view"
             >
               <span className="material-symbols-outlined text-sm">grid_view</span>
             </button>
             <button
-              className={`p-2 transition-colors ${view === 'list' ? 'bg-on-surface text-primary-container' : 'bg-surface-container text-on-surface hover:bg-surface-container-high'}`}
+              className={`p-2 transition-colors ${view === 'list' ? 'bg-on-surface text-white' : 'bg-surface-container text-on-surface hover:bg-surface-container-high'}`}
               onClick={() => onViewChange('list')}
               aria-label="List view"
             >

@@ -167,7 +167,7 @@ function Catalog() {
       {/* ═══ TESTIMONIALS - comic ═══ */}
       <section className="mb-4">
         <div className="flex items-center gap-2 mb-2">
-          <h2 className="font-black text-xs uppercase tracking-widest bg-neutral text-primary border-2 border-black px-2 py-0.5 rotate-1" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+          <h2 className="font-black text-xs uppercase tracking-widest bg-neutral text-white border-2 border-black px-2 py-0.5" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
             {t.testimonials.title}
           </h2>
           <div className="flex-1 h-[3px] bg-black" />
@@ -209,7 +209,7 @@ function Catalog() {
                 SHOP
               </span>
               <h2
-                className="font-black text-2xl md:text-3xl uppercase text-primary leading-none"
+                className="font-black text-2xl md:text-3xl uppercase text-white leading-none"
                 style={{ fontFamily: "'Space Grotesk', sans-serif" }}
               >
                 {t.products.title}

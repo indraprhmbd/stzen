@@ -309,7 +309,7 @@ const { t } = useCopy()
           <div className="sticky top-12 z-30 -mx-4 px-4 py-2 mb-4 flex gap-1.5 flex-nowrap overflow-x-auto md:flex-wrap md:overflow-visible">
             {tabKeys.map((tab, i) => {
               const tabColors: Record<string, string> = {
-                ALL: 'bg-neutral text-primary',
+                ALL: 'bg-neutral text-white',
                 PENDING: 'bg-warning text-black',
                 PAID: 'bg-info text-black',
                 DELIVERED: 'bg-primary text-black',

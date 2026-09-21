@@ -126,7 +126,7 @@ export default function Header() {
                 <div ref={menuRef}>
                   <button
                     onClick={() => setMenuOpen(!menuOpen)}
-                    className="w-8 h-8 border-2 border-black bg-primary text-black font-black text-xs flex items-center justify-center hover:bg-black hover:text-primary transition-all"
+                    className="w-8 h-8 border-2 border-black bg-primary text-black font-black text-xs flex items-center justify-center hover:bg-black hover:text-white transition-all"
                     style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                   >
                     <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.7 0 5-2.3 5-5s-2.3-5-5-5-5 2.3-5 5 2.3 5 5 5zm0 2c-3.3 0-10 1.7-10 5v2h20v-2c0-3.3-6.7-5-10-5z"/></svg>
@@ -135,7 +135,7 @@ export default function Header() {
                   {menuOpen && (
                     <div onPointerDown={(e) => e.stopPropagation()} className="absolute right-0 top-full mt-2 w-52 bg-white border-2 border-black shadow-comic z-50">
                       <div className="px-3 py-2 border-b-2 border-black bg-neutral">
-                        <p className="font-black text-[9px] uppercase text-primary truncate" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                        <p className="font-black text-[9px] uppercase text-white truncate" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
                           {user.email}
                         </p>
                       </div>
@@ -179,7 +179,7 @@ export default function Header() {
               ) : (
                 <Link
                   to="/login"
-                  className={`${pillBase} bg-primary text-black hover:bg-black hover:text-primary`}
+                  className={`${pillBase} bg-primary text-black hover:bg-black hover:text-white`}
                   style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                 >
                   {t.auth.signIn}

@@ -29,7 +29,7 @@ export default function Profile() {
     <Layout>
       <div className="max-w-md mx-auto">
         <h1
-          className="font-black text-sm uppercase tracking-widest bg-neutral text-primary border-2 border-black px-3 py-1 -rotate-1 w-fit mb-3"
+          className="font-black text-sm uppercase tracking-widest bg-neutral text-white border-2 border-black px-3 py-1 -rotate-1 w-fit mb-3"
           style={{ fontFamily: "'Space Grotesk', sans-serif" }}
         >
           {t.profile.title}
