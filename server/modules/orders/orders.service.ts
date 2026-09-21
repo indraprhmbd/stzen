@@ -9,6 +9,7 @@ import { importKeyFromBase64, encrypt } from '../../shared/lib/crypto'
 import { dispatchReminder } from '../../shared/lib/notify/notify.dispatcher'
 import { auditDispatchResults } from '../../shared/lib/notify/notify.audit'
 import { appendAudit } from '../../shared/lib/audit'
+import { countByOrders } from '../../shared/lib/notes'
 import type { OrderReminderFacts, ReminderEvent } from '../../shared/lib/notify/notify.types'
 import {
   VALID_TRANSITIONS,
@@ -526,7 +527,12 @@ export const ordersService = {
 
     // Batched vault availability for the page
     const variantIds = [...new Set(paginated.map((r: any) => r.variant_id).filter(Boolean))] as string[]
-    const stockByVariant = await getStockCounts(variantIds)
+    const orderDbIds = [...new Set(paginated.map((r: any) => r.id).filter(Boolean))] as string[]
+    const [stockByVariant, claimCounts, noteCounts] = await Promise.all([
+      getStockCounts(variantIds),
+      countByOrders('warranty_claims', orderDbIds),
+      countByOrders('order_notes', orderDbIds),
+    ])
 
     return {
       orders: paginated.map((r: any) => {
@@ -538,6 +544,8 @@ export const ordersService = {
           variantPublicId: productVariant?.public_id ?? null,
           customerEmail: profile?.email ?? null,
           vaultAvailable: r.variant_id ? stockByVariant.get(r.variant_id) ?? 0 : null,
+          claimCount: claimCounts.get(r.id) ?? 0,
+          noteCount: noteCounts.get(r.id) ?? 0,
         }
       }),
       total: total || 0,

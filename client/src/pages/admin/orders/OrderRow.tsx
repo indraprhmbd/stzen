@@ -39,18 +39,45 @@ export default function OrderRow(props: {
       pageIds={pageIds}
       selectLabel={`Pilih pesanan ${o.id.slice(0, 8).toUpperCase()}`}
     >
-      <td><CopyCell value={o.id} display={o.id.slice(0, 8).toUpperCase()} className="ad-num text-xs font-semibold" /></td>
-      <td className="text-xs ad-num text-[#6e6e73] whitespace-nowrap">{new Date(o.createdAt).toLocaleDateString('id-ID', { day:'2-digit', month:'short', year:'numeric' })}</td>
-      <td className={`text-xs ad-num whitespace-nowrap ${overdue ? 'text-red-600 font-semibold' : 'text-[#6e6e73]'}`}>{formatAge(o.createdAt)}</td>
-      <td className="text-[13px] ad-num font-medium">{o.productName}</td>
-      <td className="whitespace-nowrap text-xs ad-num">
-        {[o.fulfillmentType === 'on_demand' ? 'On-demand' : 'Vault', stockout ? 'Stok habis' : null].filter(Boolean).join(', ')}
+      <td>
+        <CopyCell value={o.id} display={o.id.slice(0, 8).toUpperCase()} className="ad-num text-xs font-semibold" />
+        {o.paymentRef && <div className="ad-num text-[11px] text-[#6e6e73] truncate max-w-28" title={o.paymentRef}>{o.paymentRef}</div>}
+      </td>
+      <td className="whitespace-nowrap">
+        <div className="text-xs ad-num text-[#6e6e73]">{new Date(o.createdAt).toLocaleDateString('id-ID', { day:'2-digit', month:'short', year:'numeric' })}</div>
+        <div className={`text-[11px] ad-num ${overdue ? 'text-red-600 font-semibold' : 'text-[#aeaeb2]'}`}>{formatAge(o.createdAt)}</div>
+      </td>
+      <td>
+        <div className="text-[13px] ad-num font-medium">{o.productName}</div>
+        <div className="text-[11px] ad-num text-[#6e6e73]">{o.fulfillmentType === 'on_demand' ? 'On-demand' : 'Vault'}</div>
       </td>
       <td className="ad-num text-xs text-[#6e6e73]" title={o.customerEmail ?? o.userId}>{o.customerEmail ?? o.userId.slice(0, 8)}</td>
       <td className="text-[13px] ad-num font-semibold">Rp {formatIdNumber(o.amount)}
         {o.status === 'REFUNDED' && o.refundAmount != null && <div className="text-[11px] font-normal text-[#dc2626]">Refund Rp {formatIdNumber(o.refundAmount)}</div>}
       </td>
-      <td><StatusChip status={o.status}>{o.status}</StatusChip></td>
+      <td>
+        <StatusChip status={o.status}>{o.status}</StatusChip>
+        {(o.claimCount > 0 || stockout || overdue || o.noteCount > 0) && (
+          <div className="mt-1 flex max-w-28 flex-wrap gap-1">
+            {o.claimCount > 0 && (
+              <button onClick={() => actions.openCalculator(o)} title="Buka hitung refund" className="rounded-full border border-amber-500 bg-amber-50 px-1.5 py-px text-[10px] font-bold text-amber-700 hover:bg-amber-100">
+                klaim {o.claimCount}x
+              </button>
+            )}
+            {stockout && (
+              <span className="rounded-full border border-red-500 bg-red-50 px-1.5 py-px text-[10px] font-bold text-red-700">stok habis</span>
+            )}
+            {overdue && (
+              <span className="rounded-full border border-red-500 bg-red-50 px-1.5 py-px text-[10px] font-bold text-red-700">overdue</span>
+            )}
+            {o.noteCount > 0 && (
+              <button onClick={() => actions.openTimeline(o)} title="Buka riwayat + catatan" className="rounded-full border border-[#d1d1d6] bg-[#f5f5f7] px-1.5 py-px text-[10px] font-bold text-[#6e6e73] hover:text-black">
+                catatan {o.noteCount}x
+              </button>
+            )}
+          </div>
+        )}
+      </td>
       <td className="text-right">
         <div className="flex justify-end gap-1.5">
           {o.status === 'PENDING' && (

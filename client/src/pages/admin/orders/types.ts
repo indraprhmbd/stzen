@@ -14,6 +14,8 @@ export interface AdminOrder {
   vaultAvailable: number | null
   status: 'PENDING' | 'PAID' | 'DELIVERED' | 'REJECTED' | 'REFUNDED'
   refundAmount: number | null
+  claimCount: number
+  noteCount: number
   createdAt: string
   paidAt: string | null
 }
@@ -35,12 +37,11 @@ export interface RefundCalcData {
 }
 
 // Shared by DataTable headers (desktop) and TableSortMenu (mobile <sm).
+// 7 columns: TANGGAL absorbs UMUR, PRODUK absorbs ALUR, ID absorbs REF.
 export const orderColumns = [
   { label: 'ID' },
   { label: 'TANGGAL', sortKey: 'createdAt' },
-  { label: 'UMUR' },
   { label: 'PRODUK' },
-  { label: 'ALUR' },
   { label: 'PELANGGAN' },
   { label: 'JUMLAH', sortKey: 'amount' },
   { label: 'STATUS', sortKey: 'status' },

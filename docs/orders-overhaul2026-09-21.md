@@ -48,6 +48,15 @@ Verify per extract: client tsc 0. Final: build + budget. One commit.
 
 ## Phase 3 — Ticket/notes + badges + row density (separate arc)
 
+Shipped 2026-09-21 (commit pending): 0027 `order_notes` (RLS on, zero
+policies, live-applied) + `order:note` audit; `GET/POST /:id/notes`
+(500-char cap); `listAll` batches claim+note counts per page (2 queries
+via `countByOrders`); Riwayat dialog shows amber notes + add-note input
+(`addTimelineNote` refreshes list for the chip); STATUS cell badges
+(klaim N× → calculator, stok habis, overdue, catatan N× → riwayat);
+row merge 9 → 7 cols (TANGGAL+UMUR, ALUR → product sub-line,
+paymentRef → ID sub-line). Original plan below, kept for reference.
+
 - `order_notes` table (order_id FK, note, actor, created_at; RLS on zero-policy)
   + `order:note` audit; surfaced in Riwayat + count chip on row. Additive only.
 - Derived badges under status: `klaim N×`, `stok habis`, `overdue`, `refund Rp X`.

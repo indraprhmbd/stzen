@@ -270,8 +270,13 @@ export default function Orders() {
       <TimelineDialog
         timelineOrder={rowActions.timelineOrder}
         timelineRows={rowActions.timelineRows}
+        timelineNotes={rowActions.timelineNotes}
         timelineLoading={rowActions.timelineLoading}
         timelineErr={rowActions.timelineErr}
+        timelineNote={rowActions.timelineNote}
+        setTimelineNote={rowActions.setTimelineNote}
+        timelineNoteSaving={rowActions.timelineNoteSaving}
+        addTimelineNote={() => void rowActions.addTimelineNote()}
       />
     </div>
   )

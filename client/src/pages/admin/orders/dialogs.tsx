@@ -239,10 +239,15 @@ export function RefundCalcDialog(props: { c: RefundCalcApi }) {
 export function TimelineDialog(props: {
   timelineOrder: AdminOrder | null
   timelineRows: { action: string; actor_email: string | null; created_at: string; snapshot_text: string }[]
+  timelineNotes: { id: string; note: string; actorEmail: string | null; createdAt: string }[]
   timelineLoading: boolean
   timelineErr: string | null
+  timelineNote: string
+  setTimelineNote: (v: string) => void
+  timelineNoteSaving: boolean
+  addTimelineNote: () => void
 }) {
-  const { timelineOrder, timelineRows, timelineLoading, timelineErr } = props
+  const { timelineOrder, timelineRows, timelineNotes, timelineLoading, timelineErr, timelineNote, setTimelineNote, timelineNoteSaving, addTimelineNote } = props
   return (
     <dialog id="order_timeline_modal" className="modal">
       <div className="modal-box ad-dialog max-w-md p-6">
@@ -252,9 +257,25 @@ export function TimelineDialog(props: {
           <div className="py-8"><div className="h-9 w-full animate-pulse rounded-[8px] bg-[#f1f1f4]" /></div>
         ) : timelineErr ? (
           <p className="text-xs font-semibold text-red-600 mt-4">{timelineErr}</p>
-        ) : timelineRows.length === 0 ? (
+        ) : timelineRows.length === 0 && timelineNotes.length === 0 ? (
           <p className="text-xs text-[#aeaeb2] mt-4">Belum ada peristiwa tercatat.</p>
         ) : (
+          <>
+          {timelineNotes.length > 0 && (
+            <div className="mt-4 rounded-[10px] border border-amber-200 bg-amber-50/50 max-h-40 overflow-y-auto">
+              {timelineNotes.map((n) => (
+                <div key={n.id} className="px-3 py-2 border-b border-amber-100 last:border-0 text-xs">
+                  <div className="flex justify-between gap-2">
+                    <span className="font-semibold text-amber-800">Catatan</span>
+                    <span className="text-[#aeaeb2] shrink-0 ad-num">{new Date(n.createdAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                  </div>
+                  <div className="text-[#3a3a3c] mt-0.5 break-words">{n.note}</div>
+                  {n.actorEmail && <div className="text-[#aeaeb2] truncate">{n.actorEmail}</div>}
+                </div>
+              ))}
+            </div>
+          )}
+          {timelineRows.length > 0 && (
           <div className="mt-4 rounded-[10px] border border-[#e8e8ed] max-h-80 overflow-y-auto">
             {timelineRows.map((t, i) => (
               <div key={i} className="px-3 py-2 border-b border-[#f4f4f5] last:border-0 text-xs">
@@ -267,6 +288,12 @@ export function TimelineDialog(props: {
               </div>
             ))}
           </div>
+          )}
+          <div className="flex gap-2 mt-3">
+            <input type="text" value={timelineNote} onChange={(e) => setTimelineNote(e.target.value)} placeholder="Tambah catatan operator..." maxLength={500} className="ad-input normal-case flex-1" />
+            <button onClick={addTimelineNote} disabled={timelineNoteSaving || !timelineNote.trim()} className="ad-btn shrink-0">{timelineNoteSaving ? '...' : 'Catat'}</button>
+          </div>
+          </>
         )}
         <div className="flex justify-end gap-2 mt-5">
           <button onClick={() => (document.getElementById('order_timeline_modal') as HTMLDialogElement | null)?.close()} className="ad-btn">Tutup</button>

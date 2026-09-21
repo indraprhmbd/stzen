@@ -254,3 +254,24 @@ export const warrantyClaims = pgTable(
   },
   (table) => [index('warranty_claims_order_idx').on(table.orderId)]
 )
+
+// ─── Operator notes ─────────────────────────────────────────────────────────
+// Ticket-style annotations per order (Phase 3, 0027). Surfaced in Riwayat +
+// count chip on row. Server-only: RLS on, zero policies.
+
+export const orderNotes = pgTable(
+  'order_notes',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    orderId: uuid('order_id')
+      .notNull()
+      .references(() => orders.id, { onDelete: 'cascade' }),
+    note: text('note').notNull(),
+    actorId: text('actor_id'),
+    actorEmail: text('actor_email'),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [index('order_notes_order_idx').on(table.orderId)]
+)

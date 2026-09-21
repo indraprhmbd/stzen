@@ -5,6 +5,7 @@ import { supabaseAdmin } from '../../shared/db'
 import { type AuthEnv } from '../../shared/middleware/auth'
 import { ordersService, auditOrderApprove } from '../orders/orders.service'
 import { warrantyService } from '../orders/warranty.service'
+import { insertOrderNote, listOrderNotes } from '../../shared/lib/notes'
 import { appendAudit, findAuditByIdempotencyKey } from '../../shared/lib/audit'
 import { normalizeWaNumber } from '../../shared/lib/wa'
 import { BadRequestError } from '../../shared/errors/http'
@@ -304,4 +305,25 @@ export const adminOrderRoutes = new Hono<AdminOrderEnv>()
   .get('/:id/refund-preview', async (c) => {
     const preview = await warrantyService.getRefundPreview(c.req.param('id'))
     return c.json(preview)
+  })
+
+  .get('/:id/notes', async (c) => {
+    return c.json(await listOrderNotes(c.req.param('id')))
+  })
+
+  .post('/:id/notes', zValidator('json', z.object({ note: z.string().trim().min(1).max(500) })), async (c) => {
+    const user = c.get('user')
+    const id = c.req.param('id')
+    const { note } = c.req.valid('json')
+    const saved = await insertOrderNote(id, note, { sub: user.sub, email: user.email ?? null })
+    await appendAudit({
+      action: 'order:note',
+      resourceType: 'order',
+      resourcePublicId: id,
+      snapshotText: `Catatan oleh ${user.email ?? user.sub}: ${note} ${new Date().toLocaleString('id-ID')}`,
+      actorId: user.sub,
+      actorEmail: user.email ?? null,
+      actorType: 'admin',
+    }).catch((e) => console.error('[audit] admin order note failed', e))
+    return c.json(saved)
   })

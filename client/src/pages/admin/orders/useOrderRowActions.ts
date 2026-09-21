@@ -20,8 +20,12 @@ export interface RowActionsApi {
   receipt: AdminOrder | null
   timelineOrder: AdminOrder | null
   timelineRows: { action: string; actor_email: string | null; created_at: string; snapshot_text: string }[]
+  timelineNotes: { id: string; note: string; actorEmail: string | null; createdAt: string }[]
   timelineLoading: boolean
   timelineErr: string | null
+  timelineNote: string
+  setTimelineNote: (v: string) => void
+  timelineNoteSaving: boolean
   handleAction: (orderId: string, action: RowAction) => Promise<void>
   handleDeliver: (orderId: string, credential?: string) => Promise<void>
   bulkApprove: (ids: string[], onDone: () => void) => Promise<void>
@@ -33,6 +37,7 @@ export interface RowActionsApi {
   openReceipt: (o: AdminOrder) => void
   printReceipt: () => void
   openTimeline: (o: AdminOrder) => Promise<void>
+  addTimelineNote: () => Promise<void>
   clearDeliver: () => void
 }
 
@@ -44,6 +49,7 @@ export const timelineActionLabel: Record<string, string> = {
   'order:refund': 'Refund',
   'order:replace': 'Ganti akses',
   'order:update': 'Diubah',
+  'order:note': 'Catatan',
   'warranty:claim': 'Klaim garansi',
 }
 
@@ -61,6 +67,9 @@ export function useOrderRowActions(opts: {
   const [receipt, setReceipt] = useState<AdminOrder | null>(null)
   const [timelineOrder, setTimelineOrder] = useState<AdminOrder | null>(null)
   const [timelineRows, setTimelineRows] = useState<{ action: string; actor_email: string | null; created_at: string; snapshot_text: string }[]>([])
+  const [timelineNotes, setTimelineNotes] = useState<{ id: string; note: string; actorEmail: string | null; createdAt: string }[]>([])
+  const [timelineNote, setTimelineNote] = useState('')
+  const [timelineNoteSaving, setTimelineNoteSaving] = useState(false)
   const [timelineLoading, setTimelineLoading] = useState(false)
   const [timelineErr, setTimelineErr] = useState<string | null>(null)
 
@@ -176,17 +185,44 @@ export function useOrderRowActions(opts: {
   async function openTimeline(o: AdminOrder) {
     setTimelineOrder(o)
     setTimelineRows([])
+    setTimelineNotes([])
+    setTimelineNote('')
     setTimelineErr(null)
     setTimelineLoading(true)
     ;(document.getElementById('order_timeline_modal') as HTMLDialogElement | null)?.showModal()
     try {
-      const res = await authedApiRequest((c) => c.api.v1.admin.history.$get({ query: { resource: o.id, limit: 50 } }))
-      if (!res.ok) throw new Error('Gagal memuat riwayat')
-      const json = (await res.json()) as { data: { action: string; actor_email: string | null; created_at: string; snapshot_text: string }[] }
+      const [histRes, notesRes] = await Promise.all([
+        authedApiRequest((c) => c.api.v1.admin.history.$get({ query: { resource: o.id, limit: 50 } })),
+        authedApiRequest((c) => c.api.v1.admin.orders[':id'].notes.$get({ param: { id: o.id } })),
+      ])
+      if (!histRes.ok) throw new Error('Gagal memuat riwayat')
+      const json = (await histRes.json()) as { data: { action: string; actor_email: string | null; created_at: string; snapshot_text: string }[] }
       setTimelineRows(json.data ?? [])
+      if (notesRes.ok) {
+        const notes = (await notesRes.json()) as { id: string; note: string; actorEmail: string | null; createdAt: string }[]
+        setTimelineNotes(notes ?? [])
+      }
     } catch (e: unknown) {
       setTimelineErr(e instanceof Error ? e.message : 'Gagal memuat riwayat')
     } finally { setTimelineLoading(false) }
+  }
+
+  async function addTimelineNote() {
+    if (!timelineOrder || !timelineNote.trim() || timelineNoteSaving) return
+    setTimelineNoteSaving(true)
+    try {
+      const res = await authedApiRequest((c) => c.api.v1.admin.orders[':id'].notes.$post({
+        param: { id: timelineOrder.id },
+        json: { note: timelineNote.trim() },
+      }))
+      if (!res.ok) throw new Error('Gagal menyimpan catatan')
+      const saved = (await res.json()) as { id: string; note: string; actorEmail: string | null; createdAt: string }
+      setTimelineNotes((prev) => [saved, ...prev])
+      setTimelineNote('')
+      await onMutated()
+    } catch (e: unknown) {
+      setTimelineErr(e instanceof Error ? e.message : 'Gagal menyimpan catatan')
+    } finally { setTimelineNoteSaving(false) }
   }
 
   function clearDeliver() {
@@ -196,9 +232,10 @@ export function useOrderRowActions(opts: {
   return {
     actionLoading, actionErr, setActionErr, actionMsg, setActionMsg,
     bulkBusy, pendingReject, pendingRefund, pendingDeliver, receipt,
-    timelineOrder, timelineRows, timelineLoading, timelineErr,
+    timelineOrder, timelineNotes, timelineRows, timelineLoading, timelineErr,
+    timelineNote, setTimelineNote, timelineNoteSaving,
     handleAction, handleDeliver, bulkApprove,
     askDeliver, askReject, confirmReject, askRefund, confirmRefund,
-    openReceipt, printReceipt, openTimeline, clearDeliver,
+    openReceipt, printReceipt, openTimeline, addTimelineNote, clearDeliver,
   }
 }
