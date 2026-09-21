@@ -271,10 +271,10 @@ export function TimelineDialog(props: {
           <>
           {timelineNotes.length > 0 && (
             <div className="mt-4 rounded-[10px] border border-amber-200 bg-amber-50/50 max-h-40 overflow-y-auto">
-              {timelineNotes.map((n) => (
+              {timelineNotes.map((n, ni) => (
                 <div key={n.id} className="px-3 py-2 border-b border-amber-100 last:border-0 text-xs">
                   <div className="flex justify-between gap-2">
-                    <span className="font-semibold text-amber-800">Catatan</span>
+                    <span className="font-semibold text-amber-800"><span className="ad-num text-[#aeaeb2] font-normal">#{timelineNotes.length - ni}</span> Catatan</span>
                     <span className="text-[#aeaeb2] shrink-0 ad-num">{new Date(n.createdAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
                   </div>
                   <div className="text-[#3a3a3c] mt-0.5 break-words">{n.note}</div>
@@ -288,7 +288,7 @@ export function TimelineDialog(props: {
             {timelineRows.map((t, i) => (
               <div key={i} className="px-3 py-2 border-b border-[#f4f4f5] last:border-0 text-xs">
                 <div className="flex justify-between gap-2">
-                  <span className="font-semibold">{timelineActionLabel[t.action] ?? t.action}</span>
+                  <span className="font-semibold"><span className="ad-num text-[#aeaeb2] font-normal">#{timelineRows.length - i}</span> {timelineActionLabel[t.action] ?? t.action}</span>
                   <span className="text-[#aeaeb2] shrink-0 ad-num">{new Date(t.created_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
                 </div>
                 <div className="text-[#6e6e73] mt-0.5 break-words">{t.snapshot_text}</div>
