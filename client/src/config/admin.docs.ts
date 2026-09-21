@@ -32,7 +32,7 @@ export const adminDocSections: AdminDocSection[] = [
       'Kartu Produk Aktif: jumlah produk yang tampil di katalog. Klik untuk buka halaman Produk.',
       'Kartu Stok Tersedia: total kredensial siap jual di vault. Klik untuk buka tab Stok.',
       'Kartu Perlu Tindakan: pesanan PENDING dan PAID yang menunggu Anda. Klik untuk buka antrean Pesanan.',
-      'Kartu Pendapatan: total dari pesanan PAID dan DELIVERED. Ikon mata untuk sembunyikan angka saat layar dilihat orang lain.',
+      'Kartu Omzet dan Keuntungan: total dari pesanan PAID dan DELIVERED. Keuntungan menjumlah snapshot laba (harga − harga beli) yang dikunci saat order dibuat; tanpa harga beli tak dihitung. Ikon mata untuk sembunyikan angka saat layar dilihat orang lain.',
       'Grafik: pilih rentang 7, 30, atau 90 hari untuk lihat tren penjualan per hari, per status, dan produk terlaris.',
       'Stok Menipis: varian di bawah ambang batas. Tambah kredensial sebelum habis agar pesanan tidak tertahan.',
     ],

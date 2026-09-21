@@ -19,6 +19,7 @@ const VariantCreateSchema = z.object({
   productId: z.string().min(1),
   price: z.string().regex(/^\d+$/, 'Price integer'),
   compareAtPrice: z.string().regex(/^\d+$/, 'Compare price integer').nullable().optional(),
+  costPrice: z.string().regex(/^\d+$/, 'Cost price integer').nullable().optional(),
   badge: z.string().nullable().optional(),
   overview: z.string().max(200).nullable().optional(),
   description: z.string().nullable().optional(),
@@ -35,6 +36,7 @@ const VariantUpdateSchema = z.object({
   productId: z.string().optional(),
   price: z.string().regex(/^\d+$/, 'Price integer').optional(),
   compareAtPrice: z.string().regex(/^\d+$/, 'Compare price integer').nullable().optional(),
+  costPrice: z.string().regex(/^\d+$/, 'Cost price integer').nullable().optional(),
   badge: z.string().nullable().optional(),
   overview: z.string().max(200).nullable().optional(),
   description: z.string().nullable().optional(),
@@ -133,6 +135,7 @@ export const adminVariantRoutes = new Hono<VariantEnv>()
         name,
         price,
         compare_at_price,
+        cost_price,
         badge,
         duration_months,
         duration_unit,
@@ -170,6 +173,7 @@ export const adminVariantRoutes = new Hono<VariantEnv>()
         name: v.name,
         price: v.price,
         compareAtPrice: v.compare_at_price,
+        costPrice: v.cost_price ?? null,
         badge: v.badge,
         durationMonths: v.duration_months,
         durationUnit: v.duration_unit,
@@ -249,6 +253,7 @@ export const adminVariantRoutes = new Hono<VariantEnv>()
         name,
         price: priceInt,
         compare_at_price: compareAt,
+        cost_price: data.costPrice ? parseInt(data.costPrice, 10) : null,
         badge: data.badge,
         overview: data.overview ?? null,
         description: data.description ?? null,
@@ -285,6 +290,7 @@ export const adminVariantRoutes = new Hono<VariantEnv>()
 
     try {
       if (data.price !== undefined) data.price = parseInt(data.price, 10)
+      if (data.costPrice !== undefined) data.costPrice = !data.costPrice ? null : parseInt(data.costPrice, 10)
       if (data.compareAtPrice !== undefined) {
         data.compareAtPrice = !data.compareAtPrice ? null : parseInt(data.compareAtPrice, 10)
         if (data.compareAtPrice !== null) {
@@ -342,6 +348,7 @@ export const adminVariantRoutes = new Hono<VariantEnv>()
       if (data.productId !== undefined) updateData.product_id = data.productId
       if (data.price !== undefined) updateData.price = data.price
       if (data.compareAtPrice !== undefined) updateData.compare_at_price = data.compareAtPrice
+      if (data.costPrice !== undefined) updateData.cost_price = data.costPrice
       if (data.badge !== undefined) updateData.badge = data.badge
       if (data.overview !== undefined) updateData.overview = data.overview
       if (data.description !== undefined) updateData.description = data.description

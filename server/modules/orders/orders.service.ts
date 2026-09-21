@@ -21,6 +21,13 @@ const VAULT_ITEMS = 'vault_items'
 const ORDERS = 'orders'
 const PROFILES = 'profiles'
 
+// Pure profit math (spec docs/profit-tracking2026-09-21.md): NULL cost =
+// unknown, excluded from profit (never fake 100% margin). Negative results
+// are real losses, never clamped.
+export function computeProfitAtPurchase(amount: number, cost: number | null): number | null {
+  return cost == null ? null : amount - cost
+}
+
 function mapOrderRow(r: any): OrderWithProduct {
   const createdAt = r.created_at ? new Date(r.created_at) : new Date()
   const paidAt = r.paid_at ? new Date(r.paid_at) : null
@@ -227,6 +234,19 @@ export const ordersService = {
     const amountInt = typeof data.amount === 'string' ? parseInt(data.amount, 10) : data.amount
     const vs: any = data.variantSnapshot
 
+    // Freeze cost from the live variant row (server-side read, never trusted
+    // from the client). NULL = unknown cost, excluded from profit.
+    let frozenCost: number | null = null
+    const createVariantId = (data as any).variantId ?? null
+    if (createVariantId) {
+      const { data: vrows } = await supabaseAdmin
+        .from(PRODUCT_VARIANTS)
+        .select('cost_price')
+        .eq('id', createVariantId)
+        .limit(1)
+      frozenCost = (vrows?.[0] as any)?.cost_price ?? null
+    }
+
     const { data: order, error } = await supabaseAdmin
       .from(ORDERS)
       .insert({
@@ -242,6 +262,8 @@ export const ordersService = {
         variant_name_snapshot: vs?.name ?? null,
         variant_sku_snapshot: vs?.sku ?? null,
         price_at_purchase: amountInt,
+        cost_at_purchase: frozenCost,
+        profit_at_purchase: computeProfitAtPurchase(amountInt, frozenCost),
         duration_snapshot: vs?.duration_months ?? null,
         duration_snapshot_unit: vs?.duration_unit ?? null,
         account_type_snapshot: vs?.account_type ?? null,
@@ -663,7 +685,18 @@ export const ordersService = {
       nextAccount !== (full.customerAccount ?? '') || nextWa !== (full.waNumber ?? '')
     if (priceChanged || contactChanged) {
       const updateData: Record<string, any> = {}
-      if (priceChanged) updateData.amount = parseInt(nextAmount, 10)
+      if (priceChanged) {
+        updateData.amount = parseInt(nextAmount, 10)
+        // PENDING-only recompute against the FROZEN cost snapshot (never the
+        // live variant price). Once PAID this path is unreachable.
+        const { data: crows } = await supabaseAdmin
+          .from(ORDERS)
+          .select('cost_at_purchase')
+          .eq('public_id', publicId)
+          .limit(1)
+        const frozenCost = (crows?.[0] as any)?.cost_at_purchase ?? null
+        updateData.profit_at_purchase = computeProfitAtPurchase(parseInt(nextAmount, 10), frozenCost)
+      }
       if (contactChanged) {
         updateData.customer_account = nextAccount
         updateData.wa_number = nextWa

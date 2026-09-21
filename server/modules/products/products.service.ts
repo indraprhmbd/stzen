@@ -473,6 +473,7 @@ export const VARIAN_BULK_COLUMNS: BulkColumn[] = [
   { header: 'account_type', label: 'Tipe Akun', aliases: ['tipe_akun', 'tipe'] },
   { header: 'tags', label: 'Tags', aliases: ['badge'] },
   { header: 'price', label: 'Harga', required: true, aliases: ['harga'] },
+  { header: 'cost', label: 'Harga Beli', aliases: ['cost_price', 'harga_beli', 'modal'] },
   { header: 'is_active', label: 'Aktif', aliases: ['aktif', 'isactive'] },
   { header: 'requires_delivery_info', label: 'Minta Akun', aliases: ['delivery_info', 'minta_akun'] },
 ]
@@ -495,6 +496,7 @@ export interface VarianBulkRow {
   accountType: string | null
   tags: string | null
   price: number
+  cost: number | null
   isActive: boolean
   deliveryInfo: boolean
 }
@@ -523,13 +525,14 @@ export function varianBulkTemplate() {
     headers: VARIAN_BULK_COLUMNS.map((c) => c.header),
     headerLine: VARIAN_BULK_COLUMNS.map((c) => c.header).join(','),
     samples: [
-      { basis: 'TULIS_ID_INDUK', duration: '1', unit: 'bulan', account_type: 'Private', tags: 'TERLARIS', price: '45000', is_active: 'true', requires_delivery_info: 'false' },
-      { basis: 'TULIS_ID_INDUK', duration: '7', unit: 'hari', account_type: 'Sharing', tags: '', price: '15000', is_active: 'true', requires_delivery_info: 'true' },
+      { basis: 'TULIS_ID_INDUK', duration: '1', unit: 'bulan', account_type: 'Private', tags: 'TERLARIS', price: '45000', cost: '30000', is_active: 'true', requires_delivery_info: 'false' },
+      { basis: 'TULIS_ID_INDUK', duration: '7', unit: 'hari', account_type: 'Sharing', tags: '', price: '15000', cost: '', is_active: 'true', requires_delivery_info: 'true' },
     ],
     notes: [
       'Satu baris = satu varian baru di bawah induk basis (kolom basis = ID publik induk, lihat tab Basis).',
       'duration angka + unit hari/minggu/bulan (boleh juga day/week/month). Nama varian digabung otomatis.',
       'price angka bulat rupiah wajib, terima 0. account_type teks bebas.',
+      'cost (harga beli) opsional, kosong = tak dihitung di laba.',
       'tags opsional, pisahkan dengan ; , kosong = ikut induk.',
       'SKU dibuat otomatis saat commit; pratinjau hanya menampilkan contoh.',
       'compare_at_price, conditions, description belum didukung: isi lewat dialog Edit setelah impor.',
@@ -594,6 +597,10 @@ export function validateVarianRows(parsed: ParsedCsv): { valid: VarianBulkRow[];
     const price = coerceInteger(priceRaw, r.row, 'price', 'Harga')
     check(priceRaw ? price.issue : null)
 
+    const costRaw = v.cost ?? ''
+    const cost = coerceInteger(costRaw, r.row, 'cost', 'Harga Beli')
+    check(costRaw ? cost.issue : null)
+
     const active = coerceBoolean(v.is_active ?? '', r.row, 'is_active', 'Aktif')
     check(active.issue)
 
@@ -619,6 +626,7 @@ export function validateVarianRows(parsed: ParsedCsv): { valid: VarianBulkRow[];
       accountType: accountRaw === '' ? null : accountRaw,
       tags: tagsRaw === '' ? null : tagsRaw,
       price: price.value ?? 0,
+      cost: costRaw === '' ? null : (cost.value ?? null),
       isActive: active.value ?? true,
       deliveryInfo: delivery.value ?? false,
     })
@@ -739,6 +747,7 @@ export const varianBulkService = {
         sku: generateSku(baseName, d.duration, d.unit, d.accountType),
         name: composeVariantName(baseName, d.duration, d.unit, d.accountType, null),
         price: d.price,
+        cost_price: d.cost,
         compare_at_price: null,
         badge: d.tags,
         duration_months: d.duration,

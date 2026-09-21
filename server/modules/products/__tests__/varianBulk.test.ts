@@ -67,6 +67,19 @@ describe('validateVarianRows', () => {
     assert.equal(valid[1]!.tags, null)
     assert.deepEqual(issues.map((e) => e.code), ['too_long'])
   })
+
+  it('parses optional cost, empty maps to null', () => {
+    const { valid, issues } = run('basis,duration,unit,price,cost\nA,1,bulan,45000,30000\nB,1,bulan,45000,')
+    assert.deepEqual(issues, [])
+    assert.equal(valid[0]!.cost, 30000)
+    assert.equal(valid[1]!.cost, null)
+  })
+
+  it('flags bad cost integer per row', () => {
+    const { valid, issues } = run('basis,duration,unit,price,cost\nA,1,bulan,45000,30rb')
+    assert.equal(valid.length, 0)
+    assert.deepEqual(issues.map((e) => e.code), ['bad_integer'])
+  })
 })
 
 describe('varianBulkTemplate', () => {

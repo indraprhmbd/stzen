@@ -99,6 +99,7 @@ export default function VariantDialog({ products, form: v, onImportNow }: Props)
           </div>
           <div className="grid grid-cols-2 gap-3">
             <RupiahInput label="Harga (Rp)" required value={v.vPrice} onChange={v.setVPrice} placeholder="45000" hint={v.vPrice !== '' && Number(v.vPrice) < 10_000 ? 'Di bawah Rp10.000: QRIS otomatis nonaktif, hanya pesanan manual' : undefined} />
+            <RupiahInput label="Harga beli (Rp)" value={v.vCost} onChange={v.setVCost} placeholder="30000" hint="Kosong = tak dihitung di laba" />
           </div>
           <div>
             <label className="ad-label">Tags<input type="text" value={v.vBadge} onChange={(e) => v.setVBadge(e.target.value)} maxLength={50} placeholder={baseTags || 'TERLARIS;PROMO'} className="ad-input mt-1.5 normal-case" /></label>

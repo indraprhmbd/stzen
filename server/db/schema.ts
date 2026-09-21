@@ -104,6 +104,8 @@ export const productVariants = pgTable(
     description: text('description'),
     price: integer('price').notNull(),
     compareAtPrice: integer('compare_at_price'),
+    // Harga beli / modal. NULL = unknown, excluded from profit.
+    costPrice: integer('cost_price'),
     badge: text('badge'),
     tags: text('tags').array().notNull().default([]),
     tagsEffective: text('tags_effective').array().notNull().default([]),
@@ -191,6 +193,10 @@ export const orders = pgTable(
     variantNameSnapshot: text('variant_name_snapshot'),
     variantSkuSnapshot: text('variant_sku_snapshot'),
     priceAtPurchase: integer('price_at_purchase'),
+    // Immutable profit pair: frozen at creation from the live variant row.
+    // profit recomputed while PENDING on manual price edits; locked at PAID.
+    costAtPurchase: integer('cost_at_purchase'),
+    profitAtPurchase: integer('profit_at_purchase'),
     durationSnapshot: integer('duration_snapshot'),
     durationSnapshotUnit: text('duration_snapshot_unit'),
     accountTypeSnapshot: text('account_type_snapshot'),

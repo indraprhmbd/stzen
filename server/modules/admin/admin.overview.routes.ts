@@ -38,8 +38,8 @@ export const adminOverviewRoutes = new Hono<OverviewEnv>()
         supabaseAdmin.from('products').select('*', { count: 'exact', head: true }),
         supabaseAdmin.from('vault_items').select('*', { count: 'estimated', head: true }).eq('status', 'AVAILABLE'),
         supabaseAdmin.from('orders').select('*', { count: 'exact', head: true }).eq('status', 'PENDING'),
-        supabaseAdmin.from('orders').select('amount').in('status', ['PAID', 'DELIVERED']).gte('created_at', cutoff),
-        supabaseAdmin.from('orders').select('created_at, amount').gte('created_at', cutoff),
+        supabaseAdmin.from('orders').select('amount, profit_at_purchase').in('status', ['PAID', 'DELIVERED']).gte('created_at', cutoff),
+        supabaseAdmin.from('orders').select('created_at, amount, status, profit_at_purchase').gte('created_at', cutoff),
         supabaseAdmin.from('orders').select('status').gte('created_at', cutoff),
         supabaseAdmin.from('products').select('category, vault_items (id)'),
         supabaseAdmin.from('orders').select('amount, products (name)').gte('created_at', cutoff),
@@ -54,8 +54,13 @@ export const adminOverviewRoutes = new Hono<OverviewEnv>()
       if (recentError) throw new Error(recentError.message)
 
       const revenue = (paidOrders || []).reduce((sum, order) => sum + parseInt((order as any).amount || '0', 10), 0)
+      // Keuntungan sums immutable snapshots only; NULL (unknown cost) skips.
+      const profit = (paidOrders || []).reduce((sum, order) => {
+        const p = (order as any).profit_at_purchase
+        return sum + (p == null ? 0 : parseInt(String(p), 10))
+      }, 0)
 
-      const dailySalesMap = new Map<string, { label: string; date: string; count: number; revenue: number }>()
+      const dailySalesMap = new Map<string, { label: string; date: string; count: number; revenue: number; profit: number }>()
       for (let i = days - 1; i >= 0; i--) {
         const d = new Date()
         d.setDate(d.getDate() - i)
@@ -65,6 +70,7 @@ export const adminOverviewRoutes = new Hono<OverviewEnv>()
           date: dateStr,
           count: 0,
           revenue: 0,
+          profit: 0,
         })
       }
       for (const order of dailySalesRes.data || []) {
@@ -72,7 +78,14 @@ export const adminOverviewRoutes = new Hono<OverviewEnv>()
         if (!dateStr || !dailySalesMap.has(dateStr)) continue
         const entry = dailySalesMap.get(dateStr)!
         entry.count += 1
-        entry.revenue += parseInt((order as any).amount || '0', 10)
+        // Money lines follow the tile scope (PAID + DELIVERED only); the
+        // count line keeps all statuses as before.
+        const st = (order as any).status
+        if (st === 'PAID' || st === 'DELIVERED') {
+          entry.revenue += parseInt((order as any).amount || '0', 10)
+          const p = (order as any).profit_at_purchase
+          if (p != null) entry.profit += parseInt(String(p), 10)
+        }
       }
 
       const byStatusMap = new Map<string, number>()
@@ -99,6 +112,7 @@ export const adminOverviewRoutes = new Hono<OverviewEnv>()
           totalStock: totalStock || 0,
           pendingOrders: pendingOrders || 0,
           revenue: String(revenue),
+          profit: String(profit),
         },
         analytics: {
           dailySales: Array.from(dailySalesMap.values()),
@@ -127,7 +141,7 @@ export const adminOverviewRoutes = new Hono<OverviewEnv>()
     } catch (e) {
       console.error('overview composite failed', e)
       return c.json({
-        stats: { totalProducts: 0, totalStock: 0, pendingOrders: 0, revenue: '0' },
+        stats: { totalProducts: 0, totalStock: 0, pendingOrders: 0, revenue: '0', profit: '0' },
         analytics: { dailySales: [], byStatus: [], byCategory: [], topProducts: [] },
         orders: [],
       })

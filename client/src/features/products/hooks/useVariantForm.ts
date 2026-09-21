@@ -8,6 +8,7 @@ export function useVariantForm(products: Product[], fetchAll: () => void, showTo
   const [vProductId, setVProductId] = useState('')
   const [vPrice, setVPrice] = useState('')
   const [vCompareAt, setVCompareAt] = useState('')
+  const [vCost, setVCost] = useState('')
   const [vDuration, setVDuration] = useState<string>('')
   const [vDurationUnit, setVDurationUnit] = useState<'day' | 'week' | 'month'>('month')
   const [vAccountType, setVAccountType] = useState('')
@@ -28,13 +29,13 @@ export function useVariantForm(products: Product[], fetchAll: () => void, showTo
   function openCreateVariant(presetProductId?: string) {
     const baseId = presetProductId ?? products[0]?.id ?? ''
     const base = products.find((p) => p.id === baseId)
-    setEditingVariantId(null); setEditingVariantSku(null); setVProductId(baseId); setVPrice(''); setVCompareAt(''); setVDuration(''); setVDurationUnit('month'); setVAccountType(''); setVConditions(''); setVBadge(''); setVFulfillmentType('vault'); setVRequiresDeliveryInfo(false); setVIsActive(true)
+    setEditingVariantId(null); setEditingVariantSku(null); setVProductId(baseId); setVPrice(''); setVCompareAt(''); setVCost(''); setVDuration(''); setVDurationUnit('month'); setVAccountType(''); setVConditions(''); setVBadge(''); setVFulfillmentType('vault'); setVRequiresDeliveryInfo(false); setVIsActive(true)
     setVOverview(base?.overview ?? ''); setVDescription(base?.description ?? '')
     setVOverviewBlank(false); setVDescriptionBlank(false)
     ;(document.getElementById('variant_modal') as HTMLDialogElement)?.showModal()
   }
   async function openEditVariant(v: Variant) {
-    setEditingVariantId(v.id); setEditingVariantSku(v.sku); setVProductId(v.productId ?? ''); setVPrice(String(v.price)); setVCompareAt(v.compareAtPrice ? String(v.compareAtPrice) : ''); setVDuration(v.durationMonths ? String(v.durationMonths) : ''); setVDurationUnit((v.durationUnit as 'day' | 'week' | 'month') ?? 'month'); setVAccountType(v.accountType ?? ''); setVConditions(v.conditions ?? ''); setVBadge(v.badge ?? ''); setVFulfillmentType(v.fulfillmentType === 'on_demand' ? 'on_demand' : 'vault'); setVRequiresDeliveryInfo(v.requiresDeliveryInfo ?? false); setVIsActive(v.isActive)
+    setEditingVariantId(v.id); setEditingVariantSku(v.sku); setVProductId(v.productId ?? ''); setVPrice(String(v.price)); setVCompareAt(v.compareAtPrice ? String(v.compareAtPrice) : ''); setVCost(v.costPrice != null ? String(v.costPrice) : ''); setVDuration(v.durationMonths ? String(v.durationMonths) : ''); setVDurationUnit((v.durationUnit as 'day' | 'week' | 'month') ?? 'month'); setVAccountType(v.accountType ?? ''); setVConditions(v.conditions ?? ''); setVBadge(v.badge ?? ''); setVFulfillmentType(v.fulfillmentType === 'on_demand' ? 'on_demand' : 'vault'); setVRequiresDeliveryInfo(v.requiresDeliveryInfo ?? false); setVIsActive(v.isActive)
     // Open instantly with induk fallback (overview/description are omitted
     // from the list query for payload size). The detail fetch below upgrades
     // the fields when it lands; a tap that feels dead on mobile is worse
@@ -90,6 +91,7 @@ export function useVariantForm(products: Product[], fetchAll: () => void, showTo
       productId: vProductId,
       price: vPrice,
       compareAtPrice: vCompareAt.trim() === '' ? null : vCompareAt.trim(),
+      costPrice: vCost.trim() === '' ? null : vCost.trim(),
       badge: trimmedBadge === '' || trimmedBadge === (base?.badge ?? '').trim() ? null : trimmedBadge,
       durationMonths: vDuration ? parseInt(vDuration, 10) : null,
       durationUnit: vDurationUnit,
@@ -121,10 +123,10 @@ export function useVariantForm(products: Product[], fetchAll: () => void, showTo
   }
 
   return {
-    vProductId, vPrice, vCompareAt, vDuration, vDurationUnit, vAccountType, vConditions, vBadge,
+    vProductId, vPrice, vCompareAt, vCost, vDuration, vDurationUnit, vAccountType, vConditions, vBadge,
     editingVariantId, editingVariantSku, vFulfillmentType, vRequiresDeliveryInfo, vIsActive, vOverview, vDescription,
     vOverviewBlank, vDescriptionBlank,
-    setVProductId, setVPrice, setVCompareAt, setVDuration, setVDurationUnit, setVAccountType, setVConditions, setVBadge,
+    setVProductId, setVPrice, setVCompareAt, setVCost, setVDuration, setVDurationUnit, setVAccountType, setVConditions, setVBadge,
     setVFulfillmentType, setVRequiresDeliveryInfo, setVIsActive, setVOverview, setVDescription,
     setVOverviewBlank, setVDescriptionBlank,
     openCreateVariant, openEditVariant, handleVariantBaseChange, handleVariantSubmit,

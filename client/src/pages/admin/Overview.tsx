@@ -17,6 +17,7 @@ interface Stats {
   totalStock: number
   pendingOrders: number
   revenue: string
+  profit: string
 }
 
 interface Order {
@@ -164,6 +165,7 @@ export default function Overview() {
     totalOrders: String(byStatus.reduce((s, e) => s + (e.count ?? 0), 0)),
   }
   const revenueText = showRevenue && stats?.revenue ? `Rp ${formatIdNumber(stats.revenue)}` : '*****'
+  const profitText = showRevenue && stats?.profit ? `Rp ${formatIdNumber(stats.profit)}` : '*****'
 
   return (
     <div className="flex flex-col gap-4">
@@ -192,6 +194,7 @@ export default function Overview() {
         </>
       ) : (
       <>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
       <button
         onClick={() => navigate('/admin/orders?status=semua')}
         className="ad-card-flat w-full p-4 sm:p-5 flex items-center gap-3 text-left transition-colors hover:border-[#d1d1d6]"
@@ -218,11 +221,29 @@ export default function Overview() {
             </span>
           </span>
           <span className="block text-[10px] sm:text-[11px] font-semibold tracking-wider uppercase text-[#6e6e73] mt-1.5">
-            Pendapatan
+            Omzet
             <span className="text-[#aeaeb2] normal-case font-normal ml-1">paid + delivered · {rangeLabel}</span>
           </span>
         </span>
       </button>
+      <button
+        onClick={() => navigate('/admin/orders?status=semua')}
+        className="ad-card-flat w-full p-4 sm:p-5 flex items-center gap-3 text-left transition-colors hover:border-[#d1d1d6]"
+      >
+        <span className="ad-squircle">
+          <Plus width={24} height={24} strokeWidth={1.5} />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="flex items-center gap-2">
+            <span className="text-[26px] sm:text-[34px] font-semibold leading-none tracking-tight ad-num break-words text-[#16a34a]">{profitText}</span>
+          </span>
+          <span className="block text-[10px] sm:text-[11px] font-semibold tracking-wider uppercase text-[#6e6e73] mt-1.5">
+            Keuntungan
+            <span className="text-[#aeaeb2] normal-case font-normal ml-1">paid + delivered · {rangeLabel}</span>
+          </span>
+        </span>
+      </button>
+      </div>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {statDefs.map((c) => (
           <StatCard
@@ -261,8 +282,11 @@ export default function Overview() {
 
         <div className="ad-card">
           <div className="ad-card-head">
-            <div className="ad-card-title">Pendapatan {rangeLabel}</div>
-            <span className="ad-card-hint ad-num">Rp</span>
+            <div className="ad-card-title">Omzet & Keuntungan {rangeLabel}</div>
+            <span className="ad-card-hint ad-num flex items-center gap-3">
+              <span className="inline-flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-full bg-[#1d1d1f]" />Omzet</span>
+              <span className="inline-flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-full bg-[#16a34a]" />Untung</span>
+            </span>
           </div>
           <div className="h-[180px] p-2">
             {mounted && (
@@ -271,8 +295,9 @@ export default function Overview() {
                 <CartesianGrid stroke="#f1f1f4" vertical={false} />
                 <XAxis dataKey="label" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} interval={4} />
                 <YAxis tick={{ fontSize: 10 }} axisLine={false} tickLine={false} width={40} tickFormatter={(v) => `${v / 1000}k`} />
-                <Tooltip contentStyle={tooltipStyle} formatter={(v: unknown) => [`Rp ${formatIdNumber(v as number)}`, 'revenue']} />
+                <Tooltip contentStyle={tooltipStyle} formatter={(v: unknown, name: unknown) => [`Rp ${formatIdNumber(v as number)}`, name === 'profit' ? 'Keuntungan' : 'Omzet']} />
                 <Area type="monotone" dataKey="revenue" stroke="#1d1d1f" fill="#1d1d1f" fillOpacity={0.06} strokeWidth={1.5} />
+                <Area type="monotone" dataKey="profit" stroke="#16a34a" fill="#16a34a" fillOpacity={0.06} strokeWidth={1.5} />
               </AreaChart>
             </ResponsiveContainer>
             )}

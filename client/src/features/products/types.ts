@@ -19,6 +19,7 @@ export interface Variant {
   description?: string | null
   price: string | number
   compareAtPrice?: number | null
+  costPrice?: number | null
   badge: string | null
   durationMonths: number | null
   durationUnit: string
