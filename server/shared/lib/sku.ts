@@ -15,8 +15,8 @@ export function generateSku(baseName: string, duration?: number | null, unit: Du
 
 export function composeVariantName(baseName: string, duration?: number | null, unit: DurationUnit = 'month', accountType?: string | null, conditions?: string | null): string {
   let name = baseName
-  if (duration) name += ` - ${duration} ${unitLabel[unit]}`
-  if (accountType) name += ` - ${accountType}`
-  if (conditions) name += ` - ${conditions}`
+  if (accountType) name += ` ${accountType}`
+  if (duration) name += ` ${duration} ${unitLabel[unit]}`
+  if (conditions) name += ` (${conditions})`
   return name
 }
