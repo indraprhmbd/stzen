@@ -236,6 +236,20 @@ export default function Overview() {
         <span className="min-w-0 flex-1">
           <span className="flex items-center gap-2">
             <span className="text-[26px] sm:text-[34px] font-semibold leading-none tracking-tight ad-num break-words text-[#16a34a]">{profitText}</span>
+            <span
+              role="button"
+              tabIndex={0}
+              onClick={(e) => { e.stopPropagation(); setShowRevenue((s) => !s) }}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); setShowRevenue((s) => !s) } }}
+              title={showRevenue ? 'Sembunyikan pendapatan' : 'Tampilkan pendapatan'}
+              aria-label={showRevenue ? 'Sembunyikan pendapatan' : 'Tampilkan pendapatan'}
+              aria-pressed={showRevenue}
+              className="grid h-7 w-7 shrink-0 place-items-center rounded-[7px] text-[#1d1d1f] transition-colors hover:bg-[#f5f5f7]"
+            >
+              {showRevenue
+                ? <Eye width={16} height={16} strokeWidth={1.5} />
+                : <EyeClosed width={16} height={16} strokeWidth={1.5} />}
+            </span>
           </span>
           <span className="block text-[10px] sm:text-[11px] font-semibold tracking-wider uppercase text-[#6e6e73] mt-1.5">
             Keuntungan
