@@ -47,6 +47,43 @@ export default function LegalDoc({ doc }: { doc: LegalDocBody }) {
           </article>
         ))}
       </div>
+
+      {doc.matrix && (
+        <article className="bg-white border-comic shadow-comic-sm p-4 mb-4">
+          <h2
+            className="font-black text-xs uppercase tracking-tight text-neutral mb-1.5"
+            style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+          >
+            {doc.matrix.title}
+          </h2>
+          <p className="text-xs font-black text-neutral/90 leading-relaxed mb-1" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+            {doc.matrix.formula}
+          </p>
+          <p className="text-[10px] font-bold text-neutral/50 leading-tight mb-2.5" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+            {doc.matrix.note}
+          </p>
+          <div className="overflow-x-auto -mx-1 px-1">
+            <table className="border-2 border-black text-xs font-bold text-neutral/80 w-full [&_tbody_tr:nth-child(odd)]:bg-black/[0.03]">
+              <thead>
+                <tr>
+                  {doc.matrix.head.map((h) => (
+                    <th key={h} className="border border-black bg-panel-dark text-white font-black px-2 py-1 text-left">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {doc.matrix.rows.map((row) => (
+                  <tr key={row.join('|')}>
+                    {row.map((cell, j) => (
+                      <td key={j} className="border border-black px-2 py-1">{cell}</td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </article>
+      )}
     </Layout>
   )
 }

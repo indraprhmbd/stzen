@@ -1,5 +1,5 @@
 export interface LegalSection { h: string; p: string[] }
-export interface LegalDoc { title: string; desc: string; updated: string; sections: LegalSection[] }
+export interface LegalDoc { title: string; desc: string; updated: string; sections: LegalSection[]; matrix?: { title: string; formula: string; note: string; head: string[]; rows: string[][] } }
 
 export interface Copy {
   nav: { home: string; shop: string; myOrders: string; admin: string; profile: string }
@@ -224,6 +224,19 @@ const id: Copy = {
         { h: '5. Metode & Waktu Refund', p: ['Refund dikembalikan ke kanal pembayaran asal; untuk transfer manual via transfer bank ke rekening yang kamu tunjuk.', 'Diproses maksimal 7 hari kerja setelah disetujui. Waktu sampai ke rekeningmu mengikuti bank masing-masing.'] },
         { h: '6. Bukti Pengiriman', p: ['Setiap pengiriman kredensial tercatat (waktu, status). Log ini menjadi dasar verifikasi sengketa: klaim tidak terkirim gugur bila log menunjukkan pengiriman berhasil dan kredensial berfungsi.'] },
       ],
+      matrix: {
+        title: 'TABEL PERHITUNGAN REFUND',
+        formula: 'Refund = Harga × Sisa Durasi ÷ Total Durasi × Fee',
+        note: '1 bulan dihitung 30 hari. Hasil dibulatkan ke bawah ke rupiah penuh.',
+        head: ['Lama Pakai', 'Klaim Garansi', 'Fee'],
+        rows: [
+          ['< 7 hari', 'Berapa pun', '× 0.8'],
+          ['≥ 7 hari', '0', '× 0.7'],
+          ['≥ 7 hari', '1–2', '× 0.6'],
+          ['≥ 7 hari', '3', '× 0.5'],
+          ['≥ 7 hari', '> 3', '× 0.4'],
+        ],
+      },
     },
   },
   admin: {
@@ -419,6 +432,19 @@ const en: Copy = {
         { h: '5. Refund Method & Timing', p: ['Refunds return via the original payment channel; manual transfers via bank transfer to your named account.', 'Processed within 7 business days of approval. Bank arrival times vary.'] },
         { h: '6. Delivery Evidence', p: ['Every credential delivery is logged (time, status). Logs ground dispute verification: never-delivered claims fail where logs show successful, working delivery.'] },
       ],
+      matrix: {
+        title: 'REFUND CALCULATION TABLE',
+        formula: 'Refund = Price × Remaining Duration ÷ Total Duration × Fee',
+        note: '1 month counts as 30 days. Results are rounded down to the nearest rupiah.',
+        head: ['Usage', 'Warranty Claims', 'Fee'],
+        rows: [
+          ['< 7 days', 'Any', '× 0.8'],
+          ['≥ 7 days', '0', '× 0.7'],
+          ['≥ 7 days', '1–2', '× 0.6'],
+          ['≥ 7 days', '3', '× 0.5'],
+          ['≥ 7 days', '> 3', '× 0.4'],
+        ],
+      },
     },
   },
   admin: {
