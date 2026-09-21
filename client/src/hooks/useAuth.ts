@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react'
-import { supabase } from '../lib/supabase-browser'
+import { supabase } from '../lib/supabase'
 import type { Session, User } from '@supabase/supabase-js'
 
 interface AuthState {
@@ -59,14 +59,25 @@ function start() {
   })
 }
 
+// Second click before the redirect lands overwrites the PKCE verifier - the
+// first tab's code then dies with "code verifier not found". One flight max.
+let oauthBusy = false
+
 const signInWithGoogle = async () => {
-  const { error } = await supabase.auth.signInWithOAuth({
-    provider: 'google',
-    options: {
-      redirectTo: `${window.location.origin}/auth/callback`,
-    },
-  })
-  if (error) throw error
+  if (oauthBusy) return
+  oauthBusy = true
+  try {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
+    })
+    if (error) throw error
+  } catch (e) {
+    oauthBusy = false
+    throw e
+  }
 }
 
 const signInWithEmail = async (email: string, password: string) => {

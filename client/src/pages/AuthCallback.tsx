@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { supabase } from '../lib/supabase-browser'
+import { supabase } from '../lib/supabase'
 
 // Module scope: survives StrictMode remounts. One PKCE code exchanges exactly
 // once - the second dev-effect run with the same code would burn the consumed

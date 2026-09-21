@@ -1,6 +1,6 @@
 import { hc } from 'hono/client'
 import type { AppType } from '../../../server/app'
-import { supabase } from './supabase-browser'
+import { supabase } from './supabase'
 
 // ─── API Client ─────────────────────────────────────────────────────────────
 
