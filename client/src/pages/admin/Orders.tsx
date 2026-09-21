@@ -7,6 +7,7 @@ import TablePagination from '../../components/admin/TablePagination'
 import CopyCell from '../../components/admin/CopyCell'
 import StatusChip from '../../components/admin/StatusChip'
 import ConfirmDialog, { openConfirm } from '../../components/admin/ConfirmDialog'
+import RowActionsMenu from '../../components/admin/RowActionsMenu'
 import DeliverDialog, { openConfirm as openDialog } from '../../components/admin/DeliverDialog'
 import { printReceipt as printOrderReceipt } from '../../lib/receipt'
 import { Refresh, Plus, Search, Key, EditPencil, Trash, Notes, Calculator, Send, Undo, Clock } from 'iconoir-react'
@@ -662,36 +663,47 @@ export default function Orders() {
               <td><StatusChip status={o.status}>{o.status}</StatusChip></td>
               <td className="text-right">
                 <div className="flex justify-end gap-1.5">
-                  {o.variantPublicId && o.status !== 'DELIVERED' && (
-                    <button onClick={() => navigate(`/admin/products?tab=stok&variant=${o.variantPublicId}&order=${o.id}`)} title="Lihat stok varian" aria-label="Lihat stok varian" className="ad-btn !px-2.5"><Key width={15} height={15} strokeWidth={1.5} /></button>
-                  )}
                   {o.status === 'PENDING' && (
-                    <>
-                      <button disabled={actionLoading === o.id} onClick={() => { if (o.paymentProvider === 'manual' || o.paymentProvider == null) void openReview(o); else void handleAction(o.id, 'approve') }} className="ad-btn ad-btn-dark"><EditPencil width={14} height={14} strokeWidth={1.5} />Setujui</button>
-                          <button disabled={actionLoading === o.id} onClick={() => askReject(o)} className="ad-btn ad-btn-danger"><Trash width={14} height={14} strokeWidth={1.5} />Tolak</button>
-                    </>
+                    <button disabled={actionLoading === o.id} onClick={() => { if (o.paymentProvider === 'manual' || o.paymentProvider == null) void openReview(o); else void handleAction(o.id, 'approve') }} className="ad-btn ad-btn-dark"><EditPencil width={14} height={14} strokeWidth={1.5} />Setujui</button>
                   )}
                   {o.status === 'PAID' && (
+                    <button disabled={actionLoading === o.id} onClick={() => askDeliver(o)} className="ad-btn ad-btn-dark"><Send width={14} height={14} strokeWidth={1.5} />Kirim Akses</button>
+                  )}
+                  {o.status === 'DELIVERED' && o.variantPublicId && (
+                    <button onClick={() => navigate(`/admin/products?tab=stok&variant=${o.variantPublicId}&order=${o.id}`)} title="Buka stok varian untuk ganti kredensial" className="ad-btn ad-btn-dark"><Key width={14} height={14} strokeWidth={1.5} />Ganti Akses</button>
+                  )}
+                  {(o.status === 'REJECTED' || o.status === 'REFUNDED') && (
                     <>
-                      <button disabled={actionLoading === o.id} onClick={() => askDeliver(o)} className="ad-btn ad-btn-dark"><Send width={14} height={14} strokeWidth={1.5} />Kirim Akses</button>
-                      <button onClick={() => openCalculator(o)} className="ad-btn"><Calculator width={14} height={14} strokeWidth={1.5} />Hitung Refund</button>
-                      <button disabled={actionLoading === o.id} onClick={() => askRefund(o)} className="ad-btn ad-btn-danger"><Undo width={14} height={14} strokeWidth={1.5} />Refund</button>
+                      <button onClick={() => openReceipt(o)} className="ad-btn"><Notes width={14} height={14} strokeWidth={1.5} />Struk</button>
+                      <button onClick={() => openTimeline(o)} className="ad-btn"><Clock width={14} height={14} strokeWidth={1.5} />Riwayat</button>
                     </>
                   )}
-                  {o.status === 'DELIVERED' && (
-                    <>
-                      {o.variantPublicId && (
-                        <button onClick={() => navigate(`/admin/products?tab=stok&variant=${o.variantPublicId}&order=${o.id}`)} title="Buka stok varian untuk ganti kredensial" className="ad-btn ad-btn-dark"><Key width={14} height={14} strokeWidth={1.5} />Ganti Akses</button>
-                      )}
-                      <button onClick={() => openCalculator(o)} className="ad-btn"><Calculator width={14} height={14} strokeWidth={1.5} />Hitung Refund</button>
-                    </>
+                  {['PENDING', 'PAID', 'DELIVERED'].includes(o.status) && (
+                    <RowActionsMenu
+                      actions={[
+                        ...(o.variantPublicId && o.status !== 'DELIVERED'
+                          ? [{ label: 'Lihat stok', icon: <Key width={14} height={14} strokeWidth={1.5} />, onClick: () => navigate(`/admin/products?tab=stok&variant=${o.variantPublicId}&order=${o.id}`) }]
+                          : []),
+                        ...(o.status === 'PENDING'
+                          ? [{ label: 'Tolak', icon: <Trash width={14} height={14} strokeWidth={1.5} />, onClick: () => askReject(o), danger: true, disabled: actionLoading === o.id }]
+                          : []),
+                        ...(o.status === 'PAID'
+                          ? [
+                              { label: 'Hitung Refund', icon: <Calculator width={14} height={14} strokeWidth={1.5} />, onClick: () => openCalculator(o) },
+                              { label: 'Refund', icon: <Undo width={14} height={14} strokeWidth={1.5} />, onClick: () => askRefund(o), danger: true, disabled: actionLoading === o.id },
+                            ]
+                          : []),
+                        ...(o.status === 'DELIVERED'
+                          ? [{ label: 'Hitung Refund', icon: <Calculator width={14} height={14} strokeWidth={1.5} />, onClick: () => openCalculator(o) }]
+                          : []),
+                        ...(o.status !== 'PENDING'
+                          ? [{ label: 'Struk', icon: <Notes width={14} height={14} strokeWidth={1.5} />, onClick: () => openReceipt(o) }]
+                          : []),
+                        { label: 'Riwayat', icon: <Clock width={14} height={14} strokeWidth={1.5} />, onClick: () => openTimeline(o) },
+                      ]}
+                    />
                   )}
-                  <button onClick={() => openTimeline(o)} className="ad-btn"><Clock width={14} height={14} strokeWidth={1.5} />Riwayat</button>
                   {actionLoading === o.id && <span className="loading loading-spinner loading-xs"></span>}
-                  {o.status !== 'PENDING' && (
-                    <button onClick={() => openReceipt(o)} className="ad-btn"><Notes width={14} height={14} strokeWidth={1.5} />Struk</button>
-                  )}
-                  {!['PENDING','PAID'].includes(o.status) && <span className="text-xs text-[#aeaeb2]">-</span>}
                 </div>
               </td>
             </SelectableRow>
