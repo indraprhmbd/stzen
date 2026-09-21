@@ -205,7 +205,7 @@ export function RefundCalcDialog(props: { c: RefundCalcApi }) {
                 <div className="flex justify-between border-t-2 border-dashed border-[#e8e8ed] pt-2 mt-1"><span className="font-semibold">Refund</span><span className="font-semibold text-[#dc2626]">Rp {formatIdNumber(c.calcData.preview.refund)}</span></div>
               </>
             ) : (
-              <p className="text-xs text-[#aeaeb2]">Tanpa snapshot durasi — refund manual penuh, nominal dihitung di luar.</p>
+              <div className="flex justify-between border-t-2 border-dashed border-[#e8e8ed] pt-2 mt-1"><span className="font-semibold">Refund penuh</span><span className="font-semibold text-[#dc2626]">Rp {formatIdNumber(c.calcData.amount)}</span></div>
             )}
             {c.calcData.claims.length > 0 && (
               <div className="mt-2 rounded-[10px] border border-[#e8e8ed] max-h-32 overflow-y-auto">
@@ -228,7 +228,7 @@ export function RefundCalcDialog(props: { c: RefundCalcApi }) {
         )}
         <div className="flex justify-end gap-2 mt-5">
           <button onClick={() => (document.getElementById('refund_calc_modal') as HTMLDialogElement | null)?.close()} className="ad-btn">Tutup</button>
-          <button onClick={c.applyCalcRefund} disabled={!c.calcData?.preview || c.calcData.status !== 'PAID' && c.calcData.status !== 'DELIVERED'} className="ad-btn ad-btn-danger">Lanjut ke Refund</button>
+          <button onClick={c.applyCalcRefund} disabled={!c.calcData || (c.calcData.status !== 'PAID' && c.calcData.status !== 'DELIVERED')} className="ad-btn ad-btn-danger">Lanjut ke Refund</button>
         </div>
       </div>
       <form method="dialog" className="modal-backdrop"><button>close</button></form>

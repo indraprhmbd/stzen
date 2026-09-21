@@ -172,6 +172,7 @@ export function useManualOrder(opts: {
             param: { id: mReview.id },
             json: {
               ...(customAmount ? { amount: customAmount } : {}),
+              paymentRef: mPaymentRef.trim() || null,
               customerAccount: mAccount.trim(),
               waNumber: mWa.trim(),
             },

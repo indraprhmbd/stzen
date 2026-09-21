@@ -39,6 +39,7 @@ const ManualOrderSchema = z.object({  customerEmail: z.string().email(),
 // in one call. PENDING + manual rail only; enforced in the service.
 const ApproveManualSchema = z.object({
   amount: z.string().regex(/^\d+$/, 'Harga integer').optional(),
+  paymentRef: z.string().max(120).nullable().optional(),
   customerAccount: z.string().max(120).optional(),
   waNumber: z.string().max(32).optional(),
 })
@@ -97,10 +98,11 @@ export const adminOrderRoutes = new Hono<AdminOrderEnv>()
       if (prior) return c.json(prior)
     }
     const out = await ordersService.approveManual(c.req.param('id'), c.req.valid('json'))
-    if (out.priceChanged || out.contactChanged) {
+    if (out.priceChanged || out.contactChanged || (out as any).refChanged) {
       const bits: string[] = []
       if (out.priceChanged) bits.push(`harga Rp ${Number(out.prevAmount).toLocaleString('id-ID')} -> Rp ${Number((out.order as any).amount).toLocaleString('id-ID')}`)
       if (out.contactChanged) bits.push('kontak diperbarui')
+      if ((out as any).refChanged) bits.push('ref diperbarui')
       await appendAudit({
         action: 'order:update',
         resourceType: 'order',

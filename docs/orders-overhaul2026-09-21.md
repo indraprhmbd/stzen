@@ -2,6 +2,12 @@
 
 State machine stays. This arc fixes data flow + tames `admin/Orders.tsx` (987 lines).
 
+Phase 2 shipped 2026-09-21 (commit pending): RefBayar persists via
+approve-manual (`paymentRef` schema → `updateData.payment_ref` + `refChanged`
+audit bit; `submitReview` sends `mPaymentRef`); refund unblocked for
+duration-less orders (button gates on status only, null preview renders
+"Refund penuh Rp {amount}"; server already null-safe end-to-end).
+
 ## Confirmed bugs (Phase 2)
 
 1. **RefBayar dropped on review-approve.** `submitReview` (Orders.tsx:533-544)

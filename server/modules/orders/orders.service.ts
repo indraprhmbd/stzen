@@ -637,7 +637,7 @@ export const ordersService = {
   // allocates + delivers in the same call; on-demand / variant-less /
   // empty stock stops at PAID for the existing Kirim flow. Contact rules
   // mirror checkout (flag read from the DB row, never the client).
-  async approveManual(publicId: string, input: { amount?: string; customerAccount?: string; waNumber?: string }) {
+  async approveManual(publicId: string, input: { amount?: string; paymentRef?: string | null; customerAccount?: string; waNumber?: string }) {
     const full = await this.getById(publicId)
     if (full.status !== 'PENDING') {
       throw new ConflictError(`Cannot approve-manual order in ${full.status} status`)
@@ -684,7 +684,14 @@ export const ordersService = {
     const priceChanged = nextAmount !== prevAmount
     const contactChanged =
       nextAccount !== (full.customerAccount ?? '') || nextWa !== (full.waNumber ?? '')
-    if (priceChanged || contactChanged) {
+    const prevRef = (full as any).paymentRef ?? null
+    let nextRef = prevRef
+    let refChanged = false
+    if (input.paymentRef !== undefined) {
+      nextRef = input.paymentRef ? input.paymentRef.trim() || null : null
+      refChanged = nextRef !== prevRef
+    }
+    if (priceChanged || contactChanged || refChanged) {
       const updateData: Record<string, any> = {}
       if (priceChanged) {
         updateData.amount = parseInt(nextAmount, 10)
@@ -702,6 +709,9 @@ export const ordersService = {
         updateData.customer_account = nextAccount
         updateData.wa_number = nextWa
       }
+      if (refChanged) {
+        updateData.payment_ref = nextRef
+      }
       const { error: uerr } = await supabaseAdmin
         .from(ORDERS)
         .update(updateData)
@@ -716,9 +726,9 @@ export const ordersService = {
       if (got) {
         await this.setVaultItem(pay.id, got.id)
         const delivered = await this.transitionStatus(publicId, 'deliver')
-        return { order: delivered, allocated: true, priceChanged, contactChanged, prevAmount }
+        return { order: delivered, allocated: true, priceChanged, contactChanged, refChanged, prevAmount }
       }
     }
-    return { order: paid, allocated: false, priceChanged, contactChanged, prevAmount }
+    return { order: paid, allocated: false, priceChanged, contactChanged, refChanged, prevAmount }
   },
 }

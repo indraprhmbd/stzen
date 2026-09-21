@@ -45,6 +45,7 @@ describe('bulkApprove manual skip', () => {
 describe('approve-manual schemas', () => {
   const ApproveManualSchema = z.object({
     amount: z.string().regex(/^\d+$/, 'Harga integer').optional(),
+    paymentRef: z.string().max(120).nullable().optional(),
     customerAccount: z.string().max(120).optional(),
     waNumber: z.string().max(32).optional(),
   })
@@ -56,6 +57,12 @@ describe('approve-manual schemas', () => {
   it('accepts amount + contact together', () => {
     const out = ApproveManualSchema.parse({ amount: '45000', customerAccount: 'user@mail.com', waNumber: '081234' })
     assert.equal(out.amount, '45000')
+  })
+
+  it('accepts paymentRef string, null, and overlong rejection', () => {
+    assert.equal(ApproveManualSchema.parse({ paymentRef: 'SEABANK' }).paymentRef, 'SEABANK')
+    assert.equal(ApproveManualSchema.parse({ paymentRef: null }).paymentRef, null)
+    assert.throws(() => ApproveManualSchema.parse({ paymentRef: 'x'.repeat(121) }))
   })
 
   it('rejects non-digit amount', () => {
