@@ -238,15 +238,22 @@ export const ordersService = {
 
     // Freeze cost from the live variant row (server-side read, never trusted
     // from the client). NULL = unknown cost, excluded from profit.
+    // Same read also freezes duration: storefront projections drop
+    // duration_months, so trusting the snapshot object left checkout orders
+    // with NULL duration and a null (full) refund preview.
     let frozenCost: number | null = null
+    let frozenDuration: number | null = null
+    let frozenDurationUnit: string | null = null
     const createVariantId = (data as any).variantId ?? null
     if (createVariantId) {
       const { data: vrows } = await supabaseAdmin
         .from(PRODUCT_VARIANTS)
-        .select('cost_price')
+        .select('cost_price, duration_months, duration_unit')
         .eq('id', createVariantId)
         .limit(1)
       frozenCost = (vrows?.[0] as any)?.cost_price ?? null
+      frozenDuration = (vrows?.[0] as any)?.duration_months ?? null
+      frozenDurationUnit = (vrows?.[0] as any)?.duration_unit ?? null
     }
 
     const { data: order, error } = await supabaseAdmin
@@ -266,8 +273,8 @@ export const ordersService = {
         price_at_purchase: amountInt,
         cost_at_purchase: frozenCost,
         profit_at_purchase: computeProfitAtPurchase(amountInt, frozenCost),
-        duration_snapshot: vs?.duration_months ?? null,
-        duration_snapshot_unit: vs?.duration_unit ?? null,
+        duration_snapshot: frozenDuration ?? vs?.duration_months ?? null,
+        duration_snapshot_unit: frozenDurationUnit ?? vs?.duration_unit ?? null,
         account_type_snapshot: vs?.account_type ?? null,
         conditions_snapshot: vs?.conditions ?? null,
         base_name_snapshot: vs?.base_name ?? (vs?.name ?? null),
