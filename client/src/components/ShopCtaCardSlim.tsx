@@ -18,17 +18,11 @@ export default function ShopCtaCardSlim() {
             className="font-black text-sm uppercase text-neutral leading-none truncate"
             style={{ fontFamily: "'Space Grotesk', sans-serif" }}
           >
-            {t.hero.cta}
-          </p>
-          <p
-            className="text-[10px] font-bold text-neutral/60 leading-tight truncate mt-0.5"
-            style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
-          >
-            {t.hero.tagline}
+            {t.hero.cardTitle1} {t.hero.cardTitle2}
           </p>
         </div>
       </div>
-      <span className="bg-neutral text-primary font-black text-[9px] uppercase px-2 py-0.5 border-2 border-black -rotate-1 group-hover:rotate-0 transition-all shrink-0">
+      <span className="bg-primary text-neutral font-black text-[9px] uppercase px-2 py-0.5 border-2 border-black group-hover:rotate-1 transition-all shrink-0">
         <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="square" strokeLinejoin="miter"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
       </span>
     </Link>

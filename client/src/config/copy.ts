@@ -11,7 +11,7 @@ export interface Copy {
     verifyEmail: string; verifyEmailTitle: string; verifyEmailSubtitle: string; resendEmail: string; emailSent: string;
     checkInbox: string; spamHint: string; successRedirect: string;
   }
-  hero: { title1: string; title2: string; tagline: string; cta: string; statusPill: string; searchPlaceholder: string; searchHint: string }
+  hero: { title1: string; title2: string; tagline: string; cta: string; cardTitle1: string; cardTitle2: string; cardTagline: string; statusPill: string; searchPlaceholder: string; searchHint: string }
   marquee: string[]
   products: { title: string; buy: string; buyNow: string; soldOut: string; inStock: string; onlyXLeft: string; outOfStock: string; sortNewest: string; sortPrice: string; sortStock: string; sortOutOfStock: string; viewGrid: string; viewList: string; verifiedBuyer: string; loginForMore: string; confirmTitle: string; confirmNote: string; confirmCancel: string; confirmGo: string; confirmPlace: string; processing: string; methodTitle: string; methodAutoMin: string; methodManualHours: string; methodAuto: string; methodAutoDesc: string; methodManual: string; methodManualDesc: string; accountLabel: string; accountPlaceholder: string; waLabel: string; waPlaceholder: string; errAccount: string; errWa: string; termsAgree: string; termsShow: string; errTerms: string; manualPlaced: string; manualPlacedNote: string; waConfirm: string; waConfirmText: string; feeLabel: string; viewCategory: string; viewBadge: string; askAdmin: string; askAdminText: string }
   howItWorks: { title: string; steps: { num: string; title: string; desc: string }[] }
@@ -47,6 +47,9 @@ const id: Copy = {
     title2: 'AKUN DIGITAL PREMIUM',
     tagline: 'Akses Instan Akun Digital Premium',
     cta: 'BELI SEKARANG',
+    cardTitle1: 'PILIH. BAYAR.',
+    cardTitle2: 'LANGSUNG DAPAT.',
+    cardTagline: 'Terkirim otomatis. Garansi 30 hari.',
     statusPill: '1.420+ AKUN OTOMATIS TERKIRIM HARI INI',
     searchPlaceholder: 'CARI PRODUK...',
     searchHint: 'Ctrl+K',
@@ -108,31 +111,28 @@ const id: Copy = {
   howItWorks: {
     title: 'CARA KERJA',
     steps: [
-      { num: '1', title: 'Pilih Produk', desc: 'Pilih akun digital yang kamu butuhkan' },
-      { num: '2', title: 'Pesan & Bayar', desc: 'Buat pesanan dan transfer pembayaran' },
-      { num: '3', title: 'Verifikasi', desc: 'Tim kami memverifikasi pembayaranmu' },
-      { num: '4', title: 'Terima Akses', desc: 'Kredensial dikirim ke dashboard kamu' },
+      { num: '1', title: 'Pilih Produk', desc: 'Cari akun, cek stok' },
+      { num: '2', title: 'Pesan & Bayar', desc: 'QRIS atau transfer' },
+      { num: '3', title: 'Verifikasi', desc: 'Otomatis, hitungan detik' },
+      { num: '4', title: 'Terima Akses', desc: 'Masuk dashboard, langsung pakai' },
     ],
   },
   whyUs: {
     title: 'KENAPA ST.ZEN?',
     items: [
-      { title: 'Akses Instan', desc: 'Dapatkan kredensial langsung setelah pembayaran dikonfirmasi' },
-      { title: 'Privasi & Aman', desc: 'Kredensialmu tetap terenkripsi dan terlindungi' },
-      { title: 'Diverifikasi Orang', desc: 'Setiap pesanan dicek sebelum dikirim' },
+      { title: 'GARANSI 30 HARI', desc: 'Error? Ganti baru, tanpa drama.' },
+      { title: 'TERENKRIPSI AES-256', desc: 'Kredensial tak pernah plain text.' },
+      { title: 'SUPPORT 24 JAM', desc: 'WhatsApp dijawab manusia.' },
     ],
   },
   testimonials: {
     title: 'APA KATA MEREKA',
     items: [
-      { quote: 'Prosesnya cepat, langsung dapat akses setelah bayar. Recommended!', name: 'Rizky A.', product: 'Netflix Premium' },
-      { quote: 'Aman dan terpercaya. Kredensialnya work semua.', name: 'Diana P.', product: 'ChatGPT Plus' },
-      { quote: 'Pertama beli di sini, hasilnya memuaskan. Akan beli lagi.', name: 'Fajar M.', product: 'Spotify Family' },
-      { quote: 'CS fast respon, akun bermasalah langsung diganti baru.', name: 'Sinta W.', product: 'Canva Pro' },
-      { quote: 'Harga paling miring dibanding tempat lain, mantap.', name: 'Bagas R.', product: 'YouTube Premium' },
-      { quote: 'Sudah langganan 3x, tidak pernah kecewa.', name: 'Nadia L.', product: 'Disney+ Hotstar' },
-      { quote: 'Bayar pakai QRIS, 2 menit langsung masuk akunnya.', name: 'Yoga P.', product: 'CapCut Pro' },
-      { quote: 'Garansinya beneran, akun error diganti tanpa drama.', name: 'Putri H.', product: 'Viu Premium' },
+      { quote: 'Bayar QRIS, 2 menit akun masuk.', name: 'Yoga P.', product: 'CapCut Pro' },
+      { quote: 'Garansinya beneran, ganti tanpa drama.', name: 'Putri H.', product: 'Viu Premium' },
+      { quote: 'Langganan 3x, belum pernah kecewa.', name: 'Nadia L.', product: 'Disney+ Hotstar' },
+      { quote: 'Akun error, langsung diganti baru.', name: 'Sinta W.', product: 'Canva Pro' },
+      { quote: 'Harga termurah yang saya temuin.', name: 'Bagas R.', product: 'YouTube Premium' },
     ],
   },
   footer: { rights: 'Hak cipta dilindungi', howToOrder: 'Cara Pesan', paymentMethods: 'Metode Pembayaran', faq: 'FAQ', myOrders: 'Pesanan Saya', terms: 'Syarat & Ketentuan', privacy: 'Kebijakan Privasi', refunds: 'Pengembalian Dana' },
@@ -242,6 +242,9 @@ const en: Copy = {
     title2: 'PREMIUM DIGITAL ACCOUNTS',
     tagline: 'Instant Access to Premium Digital Accounts',
     cta: 'SHOP NOW',
+    cardTitle1: 'PICK. PAY.',
+    cardTitle2: 'GOT IT.',
+    cardTagline: 'Auto-delivered. 30-day warranty.',
     statusPill: '1,420+ ACCOUNTS AUTO-DELIVERED TODAY',
     searchPlaceholder: 'SEARCH PRODUCTS...',
     searchHint: 'Ctrl+K',
@@ -303,31 +306,28 @@ const en: Copy = {
   howItWorks: {
     title: 'HOW IT WORKS',
     steps: [
-      { num: '1', title: 'Browse', desc: 'Find the digital account you need' },
-      { num: '2', title: 'Order & Pay', desc: 'Place your order and transfer payment' },
-      { num: '3', title: 'Verify', desc: 'Our team verifies your payment' },
-      { num: '4', title: 'Get Access', desc: 'Credentials delivered to your dashboard' },
+      { num: '1', title: 'Browse', desc: 'Pick an account, check stock' },
+      { num: '2', title: 'Order & Pay', desc: 'QRIS or bank transfer' },
+      { num: '3', title: 'Verify', desc: 'Automatic, in seconds' },
+      { num: '4', title: 'Get Access', desc: 'In your dashboard, ready to use' },
     ],
   },
   whyUs: {
     title: 'WHY ST.ZEN?',
     items: [
-      { title: 'Instant Access', desc: 'Get your credentials right after payment is confirmed' },
-      { title: 'Private & Safe', desc: 'Your credentials stay encrypted and protected' },
-      { title: 'Verified by Real People', desc: 'Every order is checked before delivery' },
+      { title: '30-DAY WARRANTY', desc: 'Broken? Replaced, no drama.' },
+      { title: 'AES-256 ENCRYPTED', desc: 'Credentials never stored plain.' },
+      { title: '24/7 SUPPORT', desc: 'WhatsApp answered by humans.' },
     ],
   },
   testimonials: {
     title: 'WHAT OUR CUSTOMERS SAY',
     items: [
-      { quote: 'Fast process, got access right after paying. Recommended!', name: 'Rizky A.', product: 'Netflix Premium' },
-      { quote: 'Safe and trustworthy. All credentials work perfectly.', name: 'Diana P.', product: 'ChatGPT Plus' },
-      { quote: 'First time buying here, very satisfied. Will buy again.', name: 'Fajar M.', product: 'Spotify Family' },
-      { quote: 'Fast support, broken account replaced immediately.', name: 'Sinta W.', product: 'Canva Pro' },
-      { quote: 'Cheapest price around, awesome.', name: 'Bagas R.', product: 'YouTube Premium' },
-      { quote: 'Subscribed 3 times already, never disappointed.', name: 'Nadia L.', product: 'Disney+ Hotstar' },
       { quote: 'Paid with QRIS, account arrived in 2 minutes.', name: 'Yoga P.', product: 'CapCut Pro' },
-      { quote: 'Warranty is real, faulty account replaced no questions asked.', name: 'Putri H.', product: 'Viu Premium' },
+      { quote: 'Warranty is real, replaced without drama.', name: 'Putri H.', product: 'Viu Premium' },
+      { quote: 'Subscribed 3 times, never disappointed.', name: 'Nadia L.', product: 'Disney+ Hotstar' },
+      { quote: 'Broken account, replaced with a new one fast.', name: 'Sinta W.', product: 'Canva Pro' },
+      { quote: 'Cheapest price I could find.', name: 'Bagas R.', product: 'YouTube Premium' },
     ],
   },
   footer: { rights: 'All rights reserved', howToOrder: 'How to Order', paymentMethods: 'Payment Methods', faq: 'FAQ', myOrders: 'My Orders', terms: 'Terms & Conditions', privacy: 'Privacy Policy', refunds: 'Refund Policy' },
