@@ -6,7 +6,13 @@ import { SelectableRow } from '../../../components/admin/RowSelection'
 import { Key, EditPencil, Trash, Notes, Calculator, Send, Undo, Clock } from 'iconoir-react'
 import { formatIdNumber } from '../../../lib/format'
 import type { AdminOrder } from './types'
-import { formatAge, blockedReason } from './types'
+import { formatAge, blockedReason, orderColumns } from './types'
+
+// NOTE: DataTable's thead hides below sm (app.css card view) and per-cell
+// data-labels take over as the "headers". DataTable can only stamp plain
+// <tr>/Fragment/SelectableRow children — this wrapper component is opaque
+// to it, so each <td> carries its own data-label from orderColumns (same
+// array as the desktop headers, so labels can never drift).
 
 export interface OrderRowActions {
   actionLoading: string | null
@@ -41,23 +47,23 @@ export default function OrderRow(props: {
       pageIds={pageIds}
       selectLabel={`Pilih pesanan ${o.id.slice(0, 8).toUpperCase()}`}
     >
-      <td>
+      <td data-label={orderColumns[0]?.label}>
         <CopyCell value={o.id} display={o.id.slice(0, 8).toUpperCase()} className="ad-num text-xs font-semibold" />
         {o.paymentRef && <div className="ad-num text-[11px] text-[#6e6e73] truncate max-w-28" title={o.paymentRef}>{o.paymentRef}</div>}
       </td>
-      <td className="whitespace-nowrap">
+      <td data-label={orderColumns[1]?.label} className="whitespace-nowrap">
         <div className="text-xs ad-num text-[#6e6e73]">{new Date(o.createdAt).toLocaleDateString('id-ID', { day:'2-digit', month:'short', year:'numeric' })}</div>
         <div className={`text-[11px] ad-num ${overdue ? 'text-red-600 font-semibold' : 'text-[#aeaeb2]'}`}>{formatAge(o.createdAt)}</div>
       </td>
-      <td>
+      <td data-label={orderColumns[2]?.label}>
         <div className="text-[13px] ad-num font-medium">{o.productName}</div>
         <div className="text-[11px] ad-num text-[#6e6e73]">{o.fulfillmentType === 'on_demand' ? 'On-demand' : 'Vault'}</div>
       </td>
-      <td className="ad-num text-xs text-[#6e6e73]" title={o.customerEmail ?? o.userId}>{o.customerEmail ?? o.userId.slice(0, 8)}</td>
-      <td className="text-[13px] ad-num font-semibold">Rp {formatIdNumber(o.amount)}
+      <td data-label={orderColumns[3]?.label} className="ad-num text-xs text-[#6e6e73]" title={o.customerEmail ?? o.userId}>{o.customerEmail ?? o.userId.slice(0, 8)}</td>
+      <td data-label={orderColumns[4]?.label} className="text-[13px] ad-num font-semibold">Rp {formatIdNumber(o.amount)}
         {o.status === 'REFUNDED' && o.refundAmount != null && <div className="text-[11px] font-normal text-[#dc2626]">Refund Rp {formatIdNumber(o.refundAmount)}</div>}
       </td>
-      <td>
+      <td data-label={orderColumns[5]?.label}>
         <StatusChip status={o.status}>{o.status}</StatusChip>
         {blocked && (
           <div className={`mt-1 max-w-32 text-[11px] font-semibold leading-tight ${blockedTone}`}>{blocked.text}</div>
@@ -80,7 +86,7 @@ export default function OrderRow(props: {
           </div>
         )}
       </td>
-      <td className="text-right">
+      <td data-label={orderColumns[6]?.label} className="text-right">
         <div className="flex justify-end gap-1.5">
           {o.status === 'PENDING' && (
             <button disabled={actions.actionLoading === o.id} onClick={() => { if (o.paymentProvider === 'manual' || o.paymentProvider == null) void actions.openReview(o); else void actions.approveDirect(o.id) }} className="ad-btn ad-btn-dark"><EditPencil width={14} height={14} strokeWidth={1.5} />Setujui</button>
