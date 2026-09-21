@@ -29,7 +29,10 @@ export default function AuthCallback() {
       return
     }
 
-    if (!searchParams.get('code')) {
+    // Direct visit (no OAuth params at all) fails fast. Anything else -
+    // ?code= (PKCE) or #access_token (legacy implicit link) - waits for
+    // the client's auto-exchange to produce a session.
+    if (!searchParams.get('code') && !window.location.hash) {
       done('/login?error=missing_code')
       return
     }
