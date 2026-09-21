@@ -2,68 +2,58 @@ import { useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 
-// Module scope: survives StrictMode remounts. One PKCE code exchanges exactly
-// once - the second dev-effect run with the same code would burn the consumed
-// verifier and bounce a logged-in user back to /login?error=.
-const exchangedCodes = new Set<string>()
-
+// No manual exchangeCodeForSession here: the supabase client auto-detects
+// ?code= in the URL (detectSessionInUrl) and exchanges exactly once at init.
+// A manual call races it - the loser finds the consumed verifier gone and
+// throws "PKCE code verifier not found". This page just waits for the
+// resulting session, then routes.
 export default function AuthCallback() {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
-  const ran = useRef(false)
+  const settled = useRef(false)
 
   useEffect(() => {
     let cancelled = false
 
-    async function handleCallback() {
-      const code = searchParams.get('code')
-      const errorParam = searchParams.get('error')
-      const errorDescription = searchParams.get('error_description')
-
-      if (errorParam) {
-        console.error('OAuth error:', errorParam, errorDescription)
-        navigate(`/login?error=${encodeURIComponent(errorDescription || errorParam)}`, { replace: true })
-        return
-      }
-
-      if (!code) {
-        navigate('/login?error=missing_code', { replace: true })
-        return
-      }
-
-      if (ran.current || exchangedCodes.has(code)) {
-        // StrictMode second run, or back-button revisit: exchange already
-        // in flight or done. Dashboard resolves session from storage.
-        navigate('/dashboard', { replace: true })
-        return
-      }
-      ran.current = true
-      exchangedCodes.add(code)
-
-      try {
-        const { data, error } = await supabase.auth.exchangeCodeForSession(code)
-
-        if (cancelled) return
-
-        if (error || !data.session) {
-          console.error('Code exchange failed:', error)
-          navigate(`/login?error=${encodeURIComponent(error?.message || 'exchange_failed')}`, { replace: true })
-          return
-        }
-
-        // Success - redirect to dashboard
-        navigate('/dashboard', { replace: true })
-      } catch (err) {
-        if (cancelled) return
-        console.error('Unexpected error during callback:', err)
-        navigate('/login?error=unexpected', { replace: true })
-      }
+    function done(path: string) {
+      if (cancelled || settled.current) return
+      settled.current = true
+      navigate(path, { replace: true })
     }
 
-    handleCallback()
+    const errorParam = searchParams.get('error')
+    if (errorParam) {
+      const desc = searchParams.get('error_description')
+      console.error('OAuth error:', errorParam, desc)
+      done(`/login?error=${encodeURIComponent(desc || errorParam)}`)
+      return
+    }
+
+    if (!searchParams.get('code')) {
+      done('/login?error=missing_code')
+      return
+    }
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        if (session) done('/dashboard')
+      }
+    )
+
+    // Fallback: session may already exist (or auto-exchange already done).
+    const t = setTimeout(async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        done(session ? '/dashboard' : '/login?error=exchange_timeout')
+      } catch {
+        done('/login?error=exchange_timeout')
+      }
+    }, 8000)
 
     return () => {
       cancelled = true
+      clearTimeout(t)
+      subscription.unsubscribe()
     }
   }, [searchParams, navigate])
 
