@@ -184,7 +184,7 @@ function OrderCard({ order, fee, onViewCredentials, onReport, onReceipt, onPay, 
         )}
         {onReceipt && (
           <button
-            className="ml-auto inline-flex items-center gap-0.5 border border-black bg-white text-black font-bold uppercase text-[8px] px-1 py-0.5 whitespace-nowrap transition-colors hover:bg-black hover:text-white"
+            className="ml-auto inline-flex items-center gap-0.5 border border-black bg-white text-black font-bold uppercase text-[8px] px-1 py-0.5 whitespace-nowrap transition-colors hover:bg-panel-dark hover:text-white"
             onClick={() => onReceipt?.(order.id)}
           >
             <Notes width={10} height={10} strokeWidth={2} />{t.dashboard.receipt}

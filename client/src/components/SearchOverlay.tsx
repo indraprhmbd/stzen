@@ -89,7 +89,7 @@ export default function SearchOverlay({ open, onClose }: SearchOverlayProps) {
   if (!open) return null
 
   return (
-    <div className="fixed inset-0 z-[100] bg-black/60 flex flex-col" onClick={onClose}>
+    <div className="fixed inset-0 z-[100] bg-panel-dark/70 flex flex-col" onClick={onClose}>
       {/* Search bar */}
       <div
         className="bg-white border-b-[3px] border-black px-4 py-3"
@@ -108,7 +108,7 @@ export default function SearchOverlay({ open, onClose }: SearchOverlayProps) {
           />
           <button
             onClick={onClose}
-            className="w-8 h-8 border-2 border-black bg-white text-black font-black text-xs flex items-center justify-center hover:bg-black hover:text-white transition-colors"
+            className="w-8 h-8 border-2 border-black bg-white text-black font-black text-xs flex items-center justify-center hover:bg-panel-dark hover:text-white transition-colors"
           >
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="square"><path d="M18 6L6 18M6 6l12 12"/></svg>
           </button>

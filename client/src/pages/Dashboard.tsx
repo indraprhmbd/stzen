@@ -430,7 +430,7 @@ const { t } = useCopy()
               <div className="text-sm font-bold text-neutral/50 text-center py-6">Tidak ada data.</div>
             )}
             <form method="dialog">
-              <button className="w-full inline-flex items-center justify-center gap-1.5 bg-white text-black font-black text-xs uppercase border-2 border-black py-2.5 hover:bg-black hover:text-white transition-colors">
+              <button className="w-full inline-flex items-center justify-center gap-1.5 bg-white text-black font-black text-xs uppercase border-2 border-black py-2.5 hover:bg-panel-dark hover:text-white transition-colors">
                 <Xmark width={14} height={14} strokeWidth={2.5} />
                 Tutup
               </button>

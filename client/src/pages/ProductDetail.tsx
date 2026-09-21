@@ -392,7 +392,7 @@ export default function ProductDetail() {
               if (idx > 0) navigate(-1)
               else navigate('/products')
             }}
-            className="mt-3 flex items-center justify-center gap-2 border-2 border-black font-black text-[10px] uppercase px-3 py-2 bg-white text-black hover:bg-black hover:text-white transition-colors w-full cursor-pointer"
+            className="mt-3 flex items-center justify-center gap-2 border-2 border-black font-black text-[10px] uppercase px-3 py-2 bg-white text-black hover:bg-panel-dark hover:text-white transition-colors w-full cursor-pointer"
             style={{ fontFamily: "'Space Grotesk', sans-serif" }}
           >
             <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="square" strokeLinejoin="miter"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>
@@ -408,7 +408,7 @@ export default function ProductDetail() {
             <h2 className="font-black text-xs uppercase tracking-widest bg-panel-dark text-white border-2 border-black px-2 py-0.5 -rotate-1" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
               PRODUK TERKAIT
             </h2>
-            <div className="flex-1 h-[3px] bg-black" />
+            <div className="flex-1 h-[3px] bg-panel-dark" />
           </div>
 
           {/* Mobile: horizontal scroll */}
@@ -556,7 +556,7 @@ export default function ProductDetail() {
                     ;(document.getElementById('buy-confirm') as HTMLDialogElement | null)?.close()
                     navigate('/dashboard')
                   }}
-                  className="w-full bg-white text-black font-black text-xs uppercase border-2 border-black py-2.5 hover:bg-black hover:text-white transition-colors"
+                  className="w-full bg-white text-black font-black text-xs uppercase border-2 border-black py-2.5 hover:bg-panel-dark hover:text-white transition-colors"
                 >
                   {t.payment.toDashboard}
                 </button>
@@ -721,7 +721,7 @@ export default function ProductDetail() {
             )}
             <div className="flex gap-2">
               <form method="dialog" className="flex-1">
-                <button disabled={purchasing} className="w-full bg-white text-black font-black text-xs uppercase border-2 border-black py-2.5 hover:bg-black hover:text-white transition-colors disabled:opacity-50">
+                <button disabled={purchasing} className="w-full bg-white text-black font-black text-xs uppercase border-2 border-black py-2.5 hover:bg-panel-dark hover:text-white transition-colors disabled:opacity-50">
                   {t.products.confirmCancel}
                 </button>
               </form>

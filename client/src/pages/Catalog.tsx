@@ -113,7 +113,7 @@ function Catalog() {
           <h2 className="font-black text-xs uppercase tracking-widest text-neutral bg-primary border-2 border-black px-2 py-0.5 -rotate-1" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
             {t.howItWorks.title}
           </h2>
-          <div className="flex-1 h-[3px] bg-black" />
+          <div className="flex-1 h-[3px] bg-panel-dark" />
         </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
           {t.howItWorks.steps.map((step) => {
@@ -142,7 +142,7 @@ function Catalog() {
           <h2 className="font-black text-xs uppercase tracking-widest bg-accent text-neutral border-2 border-black px-2 py-0.5 -rotate-1" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
             {t.whyUs.title}
           </h2>
-          <div className="flex-1 h-[3px] bg-black" />
+          <div className="flex-1 h-[3px] bg-panel-dark" />
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
           {t.whyUs.items.map((item, i) => {
@@ -170,7 +170,7 @@ function Catalog() {
           <h2 className="font-black text-xs uppercase tracking-widest bg-panel-dark text-white border-2 border-black px-2 py-0.5" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
             {t.testimonials.title}
           </h2>
-          <div className="flex-1 h-[3px] bg-black" />
+          <div className="flex-1 h-[3px] bg-panel-dark" />
         </div>
         <div ref={stripRef} className="flex gap-2 overflow-x-auto pb-2 -mx-4 pl-6 pr-4 scroll-pl-6 snap-x snap-proximity md:mx-0 md:px-0 md:scroll-px-0">
           {t.testimonials.items.map((item) => (

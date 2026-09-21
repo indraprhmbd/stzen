@@ -57,7 +57,7 @@ export default function Header() {
   const pillBase = `border-2 border-black font-black text-[10px] uppercase px-3 py-1.5 transition-all`
 
   function pillActive(isActive: boolean) {
-    return isActive ? 'bg-black text-white' : 'bg-white text-black hover:bg-black hover:text-white'
+    return isActive ? 'bg-panel-dark text-white' : 'bg-white text-black hover:bg-panel-dark hover:text-white'
   }
 
   return (
@@ -81,7 +81,7 @@ export default function Header() {
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setSearchOpen(true)}
-                  className="w-8 h-8 border-2 border-black bg-white text-black flex items-center justify-center hover:bg-black hover:text-white transition-colors"
+                  className="w-8 h-8 border-2 border-black bg-white text-black flex items-center justify-center hover:bg-panel-dark hover:text-white transition-colors"
                   aria-label="Search"
                 >
                   <span className="material-symbols-outlined text-sm">search</span>
@@ -126,7 +126,7 @@ export default function Header() {
                 <div ref={menuRef}>
                   <button
                     onClick={() => setMenuOpen(!menuOpen)}
-                    className="w-8 h-8 border-2 border-black bg-primary text-black font-black text-xs flex items-center justify-center hover:bg-black hover:text-white transition-all"
+                    className="w-8 h-8 border-2 border-black bg-primary text-black font-black text-xs flex items-center justify-center hover:bg-panel-dark hover:text-white transition-all"
                     style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                   >
                     <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.7 0 5-2.3 5-5s-2.3-5-5-5-5 2.3-5 5 2.3 5 5 5zm0 2c-3.3 0-10 1.7-10 5v2h20v-2c0-3.3-6.7-5-10-5z"/></svg>
@@ -179,7 +179,7 @@ export default function Header() {
               ) : (
                 <Link
                   to="/login"
-                  className={`${pillBase} bg-primary text-black hover:bg-black hover:text-white`}
+                  className={`${pillBase} bg-primary text-black hover:bg-panel-dark hover:text-white`}
                   style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                 >
                   {t.auth.signIn}
@@ -188,7 +188,7 @@ export default function Header() {
 
               <button
                 onClick={toggle}
-                className={`${pillBase} bg-white text-black hover:bg-black hover:text-white`}
+                className={`${pillBase} bg-white text-black hover:bg-panel-dark hover:text-white`}
                 style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                 aria-label="Switch language"
               >

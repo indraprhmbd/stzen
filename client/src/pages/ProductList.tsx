@@ -222,7 +222,7 @@ export default function ProductList() {
           >
             {t.products.title}
           </h1>
-          <div className="flex-1 h-[3px] bg-black" />
+          <div className="flex-1 h-[3px] bg-panel-dark" />
         </div>
         {result && (
           <p className="text-xs font-bold text-neutral/60">

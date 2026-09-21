@@ -17,7 +17,7 @@ export default function HowToOrder() {
           >
             {title}
           </h1>
-          <div className="flex-1 h-[3px] bg-black" />
+          <div className="flex-1 h-[3px] bg-panel-dark" />
         </div>
         <p className="text-xs font-bold text-neutral/60" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
           {desc}

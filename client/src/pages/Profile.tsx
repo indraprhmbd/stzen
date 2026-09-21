@@ -75,7 +75,7 @@ export default function Profile() {
               <button
                 key={l}
                 onClick={() => { if (lang !== l) toggle() }}
-                className={`flex-1 border-2 border-black font-black text-xs uppercase px-4 py-2 shadow-comic-sm btn-brutal-interactive ${lang === l ? 'bg-black text-white' : 'bg-white text-black'}`}
+                className={`flex-1 border-2 border-black font-black text-xs uppercase px-4 py-2 shadow-comic-sm btn-brutal-interactive ${lang === l ? 'bg-panel-dark text-white' : 'bg-white text-black'}`}
                 style={{ fontFamily: "'Space Grotesk', sans-serif" }}
               >
                 {l === 'id' ? 'ID' : 'EN'}
