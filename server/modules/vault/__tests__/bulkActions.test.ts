@@ -124,7 +124,7 @@ describe('vaultBulkService.revokeMany', () => {
       'vault:revoke'
     )
     const out = await vaultBulkService.revokeMany(['A', 'B'], actor, s.deps)
-    assert.deepEqual(out, { scanned: 2, processed: 1, skipped: [{ id: 'A', reason: 'Terikat order — gunakan Ganti akses' }] })
+    assert.deepEqual(out, { scanned: 2, processed: 1, skipped: [{ id: 'A', reason: 'Terikat order, gunakan Ganti akses' }] })
     assert.deepEqual(s.written, [['B']])
   })
 })

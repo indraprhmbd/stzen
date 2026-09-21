@@ -276,7 +276,7 @@ export const vaultService = {
     // path, which revokes + reallocates atomically.
     if (status === 'SOLD') {
       const refs = await findOrderRefs([id])
-      if (refs.has(id)) throw new ConflictError('Kredensial terikat order — gunakan Ganti akses')
+      if (refs.has(id)) throw new ConflictError('Kredensial terikat order, gunakan Ganti akses')
     }
 
     const { error: updateError } = await supabaseAdmin
@@ -864,7 +864,7 @@ export const vaultBulkService = {
       else if (row.status !== 'SOLD' && row.status !== 'AVAILABLE') skipped.push({ id, reason: 'Hanya SOLD atau AVAILABLE yang bisa dicabut' })
       // SOLD rows bound to an order must go through Ganti (revoke+replace),
       // never bare revoke — otherwise the DELIVERED order is orphaned.
-      else if (row.status === 'SOLD' && refs.has(id)) skipped.push({ id, reason: 'Terikat order — gunakan Ganti akses' })
+      else if (row.status === 'SOLD' && refs.has(id)) skipped.push({ id, reason: 'Terikat order, gunakan Ganti akses' })
       else eligible.push(id)
     }
     await writeRevoke(eligible)

@@ -101,12 +101,12 @@ export function blockedReason(o: Pick<AdminOrder, 'status' | 'paymentProvider' |
       return { text: 'Varian tidak tertaut', tone: 'red' }
     }
     if ((o.vaultAvailable ?? 0) === 0) {
-      return { text: 'Stok varian kosong — tambah stok dulu', tone: 'red' }
+      return { text: 'Stok varian kosong, tambah stok dulu', tone: 'red' }
     }
     return null
   }
   if (o.status === 'DELIVERED' && o.vaultItemStatus === 'REVOKED') {
-    return { text: 'Kredensial dicabut — perlu Ganti Akses', tone: 'red' }
+    return { text: 'Kredensial dicabut, perlu Ganti Akses', tone: 'red' }
   }
   return null
 }
