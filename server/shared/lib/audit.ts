@@ -14,7 +14,7 @@ export type AuditAction =
 
 export type ActorType = 'admin' | 'user' | 'system'
 
-export async function appendAudit(params: {
+type AuditParams = {
   action: AuditAction
   resourceType: 'order' | 'stock' | 'product' | 'variant' | 'settings' | 'danger'
   resourcePublicId?: string
@@ -25,21 +25,39 @@ export async function appendAudit(params: {
   actorType: ActorType
   diff?: any
   idempotencyKey?: string | null
-}) {
+}
+
+function toAuditRow(params: AuditParams) {
+  return {
+    actor_id: params.actorId ?? null,
+    actor_email: params.actorEmail ?? null,
+    actor_type: params.actorType,
+    action: params.action,
+    resource_type: params.resourceType,
+    resource_public_id: params.resourcePublicId ?? null,
+    resource_name: params.resourceName ?? null,
+    snapshot_text: params.snapshotText,
+    diff: params.diff ? JSON.stringify(params.diff) : null,
+    idempotency_key: params.idempotencyKey ?? null,
+  }
+}
+
+export async function appendAudit(params: AuditParams) {
   const { error } = await supabaseAdmin
     .from('audit_logs')
-    .insert({
-      actor_id: params.actorId ?? null,
-      actor_email: params.actorEmail ?? null,
-      actor_type: params.actorType,
-      action: params.action,
-      resource_type: params.resourceType,
-      resource_public_id: params.resourcePublicId ?? null,
-      resource_name: params.resourceName ?? null,
-      snapshot_text: params.snapshotText,
-      diff: params.diff ? JSON.stringify(params.diff) : null,
-      idempotency_key: params.idempotencyKey ?? null,
-    })
+    .insert(toAuditRow(params))
+
+  if (error) throw new Error(error.message)
+}
+
+// Batched audit: one INSERT for N rows. Bulk endpoints must use this —
+// per-row appendAudit inside a loop multiplies Worker subrequests and
+// dies at the 50-subrequest free-plan cap mid-batch.
+export async function appendAuditMany(list: AuditParams[]) {
+  if (list.length === 0) return
+  const { error } = await supabaseAdmin
+    .from('audit_logs')
+    .insert(list.map(toAuditRow))
 
   if (error) throw new Error(error.message)
 }

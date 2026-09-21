@@ -132,7 +132,7 @@ export default function VaultList({ variants, fetchedAt, initialVariantId, onVar
   const [pendingBulk, setPendingBulk] = useState<'delete' | 'revoke' | null>(null)
 
   async function runBulkVault(action: 'delete' | 'revoke') {
-    const ids = selection.selected.slice(0, 20)
+    const ids = selection.selected.slice(0, 100)
     if (bulkBusy || ids.length === 0) return
     setBulkBusy(true)
     setPendingBulk(null)

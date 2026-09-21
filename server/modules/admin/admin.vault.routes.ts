@@ -32,7 +32,7 @@ const ReplaceSchema = z.object({
 // (SOLD/AVAILABLE flip to REVOKED). Unlock-guarded like the single rows.
 const VaultBulkSchema = z.object({
   action: z.enum(['delete', 'revoke']),
-  ids: z.array(z.string().min(1)).min(1).max(20),
+  ids: z.array(z.string().min(1)).min(1).max(100),
 })
 
 async function unlockGuard(c: { req: { header: (n: string) => string | undefined }; get: (k: 'user') => { sub: string } }) {

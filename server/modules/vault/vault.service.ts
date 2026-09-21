@@ -1,7 +1,7 @@
 import { supabaseAdmin } from '../../shared/db'
 import { getEnv } from '../../shared/lib/runtime-env'
 import { NotFoundError, BadRequestError, ConflictError } from '../../shared/errors/http'
-import { appendAudit, claimIdempotencyKey, findAuditByIdempotencyKey, releaseIdempotencyKey } from '../../shared/lib/audit'
+import { appendAudit, appendAuditMany, claimIdempotencyKey, findAuditByIdempotencyKey, releaseIdempotencyKey } from '../../shared/lib/audit'
 import {
   BULK_ROW_LIMIT,
   BULK_TEXT_LIMIT,
@@ -721,20 +721,32 @@ export const stokBulkService = {
 }
 
 // ─── Bulk Actions (checkbox selection: delete + revoke) ───────────────────
-// Sequential per-id mutations, one audit row per success, per-id skip
-// reasons — same shape as orders bulkApprove. Delete is hard-delete but
-// gated to AVAILABLE rows never allocated to any order (allocated_at null
-// AND no referencing order); everything else is a status flip, never a
-// delete. Default runners hit the DB; tests inject run/audit stubs.
+// Set-based, constant ~4 PostgREST roundtrips per batch regardless of size:
+// 1× fetch rows IN(ids), 1× order refs IN(ids), 1× write IN(eligible),
+// 1× batched audit INSERT. The old sequential per-id loop (4 roundtrips ×
+// N) blew past the Cloudflare free 50-subrequest cap and died mid-batch
+// around item 12 — partial deletes + client timeout. Per-id skip reasons
+// preserved in input order; single-statement writes are all-or-nothing so
+// a write failure throws instead of silently half-applying. Default
+// runners hit the DB; tests inject batched stubs.
 
 export interface VaultBulkActor {
   sub: string
   email?: string | null
 }
 
+interface BulkRow {
+  id: string
+  status: string
+  allocated_at: string | null
+}
+
 export interface VaultBulkDeps {
-  run?: (id: string) => Promise<{ id: string }>
-  audit?: (row: { id: string }, actor: VaultBulkActor) => Promise<void>
+  fetchRows?: (ids: string[]) => Promise<Map<string, BulkRow>>
+  findRefs?: (ids: string[]) => Promise<Set<string>>
+  writeDelete?: (ids: string[]) => Promise<void>
+  writeRevoke?: (ids: string[]) => Promise<void>
+  auditMany?: (ids: string[], actor: VaultBulkActor) => Promise<void>
 }
 
 export interface VaultBulkResult {
@@ -743,98 +755,102 @@ export interface VaultBulkResult {
   skipped: { id: string; reason: string }[]
 }
 
-async function runVaultBulk(
-  ids: string[],
-  actor: VaultBulkActor,
-  deps: VaultBulkDeps,
-): Promise<VaultBulkResult> {
-  const run = deps.run!
-  const audit = deps.audit!
-  const skipped: { id: string; reason: string }[] = []
-  let processed = 0
-  for (const id of ids) {
-    try {
-      const row = await run(id)
-      await audit(row, actor)
-      processed++
-    } catch (e: unknown) {
-      skipped.push({ id, reason: e instanceof Error ? e.message : 'Gagal' })
-    }
-  }
-  return { scanned: ids.length, processed, skipped }
-}
-
-async function fetchVaultRow(id: string): Promise<any> {
-  const { data: item, error } = await supabaseAdmin
+async function fetchBulkRows(ids: string[]): Promise<Map<string, BulkRow>> {
+  const { data, error } = await supabaseAdmin
     .from(VAULT_ITEMS)
     .select('id, status, allocated_at')
-    .eq('id', id)
-    .limit(1)
+    .in('id', ids)
   if (error) throw new Error(error.message)
-  const row = item?.[0]
-  if (!row) throw new NotFoundError('Kredensial tidak ditemukan')
-  return row
+  return new Map(((data ?? []) as BulkRow[]).map((r) => [r.id, r]))
 }
 
-async function deleteUntouched(id: string): Promise<{ id: string }> {
-  const row = await fetchVaultRow(id)
-  if (row.status !== 'AVAILABLE') throw new ConflictError('Hanya AVAILABLE yang bisa dihapus')
-  // Untouched = never allocated: no timestamp AND no order pointing at it.
-  if (row.allocated_at) throw new ConflictError('Sudah pernah dialokasikan')
-  const { data: refs, error: refError } = await supabaseAdmin
+async function findOrderRefs(ids: string[]): Promise<Set<string>> {
+  const { data, error } = await supabaseAdmin
     .from(ORDERS)
-    .select('id')
-    .eq('vault_item_id', id)
-    .limit(1)
-  if (refError) throw new Error(refError.message)
-  if (refs && refs.length > 0) throw new ConflictError('Terikat order')
-  const { error: deleteError } = await supabaseAdmin
+    .select('vault_item_id')
+    .in('vault_item_id', ids)
+    .limit(ids.length)
+  if (error) throw new Error(error.message)
+  return new Set(
+    ((data ?? []) as { vault_item_id: string | null }[])
+      .map((r) => r.vault_item_id)
+      .filter((v): v is string => !!v)
+  )
+}
+
+async function writeDeleteIds(ids: string[]): Promise<void> {
+  if (ids.length === 0) return
+  const { error } = await supabaseAdmin
     .from(VAULT_ITEMS)
     .delete()
-    .eq('id', id)
-  if (deleteError) throw new Error(deleteError.message)
-  return { id }
+    .in('id', ids)
+  if (error) throw new Error(error.message)
 }
 
-async function revokeOne(id: string): Promise<{ id: string }> {
-  const row = await fetchVaultRow(id)
-  const status = row.status
-  // Mirrors single POST /:id/revoke: delivered or available flip to REVOKED.
-  if (status !== 'SOLD' && status !== 'AVAILABLE') throw new ConflictError('Hanya SOLD atau AVAILABLE yang bisa dicabut')
-  const { error: updateError } = await supabaseAdmin
+async function writeRevokeIds(ids: string[]): Promise<void> {
+  if (ids.length === 0) return
+  const { error } = await supabaseAdmin
     .from(VAULT_ITEMS)
     .update({ status: 'REVOKED' })
-    .eq('id', id)
-  if (updateError) throw new Error(updateError.message)
-  return { id }
+    .in('id', ids)
+  if (error) throw new Error(error.message)
 }
 
-function auditVaultBulk(action: 'vault:delete' | 'vault:revoke', verb: string) {
-  return (row: { id: string }, actor: VaultBulkActor): Promise<void> => {
-    return appendAudit({
-      action,
-      resourceType: 'stock',
-      resourcePublicId: row.id,
-      snapshotText: `Kredensial vault ${verb} oleh ${actor.email ?? actor.sub}`,
-      actorId: actor.sub,
-      actorEmail: actor.email ?? null,
-      actorType: 'admin',
-    }).catch(() => {})
-  }
+async function defaultAuditMany(action: 'vault:delete' | 'vault:revoke', verb: string, ids: string[], actor: VaultBulkActor): Promise<void> {
+  await appendAuditMany(ids.map((id) => ({
+    action,
+    resourceType: 'stock' as const,
+    resourcePublicId: id,
+    snapshotText: `Kredensial vault ${verb} oleh ${actor.email ?? actor.sub}`,
+    actorId: actor.sub,
+    actorEmail: actor.email ?? null,
+    actorType: 'admin' as const,
+  }))).catch(() => {})
 }
 
 export const vaultBulkService = {
   async remove(ids: string[], actor: VaultBulkActor, deps: VaultBulkDeps = {}): Promise<VaultBulkResult> {
-    return runVaultBulk(ids, actor, {
-      run: deps.run ?? deleteUntouched,
-      audit: deps.audit ?? auditVaultBulk('vault:delete', 'dihapus'),
-    })
+    const uniq = [...new Set(ids)]
+    if (uniq.length === 0) return { scanned: 0, processed: 0, skipped: [] }
+    const fetchRows = deps.fetchRows ?? fetchBulkRows
+    const findRefs = deps.findRefs ?? findOrderRefs
+    const writeDelete = deps.writeDelete ?? writeDeleteIds
+    const auditMany = deps.auditMany ?? ((ids: string[], a: VaultBulkActor) => defaultAuditMany('vault:delete', 'dihapus', ids, a))
+    const [rows, refs] = await Promise.all([fetchRows(uniq), findRefs(uniq)])
+    const eligible: string[] = []
+    const skipped: { id: string; reason: string }[] = []
+    for (const id of uniq) {
+      const row = rows.get(id)
+      if (!row) skipped.push({ id, reason: 'Kredensial tidak ditemukan' })
+      else if (row.status !== 'AVAILABLE') skipped.push({ id, reason: 'Hanya AVAILABLE yang bisa dihapus' })
+      // Untouched = never allocated: no timestamp AND no order pointing at it.
+      else if (row.allocated_at) skipped.push({ id, reason: 'Sudah pernah dialokasikan' })
+      else if (refs.has(id)) skipped.push({ id, reason: 'Terikat order' })
+      else eligible.push(id)
+    }
+    await writeDelete(eligible)
+    await auditMany(eligible, actor)
+    return { scanned: uniq.length, processed: eligible.length, skipped }
   },
 
   async revokeMany(ids: string[], actor: VaultBulkActor, deps: VaultBulkDeps = {}): Promise<VaultBulkResult> {
-    return runVaultBulk(ids, actor, {
-      run: deps.run ?? revokeOne,
-      audit: deps.audit ?? auditVaultBulk('vault:revoke', 'dicabut'),
-    })
+    const uniq = [...new Set(ids)]
+    if (uniq.length === 0) return { scanned: 0, processed: 0, skipped: [] }
+    const fetchRows = deps.fetchRows ?? fetchBulkRows
+    const writeRevoke = deps.writeRevoke ?? writeRevokeIds
+    const auditMany = deps.auditMany ?? ((ids: string[], a: VaultBulkActor) => defaultAuditMany('vault:revoke', 'dicabut', ids, a))
+    const rows = await fetchRows(uniq)
+    const eligible: string[] = []
+    const skipped: { id: string; reason: string }[] = []
+    for (const id of uniq) {
+      const row = rows.get(id)
+      if (!row) skipped.push({ id, reason: 'Kredensial tidak ditemukan' })
+      // Mirrors single POST /:id/revoke: delivered or available flip to REVOKED.
+      else if (row.status !== 'SOLD' && row.status !== 'AVAILABLE') skipped.push({ id, reason: 'Hanya SOLD atau AVAILABLE yang bisa dicabut' })
+      else eligible.push(id)
+    }
+    await writeRevoke(eligible)
+    await auditMany(eligible, actor)
+    return { scanned: uniq.length, processed: eligible.length, skipped }
   },
 }
