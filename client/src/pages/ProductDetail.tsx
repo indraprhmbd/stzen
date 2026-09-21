@@ -686,7 +686,7 @@ export default function ProductDetail() {
                 the requirement; server re-validates fail-closed. */}
             {settings.termsBody.trim() && (
               <div className="bg-white border-2 border-black p-2.5 flex flex-col gap-2">
-                <details>
+                <details open>
                   <summary className="text-[11px] font-black uppercase tracking-wide text-neutral cursor-pointer underline underline-offset-2">
                     {t.products.termsShow}
                   </summary>
