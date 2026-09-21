@@ -51,11 +51,11 @@ export default function RowActionsMenu({ actions, label = 'Aksi lainnya' }: RowA
   }
 
   return (
-    <details onToggle={onToggle} className="relative inline-block">
+    <details onToggle={onToggle} className="relative inline-block group">
       <summary
         aria-label={label}
         title={label}
-        className="ad-btn !px-2.5 list-none [&::-webkit-details-marker]:hidden open:before:content-[''] open:before:fixed open:before:inset-0 open:before:z-40 open:before:bg-black/20"
+        className="ad-btn !px-2.5 list-none [&::-webkit-details-marker]:hidden group-open:before:content-[''] group-open:before:fixed group-open:before:inset-0 group-open:before:z-40 group-open:before:bg-black/20 group-open:relative group-open:z-50"
       >
         <MoreVert width={15} height={15} strokeWidth={1.5} />
       </summary>
