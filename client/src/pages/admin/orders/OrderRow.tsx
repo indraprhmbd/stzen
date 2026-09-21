@@ -6,7 +6,7 @@ import { SelectableRow } from '../../../components/admin/RowSelection'
 import { Key, EditPencil, Trash, Notes, Calculator, Send, Undo, Clock } from 'iconoir-react'
 import { formatIdNumber } from '../../../lib/format'
 import type { AdminOrder } from './types'
-import { formatAge } from './types'
+import { formatAge, blockedReason } from './types'
 
 export interface OrderRowActions {
   actionLoading: string | null
@@ -28,8 +28,10 @@ export default function OrderRow(props: {
 }) {
   const { o, pageIds, selection, actions } = props
   const navigate = useNavigate()
-  const stockout = o.fulfillmentType !== 'on_demand' && o.vaultAvailable === 0
   const overdue = (o.status === 'PENDING' || o.status === 'PAID') && Date.now() - new Date(o.createdAt).getTime() > 24 * 3600 * 1000
+  const blocked = blockedReason(o)
+  const stockEmpty = o.status === 'PAID' && o.fulfillmentType !== 'on_demand' && o.variantId != null && (o.vaultAvailable ?? 0) === 0
+  const blockedTone = blocked?.tone === 'red' ? 'text-red-600' : blocked?.tone === 'amber' ? 'text-amber-700' : 'text-[#aeaeb2]'
 
   return (
     <SelectableRow
@@ -57,15 +59,15 @@ export default function OrderRow(props: {
       </td>
       <td>
         <StatusChip status={o.status}>{o.status}</StatusChip>
-        {(o.claimCount > 0 || stockout || overdue || o.noteCount > 0) && (
+        {blocked && (
+          <div className={`mt-1 max-w-32 text-[11px] font-semibold leading-tight ${blockedTone}`}>{blocked.text}</div>
+        )}
+        {(o.claimCount > 0 || overdue || o.noteCount > 0) && (
           <div className="mt-1 flex max-w-28 flex-wrap gap-1">
             {o.claimCount > 0 && (
               <button onClick={() => actions.openCalculator(o)} title="Buka hitung refund" className="rounded-full border border-amber-500 bg-amber-50 px-1.5 py-px text-[10px] font-bold text-amber-700 hover:bg-amber-100">
                 klaim {o.claimCount}x
               </button>
-            )}
-            {stockout && (
-              <span className="rounded-full border border-red-500 bg-red-50 px-1.5 py-px text-[10px] font-bold text-red-700">stok habis</span>
             )}
             {overdue && (
               <span className="rounded-full border border-red-500 bg-red-50 px-1.5 py-px text-[10px] font-bold text-red-700">overdue</span>
@@ -84,7 +86,7 @@ export default function OrderRow(props: {
             <button disabled={actions.actionLoading === o.id} onClick={() => { if (o.paymentProvider === 'manual' || o.paymentProvider == null) void actions.openReview(o); else void actions.approveDirect(o.id) }} className="ad-btn ad-btn-dark"><EditPencil width={14} height={14} strokeWidth={1.5} />Setujui</button>
           )}
           {o.status === 'PAID' && (
-            <button disabled={actions.actionLoading === o.id} onClick={() => actions.askDeliver(o)} className="ad-btn ad-btn-dark"><Send width={14} height={14} strokeWidth={1.5} />Kirim Akses</button>
+            <button disabled={actions.actionLoading === o.id || stockEmpty} title={stockEmpty ? 'Stok varian kosong' : undefined} onClick={() => actions.askDeliver(o)} className="ad-btn ad-btn-dark"><Send width={14} height={14} strokeWidth={1.5} />Kirim Akses</button>
           )}
           {o.status === 'DELIVERED' && o.variantPublicId && (
             <button onClick={() => navigate(`/admin/products?tab=stok&variant=${o.variantPublicId}&order=${o.id}`)} title="Buka stok varian untuk ganti kredensial" className="ad-btn ad-btn-dark"><Key width={14} height={14} strokeWidth={1.5} />Ganti Akses</button>

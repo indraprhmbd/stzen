@@ -113,4 +113,18 @@ describe('vaultBulkService.revokeMany', () => {
     assert.deepEqual(s.written, [['A', 'B']])
     assert.deepEqual(s.audited, [{ action: 'vault:revoke', ids: ['A', 'B'] }])
   })
+
+  it('skips SOLD rows bound to an order — Ganti path only', async () => {
+    const s = stubDeps(
+      [
+        { id: 'A', status: 'SOLD', allocated_at: '2026-01-01' },
+        { id: 'B', status: 'AVAILABLE', allocated_at: null },
+      ],
+      ['A'],
+      'vault:revoke'
+    )
+    const out = await vaultBulkService.revokeMany(['A', 'B'], actor, s.deps)
+    assert.deepEqual(out, { scanned: 2, processed: 1, skipped: [{ id: 'A', reason: 'Terikat order — gunakan Ganti akses' }] })
+    assert.deepEqual(s.written, [['B']])
+  })
 })

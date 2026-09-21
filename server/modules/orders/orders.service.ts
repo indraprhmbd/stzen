@@ -292,10 +292,13 @@ export const ordersService = {
       updateData.paid_at = new Date().toISOString()
     }
     if (targetStatus === 'REFUNDED' && (order as any).vault_item_id) {
+      // SOLD-only: never resurrect a REVOKED row back to AVAILABLE
+      // (e.g. credential cabut-ed after delivery, then refunded).
       await supabaseAdmin
         .from(VAULT_ITEMS)
         .update({ status: 'AVAILABLE', allocated_at: null })
         .eq('id', (order as any).vault_item_id)
+        .eq('status', 'SOLD')
       updateData.vault_item_id = null
     }
 
@@ -528,10 +531,24 @@ export const ordersService = {
     // Batched vault availability for the page
     const variantIds = [...new Set(paginated.map((r: any) => r.variant_id).filter(Boolean))] as string[]
     const orderDbIds = [...new Set(paginated.map((r: any) => r.id).filter(Boolean))] as string[]
-    const [stockByVariant, claimCounts, noteCounts] = await Promise.all([
+    const vaultIds = [...new Set(paginated.map((r: any) => r.vault_item_id).filter(Boolean))] as string[]
+    const [stockByVariant, claimCounts, noteCounts, vaultStatusById] = await Promise.all([
       getStockCounts(variantIds),
       countByOrders('warranty_claims', orderDbIds),
       countByOrders('order_notes', orderDbIds),
+      (async () => {
+        // Orphan detector: a DELIVERED order whose vault row was revoked
+        // outside Ganti (now blocked, but historic rows exist).
+        const map = new Map<string, string>()
+        if (vaultIds.length === 0) return map
+        const { data, error } = await supabaseAdmin
+          .from(VAULT_ITEMS)
+          .select('id, status')
+          .in('id', vaultIds)
+        if (error) throw new Error(error.message)
+        for (const v of data || []) map.set((v as any).id, (v as any).status)
+        return map
+      })(),
     ])
 
     return {
@@ -546,6 +563,7 @@ export const ordersService = {
           vaultAvailable: r.variant_id ? stockByVariant.get(r.variant_id) ?? 0 : null,
           claimCount: claimCounts.get(r.id) ?? 0,
           noteCount: noteCounts.get(r.id) ?? 0,
+          vaultItemStatus: r.vault_item_id ? vaultStatusById.get(r.vault_item_id) ?? null : null,
         }
       }),
       total: total || 0,

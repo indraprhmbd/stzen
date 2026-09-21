@@ -271,6 +271,13 @@ export const vaultService = {
     if (!item || item.length === 0) throw new NotFoundError('Credential not found')
     const status = item[0].status
     if (status !== 'SOLD' && status !== 'AVAILABLE') throw new ConflictError('Only delivered or available credentials can be revoked')
+    // SOLD rows belong to a buyer order: revoking here would orphan the
+    // DELIVERED order (no working credential, no undo). Force the Ganti
+    // path, which revokes + reallocates atomically.
+    if (status === 'SOLD') {
+      const refs = await findOrderRefs([id])
+      if (refs.has(id)) throw new ConflictError('Kredensial terikat order — gunakan Ganti akses')
+    }
 
     const { error: updateError } = await supabaseAdmin
       .from(VAULT_ITEMS)
@@ -844,9 +851,10 @@ export const vaultBulkService = {
     const uniq = [...new Set(ids)]
     if (uniq.length === 0) return { scanned: 0, processed: 0, skipped: [] }
     const fetchRows = deps.fetchRows ?? fetchBulkRows
+    const findRefs = deps.findRefs ?? findOrderRefs
     const writeRevoke = deps.writeRevoke ?? writeRevokeIds
     const auditMany = deps.auditMany ?? ((ids: string[], a: VaultBulkActor) => defaultAuditMany('vault:revoke', 'dicabut', ids, a))
-    const rows = await fetchRows(uniq)
+    const [rows, refs] = await Promise.all([fetchRows(uniq), findRefs(uniq)])
     const eligible: string[] = []
     const skipped: { id: string; reason: string }[] = []
     for (const id of uniq) {
@@ -854,6 +862,9 @@ export const vaultBulkService = {
       if (!row) skipped.push({ id, reason: 'Kredensial tidak ditemukan' })
       // Mirrors single POST /:id/revoke: delivered or available flip to REVOKED.
       else if (row.status !== 'SOLD' && row.status !== 'AVAILABLE') skipped.push({ id, reason: 'Hanya SOLD atau AVAILABLE yang bisa dicabut' })
+      // SOLD rows bound to an order must go through Ganti (revoke+replace),
+      // never bare revoke — otherwise the DELIVERED order is orphaned.
+      else if (row.status === 'SOLD' && refs.has(id)) skipped.push({ id, reason: 'Terikat order — gunakan Ganti akses' })
       else eligible.push(id)
     }
     await writeRevoke(eligible)

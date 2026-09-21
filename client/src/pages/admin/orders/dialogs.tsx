@@ -220,10 +220,18 @@ export function RefundCalcDialog(props: { c: RefundCalcApi }) {
                 ))}
               </div>
             )}
-            <div className="flex gap-2 mt-2">
-              <input type="text" value={c.claimNote} onChange={(e) => c.setClaimNote(e.target.value)} placeholder="Catatan klaim (opsional)" maxLength={500} className="ad-input normal-case flex-1" />
-              <button onClick={() => void c.submitClaim()} disabled={c.claimSaving} className="ad-btn shrink-0">{c.claimSaving ? '...' : 'Catat klaim'}</button>
+            {(() => {
+              const recentRotate = (c.calcData?.claims ?? []).some((cl) => cl.note === 'Rotasi kredensial' && Date.now() - new Date(cl.claimedAt).getTime() < 24 * 3600 * 1000)
+              return (
+            <div className="flex flex-col gap-1 mt-2">
+              <div className="flex gap-2">
+                <input type="text" value={c.claimNote} onChange={(e) => c.setClaimNote(e.target.value)} placeholder="Klaim tanpa ganti akses (opsional)" maxLength={500} disabled={recentRotate} className="ad-input normal-case flex-1" />
+                <button onClick={() => void c.submitClaim()} disabled={c.claimSaving || recentRotate} title={recentRotate ? 'Ganti akses <24 jam sudah tercatat otomatis' : undefined} className="ad-btn shrink-0">{c.claimSaving ? '...' : 'Catat klaim non-ganti'}</button>
+              </div>
+              <p className="text-[11px] text-[#aeaeb2]">{recentRotate ? 'Ganti akses <24 jam sudah tercatat otomatis sebagai klaim.' : 'Ganti akses tercatat otomatis sebagai klaim — tombol ini hanya untuk keluhan tanpa penggantian kredensial.'}</p>
             </div>
+              )
+            })()}
           </div>
         )}
         <div className="flex justify-end gap-2 mt-5">

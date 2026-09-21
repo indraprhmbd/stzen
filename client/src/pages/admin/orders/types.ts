@@ -16,6 +16,7 @@ export interface AdminOrder {
   refundAmount: number | null
   claimCount: number
   noteCount: number
+  vaultItemStatus: string | null
   createdAt: string
   paidAt: string | null
 }
@@ -74,4 +75,38 @@ export const refundTierLabel: Record<string, string> = {
   claims_1_2: 'Klaim 1-2',
   claims_3: 'Klaim 3',
   claims_over_3: 'Klaim > 3',
+}
+
+// Blocked-reason for the Butuh Tindakan queue. Stock state belongs to the
+// variant, not the order — so instead of a "stok habis" badge on the row,
+// the row says why it can't move: this orderId is stuck because of what.
+// Returns null when the row needs nothing (ready / terminal / waiting well).
+export interface BlockedReason {
+  text: string
+  tone: 'red' | 'amber' | 'neutral'
+}
+
+export function blockedReason(o: Pick<AdminOrder, 'status' | 'paymentProvider' | 'fulfillmentType' | 'variantId' | 'vaultAvailable' | 'vaultItemStatus' | 'createdAt'>): BlockedReason | null {
+  if (o.status === 'PENDING') {
+    if (o.paymentProvider === 'manual' || o.paymentProvider == null) {
+      return { text: 'Perlu review manual', tone: 'amber' }
+    }
+    return { text: 'Menunggu pembayaran buyer', tone: 'neutral' }
+  }
+  if (o.status === 'PAID') {
+    if (o.fulfillmentType === 'on_demand') {
+      return { text: 'Butuh input kredensial on-demand', tone: 'amber' }
+    }
+    if (o.variantId == null) {
+      return { text: 'Varian tidak tertaut', tone: 'red' }
+    }
+    if ((o.vaultAvailable ?? 0) === 0) {
+      return { text: 'Stok varian kosong — tambah stok dulu', tone: 'red' }
+    }
+    return null
+  }
+  if (o.status === 'DELIVERED' && o.vaultItemStatus === 'REVOKED') {
+    return { text: 'Kredensial dicabut — perlu Ganti Akses', tone: 'red' }
+  }
+  return null
 }
