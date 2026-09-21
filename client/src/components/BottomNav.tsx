@@ -46,7 +46,7 @@ export default function BottomNav() {
               className={`
                 flex flex-col items-center justify-center gap-0.5 w-16 h-14
                 transition-colors
-                ${active ? 'text-primary' : 'text-black/50'}
+                ${active ? 'text-secondary' : 'text-black/50'}
               `}
             >
               <span
