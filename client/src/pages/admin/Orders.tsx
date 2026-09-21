@@ -9,7 +9,7 @@ import StatusChip from '../../components/admin/StatusChip'
 import ConfirmDialog, { openConfirm } from '../../components/admin/ConfirmDialog'
 import DeliverDialog, { openConfirm as openDialog } from '../../components/admin/DeliverDialog'
 import { printReceipt as printOrderReceipt } from '../../lib/receipt'
-import { Refresh, Plus, Search, Key, EditPencil, Trash, Notes } from 'iconoir-react'
+import { Refresh, Plus, Search, Key, EditPencil, Trash, Notes, Calculator } from 'iconoir-react'
 import { SkeletonRows } from '../../components/admin/TableSkeleton'
 import { useTableSort } from '../../hooks/useTableSort'
 import { useRowSelection } from '../../hooks/useRowSelection'
@@ -47,6 +47,7 @@ interface AdminOrder {
   fulfillmentType: string
   vaultAvailable: number | null
   status: 'PENDING' | 'PAID' | 'DELIVERED' | 'REJECTED' | 'REFUNDED'
+  refundAmount: number | null
   createdAt: string
   paidAt: string | null
 }
@@ -73,6 +74,23 @@ function formatAge(iso: string): string {
 
 interface ManualVariant { id: string; name: string; price: string | number; requiresDeliveryInfo: boolean }
 
+interface RefundCalcData {
+  amount: number
+  status: string
+  paidAt: string | null
+  claimCount: number
+  claims: { id: string; note: string | null; actorEmail: string | null; claimedAt: string }[]
+  preview: { totalDays: number; usedDays: number; remainingDays: number; tier: string; fee: number; refund: number } | null
+}
+
+const refundTierLabel: Record<string, string> = {
+  under_1_week: 'Pakai < 1 minggu',
+  no_claim: 'Tanpa klaim',
+  claims_1_2: 'Klaim 1-2',
+  claims_3: 'Klaim 3',
+  claims_over_3: 'Klaim > 3',
+}
+
 export default function Orders() {
   const [q, setQ] = useState('')
   const [searchParams, setSearchParams] = useSearchParams()
@@ -93,6 +111,12 @@ export default function Orders() {
   const [bulkBusy, setBulkBusy] = useState(false)
   const [pendingReject, setPendingReject] = useState<AdminOrder | null>(null)
   const [pendingRefund, setPendingRefund] = useState<AdminOrder | null>(null)
+  const [calcOrder, setCalcOrder] = useState<AdminOrder | null>(null)
+  const [calcData, setCalcData] = useState<RefundCalcData | null>(null)
+  const [calcLoading, setCalcLoading] = useState(false)
+  const [calcErr, setCalcErr] = useState<string | null>(null)
+  const [claimNote, setClaimNote] = useState('')
+  const [claimSaving, setClaimSaving] = useState(false)
   const [pendingDeliver, setPendingDeliver] = useState<AdminOrder | null>(null)
   const [receipt, setReceipt] = useState<AdminOrder | null>(null)
   const [manualVariants, setManualVariants] = useState<ManualVariant[]>([])
@@ -281,6 +305,57 @@ export default function Orders() {
     const id = pendingRefund.id
     setPendingRefund(null)
     await handleAction(id, 'refund')
+  }
+
+  // Refund kalkulator: preview math is server-side; the dialog only
+  // displays. Terapkan reuses the existing refund confirm flow.
+  async function loadCalcPreview(orderId: string) {
+    setCalcLoading(true)
+    setCalcErr(null)
+    try {
+      const res = await authedApiRequest((c) => c.api.v1.admin.orders[':id']['refund-preview'].$get({ param: { id: orderId } }))
+      if (!res.ok) {
+        const err = (await res.json().catch(() => ({}))) as { error?: string }
+        throw new Error(err.error || 'Gagal menghitung refund')
+      }
+      setCalcData((await res.json()) as RefundCalcData)
+    } catch (e: unknown) {
+      setCalcErr(e instanceof Error ? e.message : 'Gagal menghitung refund')
+      setCalcData(null)
+    } finally { setCalcLoading(false) }
+  }
+
+  function openCalculator(o: AdminOrder) {
+    setCalcOrder(o)
+    setCalcData(null)
+    setClaimNote('')
+    setCalcErr(null)
+    ;(document.getElementById('refund_calc_modal') as HTMLDialogElement | null)?.showModal()
+    void loadCalcPreview(o.id)
+  }
+
+  async function submitClaim() {
+    if (!calcOrder || claimSaving) return
+    setClaimSaving(true)
+    try {
+      const res = await authedApiRequest((c) => c.api.v1.admin.warranty.$post({ json: { orderId: calcOrder.id, note: claimNote.trim() || undefined } }))
+      if (!res.ok) {
+        const err = (await res.json().catch(() => ({}))) as { error?: string }
+        throw new Error(err.error || 'Gagal mencatat klaim')
+      }
+      setClaimNote('')
+      await loadCalcPreview(calcOrder.id)
+    } catch (e: unknown) {
+      setCalcErr(e instanceof Error ? e.message : 'Gagal mencatat klaim')
+    } finally { setClaimSaving(false) }
+  }
+
+  function applyCalcRefund() {
+    if (!calcOrder) return
+    const o = calcOrder
+    ;(document.getElementById('refund_calc_modal') as HTMLDialogElement | null)?.close()
+    setCalcOrder(null)
+    askRefund(o)
   }
 
   // Manual-order derived state: selected variant, catalog vs final price,
@@ -550,7 +625,9 @@ export default function Orders() {
                 {[o.fulfillmentType === 'on_demand' ? 'On-demand' : 'Vault', stockout ? 'Stok habis' : null].filter(Boolean).join(', ')}
               </td>
               <td className="ad-num text-xs text-[#6e6e73]" title={o.customerEmail ?? o.userId}>{o.customerEmail ?? o.userId.slice(0, 8)}</td>
-              <td className="text-[13px] ad-num font-semibold">Rp {formatIdNumber(o.amount)}</td>
+              <td className="text-[13px] ad-num font-semibold">Rp {formatIdNumber(o.amount)}
+                {o.status === 'REFUNDED' && o.refundAmount != null && <div className="text-[11px] font-normal text-[#dc2626]">Refund Rp {formatIdNumber(o.refundAmount)}</div>}
+              </td>
               <td><StatusChip status={o.status}>{o.status}</StatusChip></td>
               <td className="text-right">
                 <div className="flex justify-end gap-1.5">
@@ -566,8 +643,12 @@ export default function Orders() {
                   {o.status === 'PAID' && (
                     <>
                       <button disabled={actionLoading === o.id} onClick={() => askDeliver(o)} className="ad-btn ad-btn-dark"><EditPencil width={14} height={14} strokeWidth={1.5} />Kirim</button>
+                      <button onClick={() => openCalculator(o)} className="ad-btn"><Calculator width={14} height={14} strokeWidth={1.5} />Kalkulator</button>
                       <button disabled={actionLoading === o.id} onClick={() => askRefund(o)} className="ad-btn ad-btn-danger"><Trash width={14} height={14} strokeWidth={1.5} />Refund</button>
                     </>
+                  )}
+                  {o.status === 'DELIVERED' && (
+                    <button onClick={() => openCalculator(o)} className="ad-btn"><Calculator width={14} height={14} strokeWidth={1.5} />Kalkulator</button>
                   )}
                   {actionLoading === o.id && <span className="loading loading-spinner loading-xs"></span>}
                   {o.status !== 'PENDING' && (
@@ -767,6 +848,54 @@ export default function Orders() {
           void handleDeliver(id, credential)
         }}
       />
+      <dialog id="refund_calc_modal" className="modal">
+        <div className="modal-box ad-dialog max-w-md p-6">
+          <h3 className="font-semibold text-[17px] tracking-tight">Kalkulator Refund</h3>
+          <p className="text-xs text-[#6e6e73] mt-1">{calcOrder ? `${calcOrder.productName} · ${calcOrder.id.slice(0, 8).toUpperCase()}` : ''}</p>
+          {calcLoading ? (
+            <div className="py-8"><div className="h-9 w-full animate-pulse rounded-[8px] bg-[#f1f1f4]" /></div>
+          ) : calcErr ? (
+            <p className="text-xs font-semibold text-red-600 mt-4">{calcErr}</p>
+          ) : calcData && (
+            <div className="mt-4 text-sm ad-num flex flex-col gap-1.5">
+              <div className="flex justify-between"><span className="text-[#6e6e73]">Harga beli</span><span className="font-semibold">Rp {formatIdNumber(calcData.amount)}</span></div>
+              {calcData.preview ? (
+                <>
+                  <div className="flex justify-between"><span className="text-[#6e6e73]">Total durasi</span><span>{calcData.preview.totalDays} hari</span></div>
+                  <div className="flex justify-between"><span className="text-[#6e6e73]">Terpakai</span><span>{calcData.preview.usedDays.toFixed(1)} hari</span></div>
+                  <div className="flex justify-between"><span className="text-[#6e6e73]">Sisa</span><span>{calcData.preview.remainingDays.toFixed(1)} hari</span></div>
+                  <div className="flex justify-between"><span className="text-[#6e6e73]">Klaim garansi</span><span>{calcData.claimCount}x · {refundTierLabel[calcData.preview.tier] ?? calcData.preview.tier} (×{calcData.preview.fee})</span></div>
+                  <div className="flex justify-between border-t-2 border-dashed border-[#e8e8ed] pt-2 mt-1"><span className="font-semibold">Refund</span><span className="font-semibold text-[#dc2626]">Rp {formatIdNumber(calcData.preview.refund)}</span></div>
+                </>
+              ) : (
+                <p className="text-xs text-[#aeaeb2]">Tanpa snapshot durasi — refund manual penuh, nominal dihitung di luar.</p>
+              )}
+              {calcData.claims.length > 0 && (
+                <div className="mt-2 rounded-[10px] border border-[#e8e8ed] max-h-32 overflow-y-auto">
+                  {calcData.claims.map((cl) => (
+                    <div key={cl.id} className="px-3 py-2 border-b border-[#f4f4f5] last:border-0 text-xs">
+                      <div className="flex justify-between gap-2">
+                        <span className="font-medium truncate">{cl.note || 'Rotasi kredensial'}</span>
+                        <span className="text-[#aeaeb2] shrink-0">{new Date(cl.claimedAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                      </div>
+                      {cl.actorEmail && <div className="text-[#aeaeb2] truncate">{cl.actorEmail}</div>}
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="flex gap-2 mt-2">
+                <input type="text" value={claimNote} onChange={(e) => setClaimNote(e.target.value)} placeholder="Catatan klaim (opsional)" maxLength={500} className="ad-input normal-case flex-1" />
+                <button onClick={() => void submitClaim()} disabled={claimSaving} className="ad-btn shrink-0">{claimSaving ? '...' : 'Catat klaim'}</button>
+              </div>
+            </div>
+          )}
+          <div className="flex justify-end gap-2 mt-5">
+            <button onClick={() => (document.getElementById('refund_calc_modal') as HTMLDialogElement | null)?.close()} className="ad-btn">Tutup</button>
+            <button onClick={applyCalcRefund} disabled={!calcData?.preview || calcData.status !== 'PAID' && calcData.status !== 'DELIVERED'} className="ad-btn ad-btn-danger">Terapkan refund</button>
+          </div>
+        </div>
+        <form method="dialog" className="modal-backdrop"><button>close</button></form>
+      </dialog>
       <ConfirmDialog
         id="refund-confirm"
         title="Refund pesanan?"

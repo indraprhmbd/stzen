@@ -45,6 +45,7 @@ function mapOrderRow(r: any): OrderWithProduct {
     amount: String(r.amount),
     createdAt: createdAt.toISOString(),
     paidAt: paidAt ? paidAt.toISOString() : null,
+    refundAmount: r.refund_amount == null ? null : Number(r.refund_amount),
     productName: r.variant_name_snapshot ?? r.base_name_snapshot ?? product?.name ?? 'Produk',
     productCategory: product?.category ?? '',
     durationValue: r.duration_snapshot ?? null,

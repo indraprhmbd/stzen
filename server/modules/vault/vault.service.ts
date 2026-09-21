@@ -2,6 +2,7 @@ import { supabaseAdmin } from '../../shared/db'
 import { getEnv } from '../../shared/lib/runtime-env'
 import { NotFoundError, BadRequestError, ConflictError } from '../../shared/errors/http'
 import { appendAudit, appendAuditMany, claimIdempotencyKey, findAuditByIdempotencyKey, releaseIdempotencyKey } from '../../shared/lib/audit'
+import { insertWarrantyClaim } from '../../shared/lib/warranty'
 import {
   BULK_ROW_LIMIT,
   BULK_TEXT_LIMIT,
@@ -363,6 +364,9 @@ export const vaultService = {
         actorType: 'admin',
       }).catch(() => {})
 
+      // Rotate counts as a warranty claim (single source: warranty_claims).
+      await insertWarrantyClaim(order.id, actor, 'Rotasi kredensial').catch(() => {})
+
       return { oldId, newId: inserted.id }
     }
 
@@ -441,6 +445,9 @@ export const vaultService = {
       actorEmail: actor.email ?? null,
       actorType: 'admin',
     }).catch(() => {})
+
+    // Rotate counts as a warranty claim (single source: warranty_claims).
+    await insertWarrantyClaim(order.id, actor, 'Rotasi kredensial').catch(() => {})
 
     return { oldId, newId }
   },

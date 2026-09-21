@@ -206,6 +206,8 @@ export const orders = pgTable(
       .notNull()
       .defaultNow(),
     paidAt: timestamp('paid_at', { withTimezone: true }),
+    // Applied refund result (0025). NULL = never refunded / legacy full refund.
+    refundAmount: integer('refund_amount'),
     // 0014: writer-owned mirror of Google Calendar reminder truth
     reminderState: text('reminder_state').notNull().default('none'),
   },
@@ -228,4 +230,27 @@ export const orders = pgTable(
     ),
     index('orders_created_at_idx').on(table.createdAt),
   ]
+)
+
+// ─── Warranty claims ────────────────────────────────────────────────────────
+// Explicit per-order claim log (0025). Counts never derive from audit_logs
+// (90d purge would eat history). Rotates (vault replace) write here too,
+// plus a one-time backfill of historical order:replace audits (0026).
+// Server-only: RLS on, zero policies.
+
+export const warrantyClaims = pgTable(
+  'warranty_claims',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    orderId: uuid('order_id')
+      .notNull()
+      .references(() => orders.id, { onDelete: 'cascade' }),
+    note: text('note'),
+    actorId: text('actor_id'),
+    actorEmail: text('actor_email'),
+    claimedAt: timestamp('claimed_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [index('warranty_claims_order_idx').on(table.orderId)]
 )

@@ -20,6 +20,8 @@ export interface Order {
   amount: string
   createdAt: string
   paidAt: string | null
+  // Applied refund result (0025). NULL = never refunded / legacy full refund.
+  refundAmount: number | null
 }
 
 export interface OrderWithProduct extends Order {
@@ -52,7 +54,9 @@ export const VALID_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
   PENDING: ['PAID', 'REJECTED'],
   PAID: ['DELIVERED', 'REFUNDED'],
   REJECTED: [],
-  DELIVERED: [],
+  // DELIVERED→REFUNDED added for the refund calculator (0025): warranty
+  // claims only exist post-delivery; stock release reuses the PAID path.
+  DELIVERED: ['REFUNDED'],
   REFUNDED: [],
 }
 

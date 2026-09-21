@@ -2,6 +2,7 @@ import { supabaseAdmin } from '../db'
 
 export type AuditAction =
   | 'order:create' | 'order:approve' | 'order:reject' | 'order:deliver' | 'order:refund' | 'order:replace' | 'order:update'
+  | 'warranty:claim'
   | 'stock:import'
   | 'vault:unlock' | 'vault:update' | 'vault:delete' | 'vault:revoke'
   | 'product:create' | 'product:update' | 'product:delete'

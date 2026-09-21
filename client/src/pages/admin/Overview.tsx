@@ -8,7 +8,7 @@ import TablePagination from '../../components/admin/TablePagination'
 import StatusChip from '../../components/admin/StatusChip'
 import CopyCell from '../../components/admin/CopyCell'
 import { SkeletonRows, SkeletonCards } from '../../components/admin/TableSkeleton'
-import { Refresh, Cube, Archive, ShoppingBag, GraphUp, Plus, Eye, EyeClosed } from 'iconoir-react'
+import { Refresh, Cube, Archive, ShoppingBag, GraphUp, Plus, Undo, Eye, EyeClosed } from 'iconoir-react'
 import { AreaChart, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell, Area } from 'recharts'
 import { formatIdNumber } from '../../lib/format'
 
@@ -18,6 +18,7 @@ interface Stats {
   pendingOrders: number
   revenue: string
   profit: string
+  refunds: { count: number; total: string }
 }
 
 interface Order {
@@ -166,6 +167,8 @@ export default function Overview() {
   }
   const revenueText = showRevenue && stats?.revenue ? `Rp ${formatIdNumber(stats.revenue)}` : '*****'
   const profitText = showRevenue && stats?.profit ? `Rp ${formatIdNumber(stats.profit)}` : '*****'
+  const refundText = showRevenue && stats?.refunds ? `Rp ${formatIdNumber(stats.refunds.total)}` : '*****'
+  const refundCount = stats?.refunds?.count ?? 0
 
   return (
     <div className="flex flex-col gap-4">
@@ -194,7 +197,7 @@ export default function Overview() {
         </>
       ) : (
       <>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
       <button
         onClick={() => navigate('/admin/orders?status=semua')}
         className="ad-card-flat w-full p-4 sm:p-5 flex items-center gap-3 text-left transition-colors hover:border-[#d1d1d6]"
@@ -254,6 +257,37 @@ export default function Overview() {
           <span className="block text-[10px] sm:text-[11px] font-semibold tracking-wider uppercase text-[#6e6e73] mt-1.5">
             Keuntungan
             <span className="text-[#aeaeb2] normal-case font-normal ml-1">paid + delivered · {rangeLabel}</span>
+          </span>
+        </span>
+      </button>
+      <button
+        onClick={() => navigate('/admin/orders?status=refund')}
+        className="ad-card-flat w-full p-4 sm:p-5 flex items-center gap-3 text-left transition-colors hover:border-[#d1d1d6]"
+      >
+        <span className="ad-squircle">
+          <Undo width={24} height={24} strokeWidth={1.5} />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="flex items-center gap-2">
+            <span className="text-[26px] sm:text-[34px] font-semibold leading-none tracking-tight ad-num break-words text-[#dc2626]">{refundText}</span>
+            <span
+              role="button"
+              tabIndex={0}
+              onClick={(e) => { e.stopPropagation(); setShowRevenue((s) => !s) }}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); setShowRevenue((s) => !s) } }}
+              title={showRevenue ? 'Sembunyikan pendapatan' : 'Tampilkan pendapatan'}
+              aria-label={showRevenue ? 'Sembunyikan pendapatan' : 'Tampilkan pendapatan'}
+              aria-pressed={showRevenue}
+              className="grid h-7 w-7 shrink-0 place-items-center rounded-[7px] text-[#1d1d1f] transition-colors hover:bg-[#f5f5f7]"
+            >
+              {showRevenue
+                ? <Eye width={16} height={16} strokeWidth={1.5} />
+                : <EyeClosed width={16} height={16} strokeWidth={1.5} />}
+            </span>
+          </span>
+          <span className="block text-[10px] sm:text-[11px] font-semibold tracking-wider uppercase text-[#6e6e73] mt-1.5">
+            Refund · {refundCount}x
+            <span className="text-[#aeaeb2] normal-case font-normal ml-1">{rangeLabel}</span>
           </span>
         </span>
       </button>

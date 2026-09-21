@@ -9,6 +9,7 @@ import { adminOverviewRoutes } from './admin.overview.routes'
 import { adminVariantRoutes } from './admin.variants.routes'
 import { adminSettingsRoutes } from './admin.settings.routes'
 import { adminVaultRoutes } from './admin.vault.routes'
+import { adminWarrantyRoutes } from './admin.warranty.routes'
 import { routes as dangerRoutes } from '../danger'
 import { routes as reminderRoutes } from '../reminders'
 
@@ -30,5 +31,6 @@ export const adminRoutes = new Hono()
   .route('/overview', adminOverviewRoutes)
   .route('/settings', adminSettingsRoutes)
   .route('/vault', adminVaultRoutes)
+  .route('/warranty', adminWarrantyRoutes)
   .route('/danger', dangerRoutes)
   .route('/reminders', reminderRoutes)

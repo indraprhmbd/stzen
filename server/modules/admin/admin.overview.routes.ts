@@ -29,6 +29,7 @@ export const adminOverviewRoutes = new Hono<OverviewEnv>()
         { count: totalStock },
         { count: pendingOrders },
         { data: paidOrders },
+        { data: refundedOrders },
         dailySalesRes,
         byStatusRes,
         byCategoryRes,
@@ -39,6 +40,7 @@ export const adminOverviewRoutes = new Hono<OverviewEnv>()
         supabaseAdmin.from('vault_items').select('*', { count: 'estimated', head: true }).eq('status', 'AVAILABLE'),
         supabaseAdmin.from('orders').select('*', { count: 'exact', head: true }).eq('status', 'PENDING'),
         supabaseAdmin.from('orders').select('amount, profit_at_purchase').in('status', ['PAID', 'DELIVERED']).gte('created_at', cutoff),
+        supabaseAdmin.from('orders').select('amount, refund_amount').eq('status', 'REFUNDED').gte('created_at', cutoff),
         supabaseAdmin.from('orders').select('created_at, amount, status, profit_at_purchase').gte('created_at', cutoff),
         supabaseAdmin.from('orders').select('status').gte('created_at', cutoff),
         supabaseAdmin.from('products').select('category, vault_items (id)'),
@@ -106,6 +108,14 @@ export const adminOverviewRoutes = new Hono<OverviewEnv>()
         topProductsMap.set(name, (topProductsMap.get(name) || 0) + 1)
       }
 
+      // Refunds: pre-calculator rows have NULL refund_amount (always full
+      // back then), so fall back to amount — exact for legacy, stored for new.
+      const refunded = refundedOrders || []
+      const refundTotal = refunded.reduce((sum, order) => {
+        const r = (order as any).refund_amount
+        return sum + (r == null ? parseInt((order as any).amount || '0', 10) : parseInt(String(r), 10))
+      }, 0)
+
       return c.json({
         stats: {
           totalProducts: totalProducts || 0,
@@ -113,6 +123,7 @@ export const adminOverviewRoutes = new Hono<OverviewEnv>()
           pendingOrders: pendingOrders || 0,
           revenue: String(revenue),
           profit: String(profit),
+          refunds: { count: refunded.length, total: String(refundTotal) },
         },
         analytics: {
           dailySales: Array.from(dailySalesMap.values()),
@@ -141,7 +152,7 @@ export const adminOverviewRoutes = new Hono<OverviewEnv>()
     } catch (e) {
       console.error('overview composite failed', e)
       return c.json({
-        stats: { totalProducts: 0, totalStock: 0, pendingOrders: 0, revenue: '0', profit: '0' },
+        stats: { totalProducts: 0, totalStock: 0, pendingOrders: 0, revenue: '0', profit: '0', refunds: { count: 0, total: '0' } },
         analytics: { dailySales: [], byStatus: [], byCategory: [], topProducts: [] },
         orders: [],
       })

@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { supabaseAdmin } from '../../shared/db'
 import { type AuthEnv } from '../../shared/middleware/auth'
 import { ordersService, auditOrderApprove } from '../orders/orders.service'
+import { warrantyService } from '../orders/warranty.service'
 import { appendAudit, findAuditByIdempotencyKey } from '../../shared/lib/audit'
 import { normalizeWaNumber } from '../../shared/lib/wa'
 import { BadRequestError } from '../../shared/errors/http'
@@ -264,18 +265,41 @@ export const adminOrderRoutes = new Hono<AdminOrderEnv>()
       const prior = await findAuditByIdempotencyKey(idempotencyKey).catch(() => null)
       if (prior) return c.json(prior)
     }
-    const order = await ordersService.transitionStatus(c.req.param('id'), 'refund')
+    // Refund amount is recomputed server-side (never trusts a client
+    // number). NULL when uncomputable (no duration snapshot) = legacy
+    // full-manual refund; overview falls back to amount in that case.
+    const id = c.req.param('id')
+    let refundAmount: number | null = null
+    try {
+      const preview = await warrantyService.getRefundPreview(id)
+      refundAmount = preview.preview?.refund ?? null
+    } catch {
+      refundAmount = null
+    }
+    const order = await ordersService.transitionStatus(id, 'refund')
+    if (refundAmount != null) {
+      const { error } = await supabaseAdmin
+        .from(ORDERS)
+        .update({ refund_amount: refundAmount })
+        .eq('public_id', id)
+      if (error) throw new Error(error.message)
+    }
     await appendAudit({
       action: 'order:refund',
       resourceType: 'order',
-      resourcePublicId: (order as any).publicId ?? c.req.param('id'),
+      resourcePublicId: (order as any).publicId ?? id,
       resourceName: (order as any).productName ?? '',
-      snapshotText: `Order ${(order as any).publicId ?? c.req.param('id')} PAID->REFUNDED oleh ${user.email ?? user.sub} ${new Date().toLocaleString('id-ID')}`,
+      snapshotText: `Order ${(order as any).publicId ?? id} ->REFUNDED oleh ${user.email ?? user.sub}${refundAmount != null ? ` (Rp ${refundAmount.toLocaleString('id-ID')})` : ''} ${new Date().toLocaleString('id-ID')}`,
       actorId: user.sub,
       actorEmail: user.email ?? null,
       actorType: 'admin',
-      diff: order,
+      diff: { ...(order as any), refundAmount },
       idempotencyKey,
     }).catch((e) => console.error('[audit] admin order action failed', e))
-    return c.json(order)
+    return c.json({ ...(order as any), refundAmount })
+  })
+
+  .get('/:id/refund-preview', async (c) => {
+    const preview = await warrantyService.getRefundPreview(c.req.param('id'))
+    return c.json(preview)
   })
