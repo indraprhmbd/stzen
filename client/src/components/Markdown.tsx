@@ -48,7 +48,7 @@ function Markdown({ source, className }: Props) {
           li: ({ children }) => <li className="pl-1">{children}</li>,
           // GFM task-list checkboxes render read-only.
           input: (props) => <input {...props} readOnly className="mr-1.5 align-[-2px]" />,
-          strong: ({ children }) => <strong className="font-extrabold text-neutral">{children}</strong>,
+          strong: ({ children }) => <strong className="font-bold text-neutral">{children}</strong>,
           em: ({ children }) => <em className="italic">{children}</em>,
           del: ({ children }) => <del className="opacity-60">{children}</del>,
           table: TableWrapper,
