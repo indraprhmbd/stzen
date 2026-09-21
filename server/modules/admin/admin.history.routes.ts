@@ -14,6 +14,8 @@ export const adminHistoryRoutes = new Hono<HistoryEnv>()
     type: z.string().optional(),
     actor: z.enum(['admin', 'user', 'system']).optional(),
     q: z.string().optional(),
+    // Exact order/product public id for per-row timelines (Riwayat dialog).
+    resource: z.string().optional(),
     limit: z.coerce.number().int().min(1).max(100).default(10),
     offset: z.coerce.number().int().min(0).default(0),
     sort: z.string().optional(),
@@ -22,6 +24,7 @@ export const adminHistoryRoutes = new Hono<HistoryEnv>()
     const type = c.req.query('type')
     const actor = c.req.query('actor')
     const q = c.req.query('q')
+    const resource = c.req.query('resource')
     const { limit, offset } = c.req.valid('query')
     const sort = c.req.query('sort') || 'created_at'
     const sortDir = c.req.query('sortDir') || 'desc'
@@ -37,6 +40,9 @@ export const adminHistoryRoutes = new Hono<HistoryEnv>()
     if (q) {
       const like = `%${q}%`
       query = query.or(`resource_public_id.ilike.${like},snapshot_text.ilike.${like},actor_email.ilike.${like}`)
+    }
+    if (resource) {
+      query = query.eq('resource_public_id', resource)
     }
 
     if (sort === 'action') {
@@ -61,6 +67,9 @@ export const adminHistoryRoutes = new Hono<HistoryEnv>()
     if (q) {
       const like = `%${q}%`
       countQuery = countQuery.or(`resource_public_id.ilike.${like},snapshot_text.ilike.${like},actor_email.ilike.${like}`)
+    }
+    if (resource) {
+      countQuery = countQuery.eq('resource_public_id', resource)
     }
 
     const { count } = await countQuery

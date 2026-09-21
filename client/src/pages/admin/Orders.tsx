@@ -9,7 +9,7 @@ import StatusChip from '../../components/admin/StatusChip'
 import ConfirmDialog, { openConfirm } from '../../components/admin/ConfirmDialog'
 import DeliverDialog, { openConfirm as openDialog } from '../../components/admin/DeliverDialog'
 import { printReceipt as printOrderReceipt } from '../../lib/receipt'
-import { Refresh, Plus, Search, Key, EditPencil, Trash, Notes, Calculator } from 'iconoir-react'
+import { Refresh, Plus, Search, Key, EditPencil, Trash, Notes, Calculator, Send, Undo, Clock } from 'iconoir-react'
 import { SkeletonRows } from '../../components/admin/TableSkeleton'
 import { useTableSort } from '../../hooks/useTableSort'
 import { useRowSelection } from '../../hooks/useRowSelection'
@@ -119,6 +119,10 @@ export default function Orders() {
   const [claimSaving, setClaimSaving] = useState(false)
   const [pendingDeliver, setPendingDeliver] = useState<AdminOrder | null>(null)
   const [receipt, setReceipt] = useState<AdminOrder | null>(null)
+  const [timelineOrder, setTimelineOrder] = useState<AdminOrder | null>(null)
+  const [timelineRows, setTimelineRows] = useState<{ action: string; actor_email: string | null; created_at: string; snapshot_text: string }[]>([])
+  const [timelineLoading, setTimelineLoading] = useState(false)
+  const [timelineErr, setTimelineErr] = useState<string | null>(null)
   const [manualVariants, setManualVariants] = useState<ManualVariant[]>([])
   const [mEmail, setMEmail] = useState('')
   const [mAccount, setMAccount] = useState('')
@@ -290,6 +294,33 @@ export default function Orders() {
     ;(document.getElementById('receipt_modal') as HTMLDialogElement | null)?.showModal()
   }
 
+  const timelineActionLabel: Record<string, string> = {
+    'order:create': 'Dibuat',
+    'order:approve': 'Disetujui',
+    'order:reject': 'Ditolak',
+    'order:deliver': 'Dikirim',
+    'order:refund': 'Refund',
+    'order:replace': 'Ganti akses',
+    'order:update': 'Diubah',
+    'warranty:claim': 'Klaim garansi',
+  }
+
+  async function openTimeline(o: AdminOrder) {
+    setTimelineOrder(o)
+    setTimelineRows([])
+    setTimelineErr(null)
+    setTimelineLoading(true)
+    ;(document.getElementById('order_timeline_modal') as HTMLDialogElement | null)?.showModal()
+    try {
+      const res = await authedApiRequest((c) => c.api.v1.admin.history.$get({ query: { resource: o.id, limit: 50 } }))
+      if (!res.ok) throw new Error('Gagal memuat riwayat')
+      const json = (await res.json()) as { data: { action: string; actor_email: string | null; created_at: string; snapshot_text: string }[] }
+      setTimelineRows(json.data ?? [])
+    } catch (e: unknown) {
+      setTimelineErr(e instanceof Error ? e.message : 'Gagal memuat riwayat')
+    } finally { setTimelineLoading(false) }
+  }
+
   function printReceipt() {
     if (!receipt) return
     printOrderReceipt(receipt)
@@ -308,7 +339,7 @@ export default function Orders() {
   }
 
   // Refund kalkulator: preview math is server-side; the dialog only
-  // displays. Terapkan reuses the existing refund confirm flow.
+  // displays. Lanjut ke Refund reuses the existing refund confirm flow.
   async function loadCalcPreview(orderId: string) {
     setCalcLoading(true)
     setCalcErr(null)
@@ -519,7 +550,7 @@ export default function Orders() {
       setMReview(null)
       ;(document.getElementById('manual_modal') as HTMLDialogElement | null)?.close()
       await fetchOrders()
-      setActionMsg(out.allocated ? `Disetujui + dialokasikan: ${out.order.productName}` : 'Disetujui (PAID), lanjut Kirim dari antrean')
+      setActionMsg(out.allocated ? `Disetujui + dialokasikan: ${out.order.productName}` : 'Disetujui (PAID), lanjut Kirim Akses dari antrean')
     } catch (err: unknown) {
       setMError(err instanceof Error ? err.message : 'Gagal menyetujui')
     } finally {
@@ -631,7 +662,7 @@ export default function Orders() {
               <td><StatusChip status={o.status}>{o.status}</StatusChip></td>
               <td className="text-right">
                 <div className="flex justify-end gap-1.5">
-                  {o.variantPublicId && (
+                  {o.variantPublicId && o.status !== 'DELIVERED' && (
                     <button onClick={() => navigate(`/admin/products?tab=stok&variant=${o.variantPublicId}&order=${o.id}`)} title="Lihat stok varian" aria-label="Lihat stok varian" className="ad-btn !px-2.5"><Key width={15} height={15} strokeWidth={1.5} /></button>
                   )}
                   {o.status === 'PENDING' && (
@@ -642,14 +673,20 @@ export default function Orders() {
                   )}
                   {o.status === 'PAID' && (
                     <>
-                      <button disabled={actionLoading === o.id} onClick={() => askDeliver(o)} className="ad-btn ad-btn-dark"><EditPencil width={14} height={14} strokeWidth={1.5} />Kirim</button>
-                      <button onClick={() => openCalculator(o)} className="ad-btn"><Calculator width={14} height={14} strokeWidth={1.5} />Kalkulator</button>
-                      <button disabled={actionLoading === o.id} onClick={() => askRefund(o)} className="ad-btn ad-btn-danger"><Trash width={14} height={14} strokeWidth={1.5} />Refund</button>
+                      <button disabled={actionLoading === o.id} onClick={() => askDeliver(o)} className="ad-btn ad-btn-dark"><Send width={14} height={14} strokeWidth={1.5} />Kirim Akses</button>
+                      <button onClick={() => openCalculator(o)} className="ad-btn"><Calculator width={14} height={14} strokeWidth={1.5} />Hitung Refund</button>
+                      <button disabled={actionLoading === o.id} onClick={() => askRefund(o)} className="ad-btn ad-btn-danger"><Undo width={14} height={14} strokeWidth={1.5} />Refund</button>
                     </>
                   )}
                   {o.status === 'DELIVERED' && (
-                    <button onClick={() => openCalculator(o)} className="ad-btn"><Calculator width={14} height={14} strokeWidth={1.5} />Kalkulator</button>
+                    <>
+                      {o.variantPublicId && (
+                        <button onClick={() => navigate(`/admin/products?tab=stok&variant=${o.variantPublicId}&order=${o.id}`)} title="Buka stok varian untuk ganti kredensial" className="ad-btn ad-btn-dark"><Key width={14} height={14} strokeWidth={1.5} />Ganti Akses</button>
+                      )}
+                      <button onClick={() => openCalculator(o)} className="ad-btn"><Calculator width={14} height={14} strokeWidth={1.5} />Hitung Refund</button>
+                    </>
                   )}
+                  <button onClick={() => openTimeline(o)} className="ad-btn"><Clock width={14} height={14} strokeWidth={1.5} />Riwayat</button>
                   {actionLoading === o.id && <span className="loading loading-spinner loading-xs"></span>}
                   {o.status !== 'PENDING' && (
                     <button onClick={() => openReceipt(o)} className="ad-btn"><Notes width={14} height={14} strokeWidth={1.5} />Struk</button>
@@ -850,7 +887,7 @@ export default function Orders() {
       />
       <dialog id="refund_calc_modal" className="modal">
         <div className="modal-box ad-dialog max-w-md p-6">
-          <h3 className="font-semibold text-[17px] tracking-tight">Kalkulator Refund</h3>
+          <h3 className="font-semibold text-[17px] tracking-tight">Hitung Refund</h3>
           <p className="text-xs text-[#6e6e73] mt-1">{calcOrder ? `${calcOrder.productName} · ${calcOrder.id.slice(0, 8).toUpperCase()}` : ''}</p>
           {calcLoading ? (
             <div className="py-8"><div className="h-9 w-full animate-pulse rounded-[8px] bg-[#f1f1f4]" /></div>
@@ -891,7 +928,7 @@ export default function Orders() {
           )}
           <div className="flex justify-end gap-2 mt-5">
             <button onClick={() => (document.getElementById('refund_calc_modal') as HTMLDialogElement | null)?.close()} className="ad-btn">Tutup</button>
-            <button onClick={applyCalcRefund} disabled={!calcData?.preview || calcData.status !== 'PAID' && calcData.status !== 'DELIVERED'} className="ad-btn ad-btn-danger">Terapkan refund</button>
+            <button onClick={applyCalcRefund} disabled={!calcData?.preview || calcData.status !== 'PAID' && calcData.status !== 'DELIVERED'} className="ad-btn ad-btn-danger">Lanjut ke Refund</button>
           </div>
         </div>
         <form method="dialog" className="modal-backdrop"><button>close</button></form>
@@ -903,6 +940,36 @@ export default function Orders() {
         confirmLabel="Ya, refund"
         onConfirm={confirmRefund}
       />
+      <dialog id="order_timeline_modal" className="modal">
+        <div className="modal-box ad-dialog max-w-md p-6">
+          <h3 className="font-semibold text-[17px] tracking-tight">Riwayat Pesanan</h3>
+          <p className="text-xs text-[#6e6e73] mt-1">{timelineOrder ? `${timelineOrder.productName} · ${timelineOrder.id.slice(0, 8).toUpperCase()}` : ''}</p>
+          {timelineLoading ? (
+            <div className="py-8"><div className="h-9 w-full animate-pulse rounded-[8px] bg-[#f1f1f4]" /></div>
+          ) : timelineErr ? (
+            <p className="text-xs font-semibold text-red-600 mt-4">{timelineErr}</p>
+          ) : timelineRows.length === 0 ? (
+            <p className="text-xs text-[#aeaeb2] mt-4">Belum ada peristiwa tercatat.</p>
+          ) : (
+            <div className="mt-4 rounded-[10px] border border-[#e8e8ed] max-h-80 overflow-y-auto">
+              {timelineRows.map((t, i) => (
+                <div key={i} className="px-3 py-2 border-b border-[#f4f4f5] last:border-0 text-xs">
+                  <div className="flex justify-between gap-2">
+                    <span className="font-semibold">{timelineActionLabel[t.action] ?? t.action}</span>
+                    <span className="text-[#aeaeb2] shrink-0 ad-num">{new Date(t.created_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                  </div>
+                  <div className="text-[#6e6e73] mt-0.5 break-words">{t.snapshot_text}</div>
+                  {t.actor_email && <div className="text-[#aeaeb2] truncate">{t.actor_email}</div>}
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="flex justify-end gap-2 mt-5">
+            <button onClick={() => (document.getElementById('order_timeline_modal') as HTMLDialogElement | null)?.close()} className="ad-btn">Tutup</button>
+          </div>
+        </div>
+        <form method="dialog" className="modal-backdrop"><button>close</button></form>
+      </dialog>
     </div>
   )
 }
