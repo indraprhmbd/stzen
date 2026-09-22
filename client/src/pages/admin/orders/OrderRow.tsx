@@ -94,10 +94,10 @@ export default function OrderRow(props: {
           {o.status === 'PAID' && (
             <button disabled={actions.actionLoading === o.id || stockEmpty} title={stockEmpty ? 'Stok varian kosong' : undefined} onClick={() => actions.askDeliver(o)} className="ad-btn ad-btn-dark"><Send width={14} height={14} strokeWidth={1.5} />Kirim Akses</button>
           )}
-          {o.status === 'DELIVERED' && o.variantPublicId && (
+          {o.status === 'DELIVERED' && o.variantPublicId && o.vaultItemStatus !== 'REVOKED' && (
             <button onClick={() => navigate(`/admin/products?tab=stok&variant=${o.variantPublicId}&order=${o.id}`)} title="Buka stok varian untuk ganti kredensial" className="ad-btn ad-btn-dark"><Key width={14} height={14} strokeWidth={1.5} />Ganti Akses</button>
           )}
-          {(o.status === 'REJECTED' || o.status === 'REFUNDED') && (
+          {(o.status === 'REJECTED' || o.status === 'REFUNDED' || (o.status === 'DELIVERED' && o.vaultItemStatus === 'REVOKED')) && (
             <>
               <button onClick={() => actions.openReceipt(o)} className="ad-btn"><Notes width={14} height={14} strokeWidth={1.5} />Struk</button>
               <button onClick={() => actions.openTimeline(o)} className="ad-btn"><Clock width={14} height={14} strokeWidth={1.5} />Riwayat</button>

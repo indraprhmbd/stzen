@@ -106,7 +106,7 @@ export function blockedReason(o: Pick<AdminOrder, 'status' | 'paymentProvider' |
     return null
   }
   if (o.status === 'DELIVERED' && o.vaultItemStatus === 'REVOKED') {
-    return { text: 'Kredensial dicabut, perlu Ganti Akses', tone: 'red' }
+    return { text: 'Kredensial dicabut', tone: 'red' }
   }
   return null
 }
