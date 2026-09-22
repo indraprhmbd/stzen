@@ -231,7 +231,7 @@ export const ordersService = {
     return { ok: true }
   },
 
-  async create(data: { userId: string; productId?: string | null; variantId?: string; amount: string | number; variantSnapshot?: any; paymentProvider?: string; customerAccount?: string; waNumber?: string }) {
+  async create(data: { userId: string; productId?: string | null; variantId?: string; amount: string | number; variantSnapshot?: any; paymentProvider?: string; customerAccount?: string; waNumber?: string; backorderAllowed?: boolean }) {
     const publicId = generatePublicId()
     const amountInt = typeof data.amount === 'string' ? parseInt(data.amount, 10) : data.amount
     const vs: any = data.variantSnapshot
@@ -278,6 +278,7 @@ export const ordersService = {
         account_type_snapshot: vs?.account_type ?? null,
         conditions_snapshot: vs?.conditions ?? null,
         base_name_snapshot: vs?.base_name ?? (vs?.name ?? null),
+        backorder_allowed: data.backorderAllowed ?? false,
       })
       .select()
       .single()
@@ -353,7 +354,8 @@ export const ordersService = {
         amount,
         variant_id,
         payment_ref,
-        payment_provider
+        payment_provider,
+        backorder_allowed
       `)
       .eq('public_id', publicId)
       .limit(1)
@@ -385,6 +387,7 @@ export const ordersService = {
       paymentRef: row.payment_ref,
       paymentProvider: row.payment_provider,
       fulfillmentType,
+      backorderAllowed: row.backorder_allowed ?? false,
     }
   },
 
@@ -399,7 +402,8 @@ export const ordersService = {
         amount,
         variant_id,
         payment_ref,
-        payment_provider
+        payment_provider,
+        backorder_allowed
       `)
       .or(`payment_ref.eq.${providerRef},public_id.eq.${providerRef}`)
       .limit(1)
@@ -431,6 +435,7 @@ export const ordersService = {
       paymentRef: row.payment_ref,
       paymentProvider: row.payment_provider,
       fulfillmentType,
+      backorderAllowed: row.backorder_allowed ?? false,
     }
   },
 
@@ -565,6 +570,7 @@ export const ordersService = {
         return {
           ...mapOrderRow(r),
           fulfillmentType: productVariant?.fulfillment_type ?? 'vault',
+          backorderAllowed: r.backorder_allowed ?? false,
           variantPublicId: productVariant?.public_id ?? null,
           customerEmail: profile?.email ?? null,
           vaultAvailable: r.variant_id ? stockByVariant.get(r.variant_id) ?? 0 : null,
@@ -596,9 +602,11 @@ export const ordersService = {
 
     let allocated: { id: string; variantId: string | null; productId: string | null } | null = null
 
-    if ((order.fulfillmentType ?? 'vault') === 'on_demand') {
-      const line = (rawCredential ?? '').trim()
-      if (!line) throw new BadRequestError('Credential required for on-demand delivery')
+    const fulfillmentType = order.fulfillmentType ?? 'vault'
+    // Frozen at checkout: vault order that stays buyable at zero stock.
+    const backorderFallback = fulfillmentType === 'vault' && (order.backorderAllowed ?? false)
+
+    const insertManualCredential = async (line: string) => {
       const aesSecret = getEnv('AES_SECRET_KEY')
       if (!aesSecret) throw new Error('AES_SECRET_KEY not configured')
       const key = await importKeyFromBase64(aesSecret)
@@ -625,7 +633,23 @@ export const ordersService = {
 
       if (insertError) throw new Error(insertError.message)
 
-      allocated = { id: inserted.id, variantId: order.variantId, productId: variant?.product_id ?? null }
+      return { id: inserted.id, variantId: order.variantId, productId: variant?.product_id ?? null }
+    }
+
+    if (fulfillmentType === 'on_demand') {
+      const line = (rawCredential ?? '').trim()
+      if (!line) throw new BadRequestError('Credential required for on-demand delivery')
+      allocated = await insertManualCredential(line)
+    } else if (backorderFallback) {
+      // Pool first (covers restocked units); manual credential when dry.
+      console.error('[deliverWithCredential] calling allocateCredential', { variantId: order.variantId, orderId: order.id })
+      allocated = await allocateCredential(order.variantId, order.id)
+      console.error('[deliverWithCredential] allocateCredential result', { variantId: order.variantId, orderId: order.id, allocated })
+      if (!allocated) {
+        const line = (rawCredential ?? '').trim()
+        if (!line) throw new BadRequestError('Stok habis: ketik kredensial manual untuk order backorder')
+        allocated = await insertManualCredential(line)
+      }
     } else {
       console.error('[deliverWithCredential] calling allocateCredential', { variantId: order.variantId, orderId: order.id })
       allocated = await allocateCredential(order.variantId, order.id)
@@ -641,7 +665,7 @@ export const ordersService = {
 
   // Bulk approve: sequential transitionStatus, one approve-audit row per
   // success, per-id skip reasons. Invalid transitions (already PAID etc.)
-  // skip instead of failing the batch — same shape as reminders bulk.
+  // skip instead of failing the batch - same shape as reminders bulk.
   async bulkApprove(ids: string[], actor: BulkActor, deps: BulkApproveDeps = {}): Promise<BulkApproveResult> {
     const run = deps.run ?? ((id: string) => this.transitionStatus(id, 'approve'))
     const audit = deps.audit ?? ((order: any) => auditOrderApprove(order, actor))
@@ -763,5 +787,32 @@ export const ordersService = {
       }
     }
     return { order: paid, allocated: false, priceChanged, contactChanged, refChanged, prevAmount }
+  },
+
+  // Restock FIFO: oldest PAID + backorder_allowed + unallocated orders for
+  // one variant, while the pool covers them. Stops at the first dry
+  // allocation (queue order preserved). Called from stock-import paths;
+  // best-effort - import success never depends on it.
+  async fulfillBackorders(variantId: string): Promise<{ fulfilled: number; pending: number }> {
+    const { data: waiting, error } = await supabaseAdmin
+      .from(ORDERS)
+      .select('id, public_id')
+      .eq('variant_id', variantId)
+      .eq('status', 'PAID')
+      .eq('backorder_allowed', true)
+      .is('vault_item_id', null)
+      .order('created_at', { ascending: true })
+
+    if (error) throw new Error(error.message)
+
+    let fulfilled = 0
+    for (const w of waiting || []) {
+      const got = await allocateCredential(variantId, (w as any).id)
+      if (!got) break
+      await this.setVaultItem((w as any).id, got.id)
+      await this.transitionStatus((w as any).public_id, 'deliver')
+      fulfilled++
+    }
+    return { fulfilled, pending: (waiting || []).length - fulfilled }
   },
 }

@@ -28,6 +28,7 @@ const VariantCreateSchema = z.object({
   accountType: z.string().nullable().optional(),
   conditions: z.string().nullable().optional(),
   fulfillmentType: z.enum(['vault', 'on_demand']).optional().default('vault'),
+  allowBackorder: z.boolean().optional(),
   requiresDeliveryInfo: z.boolean().optional(),
   isActive: z.boolean().optional(),
 })
@@ -45,6 +46,7 @@ const VariantUpdateSchema = z.object({
   accountType: z.string().nullable().optional(),
   conditions: z.string().nullable().optional(),
   fulfillmentType: z.enum(['vault', 'on_demand']).optional(),
+  allowBackorder: z.boolean().optional(),
   requiresDeliveryInfo: z.boolean().optional(),
   isActive: z.boolean().optional(),
 })
@@ -142,6 +144,7 @@ export const adminVariantRoutes = new Hono<VariantEnv>()
         account_type,
         conditions,
         fulfillment_type,
+        allow_backorder,
         requires_delivery_info,
         is_active,
         product_id,
@@ -180,6 +183,7 @@ export const adminVariantRoutes = new Hono<VariantEnv>()
         accountType: v.account_type,
         conditions: v.conditions,
         fulfillmentType: v.fulfillment_type,
+        allowBackorder: v.allow_backorder ?? false,
         requiresDeliveryInfo: v.requires_delivery_info ?? false,
         isActive: v.is_active,
         baseName: product?.name,
@@ -261,6 +265,7 @@ export const adminVariantRoutes = new Hono<VariantEnv>()
         account_type: data.accountType,
         conditions: data.conditions,
         fulfillment_type: data.fulfillmentType ?? 'vault',
+        allow_backorder: data.allowBackorder ?? false,
         requires_delivery_info: data.requiresDeliveryInfo ?? false,
         is_active: data.isActive ?? true,
       })
@@ -357,6 +362,7 @@ export const adminVariantRoutes = new Hono<VariantEnv>()
       if (data.accountType !== undefined) updateData.account_type = data.accountType
       if (data.conditions !== undefined) updateData.conditions = data.conditions
       if (data.fulfillmentType !== undefined) updateData.fulfillment_type = data.fulfillmentType
+      if (data.allowBackorder !== undefined) updateData.allow_backorder = data.allowBackorder
       if (data.requiresDeliveryInfo !== undefined) updateData.requires_delivery_info = data.requiresDeliveryInfo
       if (data.isActive !== undefined) updateData.is_active = data.isActive
       if (data.name !== undefined) updateData.name = data.name

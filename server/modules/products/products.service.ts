@@ -45,6 +45,7 @@ function mapVariantToProduct(variant: any, stockCount: number): ProductWithStock
     isActive: variant.is_active,
     stockCount,
     fulfillmentType: variant.fulfillment_type,
+    allowBackorder: variant.allow_backorder ?? false,
     requiresDeliveryInfo: variant.requires_delivery_info ?? false,
     compareAtPrice: variant.compare_at_price ?? null,
     overview: variant.overview ?? product.overview ?? null,
@@ -67,6 +68,7 @@ function mapVariantToCard(variant: any, stockCount: number): CatalogCard {
     isActive: variant.is_active,
     stockCount,
     fulfillmentType: variant.fulfillment_type,
+    allowBackorder: variant.allow_backorder ?? false,
   }
 }
 
@@ -121,6 +123,7 @@ export const productsService = {
         account_type,
         conditions,
         fulfillment_type,
+        allow_backorder,
         requires_delivery_info,
         is_active,
         product_id,
@@ -157,7 +160,7 @@ export const productsService = {
       if (catA !== catB) return catA.localeCompare(catB)
       return a.name.localeCompare(b.name)
     })
-    return withStock.filter(item => item.stockCount > 0)
+    return withStock.filter(item => item.stockCount > 0 || item.allowBackorder)
   },
 
   async getCategoryCounts(): Promise<{ categories: string[]; counts: Record<string, number> }> {
@@ -166,6 +169,7 @@ export const productsService = {
       .select(`
         id,
         fulfillment_type,
+        allow_backorder,
         products (
           category
         )
@@ -179,7 +183,7 @@ export const productsService = {
 
     const categoryMap = new Map<string, number>()
     for (const variant of variants || []) {
-      const isSellable = variant.fulfillment_type === 'on_demand' || (stockByVariant.get(variant.id) ?? 0) > 0
+      const isSellable = variant.fulfillment_type === 'on_demand' || variant.allow_backorder || (stockByVariant.get(variant.id) ?? 0) > 0
       if (!isSellable) continue
       const cat = pickProductFields(variant).category
       if (!cat) continue
@@ -201,7 +205,8 @@ export const productsService = {
       .select(`
         id,
         tags_effective,
-        fulfillment_type
+        fulfillment_type,
+        allow_backorder
       `)
       .eq('is_active', true)
 
@@ -212,7 +217,7 @@ export const productsService = {
 
     const tagMap = new Map<string, number>()
     for (const variant of variants || []) {
-      const isSellable = variant.fulfillment_type === 'on_demand' || (stockByVariant.get(variant.id) ?? 0) > 0
+      const isSellable = variant.fulfillment_type === 'on_demand' || variant.allow_backorder || (stockByVariant.get(variant.id) ?? 0) > 0
       if (!isSellable) continue
       const effective: string[] = Array.isArray(variant.tags_effective) ? variant.tags_effective : []
       for (const t of effective) tagMap.set(t, (tagMap.get(t) || 0) + 1)
@@ -242,6 +247,7 @@ export const productsService = {
       badge,
       overview,
       fulfillment_type,
+      allow_backorder,
       is_active,
       products (
         id,
@@ -304,9 +310,9 @@ export const productsService = {
     )
 
     if (sort === 'out_of_stock') {
-      withStock = withStock.filter(v => v.fulfillmentType !== 'on_demand' && v.stockCount === 0)
+      withStock = withStock.filter(v => v.fulfillmentType !== 'on_demand' && !v.allowBackorder && v.stockCount === 0)
     } else {
-      withStock = withStock.filter(v => v.fulfillmentType === 'on_demand' || v.stockCount > 0)
+      withStock = withStock.filter(v => v.fulfillmentType === 'on_demand' || v.allowBackorder || v.stockCount > 0)
       if (sort === 'stock') {
         withStock.sort((a, b) => b.stockCount - a.stockCount)
       }
@@ -343,6 +349,7 @@ export const productsService = {
         account_type,
         conditions,
         fulfillment_type,
+        allow_backorder,
         requires_delivery_info,
         is_active,
         product_id,
@@ -433,6 +440,7 @@ export const productsService = {
         account_type,
         conditions,
         fulfillment_type,
+        allow_backorder,
         is_active,
         product_id,
         created_at,
@@ -1005,7 +1013,7 @@ export const basisBulkService = {
 
 // ─── Bulk Status (checkbox selection: activate/deactivate) ────────────────
 // Sequential per-id updates, one update-audit row per success, per-id skip
-// reasons — same shape as orders bulkApprove. Default runners hit the DB
+// reasons - same shape as orders bulkApprove. Default runners hit the DB
 // and mirror the single PUT audit rows; tests inject run/audit stubs.
 
 export interface BulkStatusActor {

@@ -225,6 +225,7 @@ export const adminOrderRoutes = new Hono<AdminOrderEnv>()
       paymentProvider: 'manual',
       customerAccount: finalAccount,
       waNumber: finalWa,
+      backorderAllowed: variant[0]!.allow_backorder ?? false,
       variantSnapshot: {
         name: variant[0]!.name,
         sku: variant[0]!.sku,

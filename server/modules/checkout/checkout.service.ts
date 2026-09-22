@@ -51,14 +51,14 @@ export const checkoutService = {
     // SumoPod floor: gateway rejects invoices below Rp10.000. Enforced on
     // the DB price, never the client payload. Manual orders have no floor.
     // Fee passthrough (dashboard ON: 0.7%+300) is collected by the gateway
-    // on top of base — we invoice base, store base (revenue = net).
+    // on top of base - we invoice base, store base (revenue = net).
     if (paymentMethod === 'sumopod' && Number(variant.price) < SUMOPOD_MIN_AMOUNT_IDR) {
       throw new BadRequestError('QRIS otomatis minimal Rp10.000, gunakan pesanan manual')
     }
 
     const { data: internal, error } = await supabaseAdmin
       .from(PRODUCT_VARIANTS)
-      .select('id, product_id, fulfillment_type, requires_delivery_info')
+      .select('id, product_id, fulfillment_type, allow_backorder, requires_delivery_info')
       .eq('public_id', publicId)
       .limit(1)
 
@@ -67,11 +67,13 @@ export const checkoutService = {
     let internalId: string
     let internalProductId: string | null = null
     let fulfillmentType: string = 'vault'
+    let allowBackorder = false
 
     if (internal && internal.length > 0) {
       internalId = internal[0]!.id
       internalProductId = internal[0]!.product_id
       fulfillmentType = internal[0]!.fulfillment_type
+      allowBackorder = internal[0]!.allow_backorder ?? false
     } else {
       const { data: p, error: pError } = await supabaseAdmin
         .from(PRODUCTS)
@@ -83,7 +85,9 @@ export const checkoutService = {
       internalId = p[0]!.id
     }
 
-    if (fulfillmentType !== 'on_demand') {
+    // Backorder variants stay buyable at zero stock; the flag freezes
+    // onto the order so later variant toggles never retro-change it.
+    if (fulfillmentType !== 'on_demand' && !allowBackorder) {
       const stock = await getStockCount(internalId)
       if (stock === 0) {
         throw new ConflictError('Out of stock')
@@ -112,6 +116,7 @@ export const checkoutService = {
       userId,
       productId: internalProductId,
       variantId: internal ? internalId : undefined,
+      backorderAllowed: internal ? allowBackorder : false,
       amount: variant.price,
       variantSnapshot: variant,
       paymentProvider: paymentMethod,

@@ -17,6 +17,8 @@ export interface Product {
 export interface ProductWithStock extends Product {
   stockCount: number
   fulfillmentType?: string
+  // Vault variant stays buyable at zero stock (admin fulfills manually).
+  allowBackorder?: boolean
   compareAtPrice?: number | null
   // True when the storefront checkout must collect delivery contact
   // (account + WA). Set per variant by admin; product-only rows are false.
@@ -44,6 +46,7 @@ export interface CatalogCard {
   isActive: boolean
   stockCount: number
   fulfillmentType?: string
+  allowBackorder?: boolean
 }
 
 export interface PaginatedCatalog {

@@ -22,6 +22,7 @@ import {
   decrypt,
   type EncryptedPayload,
 } from '../../shared/lib/crypto'
+import { ordersService } from '../orders/orders.service'
 
 const VAULT_ITEMS = 'vault_items'
 const PRODUCTS = 'products'
@@ -86,7 +87,19 @@ export const vaultService = {
       .select()
 
     if (error) throw new Error(error.message)
-    return { imported: inserted?.length || 0, productId: variantOrProductId }
+
+    // Restock FIFO: waiting backorder orders drain the fresh pool oldest
+    // first. Best-effort - import success never depends on it.
+    let backordersFulfilled = 0
+    if (isVariant) {
+      try {
+        const r = await ordersService.fulfillBackorders(variantOrProductId)
+        backordersFulfilled = r.fulfilled
+      } catch {
+        // ignore: orders stay PAID, admin delivers manually
+      }
+    }
+    return { imported: inserted?.length || 0, productId: variantOrProductId, backordersFulfilled }
   },
 
   async decryptCredential(encryptedPayload: string): Promise<string> {
@@ -327,7 +340,7 @@ export const vaultService = {
 
     // Allocate-first: old stays live until replacement exists. Revoke-first
     // orphaned the order on STOK_HABIS / missing credential.
-    // On-demand: validate upfront — never revoke before replacement exists.
+    // On-demand: validate upfront - never revoke before replacement exists.
     if (fulfillmentType === 'on_demand' && !(opts?.credential || '').trim()) {
       throw new ConflictError('ON_DEMAND_REQUIRES_CREDENTIAL')
     }
@@ -416,7 +429,7 @@ export const vaultService = {
       throw new ConflictError('STOK_HABIS: no replacement stock for this variant')
     }
 
-    // Swap: replacement exists — now revoke old + repoint. (RPC path already
+    // Swap: replacement exists - now revoke old + repoint. (RPC path already
     // revoked atomically; re-revoke is idempotent.)
     await supabaseAdmin
       .from(VAULT_ITEMS)
@@ -717,6 +730,22 @@ export const stokBulkService = {
       committed: inserted?.length ?? 0,
       perVariant: [...perVariant.entries()].map(([name, count]) => ({ name, count })),
     }
+    // Restock FIFO across every touched variant. Best-effort per variant.
+    let backordersFulfilled = 0
+    try {
+      const variantIds = [...new Set(valid!.map((d) => String(parents!.get(d.variantRef)!.id)))]
+      for (const vid of variantIds) {
+        try {
+          const r = await ordersService.fulfillBackorders(vid)
+          backordersFulfilled += r.fulfilled
+        } catch {
+          // ignore: orders stay PAID, admin delivers manually
+        }
+      }
+    } catch {
+      // ignore
+    }
+    ;(result as Record<string, unknown>).backordersFulfilled = backordersFulfilled
     await appendAudit({
       action: 'stock:import',
       resourceType: 'stock',
@@ -736,7 +765,7 @@ export const stokBulkService = {
 // 1× fetch rows IN(ids), 1× order refs IN(ids), 1× write IN(eligible),
 // 1× batched audit INSERT. The old sequential per-id loop (4 roundtrips ×
 // N) blew past the Cloudflare free 50-subrequest cap and died mid-batch
-// around item 12 — partial deletes + client timeout. Per-id skip reasons
+// around item 12 - partial deletes + client timeout. Per-id skip reasons
 // preserved in input order; single-statement writes are all-or-nothing so
 // a write failure throws instead of silently half-applying. Default
 // runners hit the DB; tests inject batched stubs.
@@ -860,7 +889,7 @@ export const vaultBulkService = {
       // Mirrors single POST /:id/revoke: delivered or available flip to REVOKED.
       else if (row.status !== 'SOLD' && row.status !== 'AVAILABLE') skipped.push({ id, reason: 'Hanya SOLD atau AVAILABLE yang bisa dicabut' })
       // SOLD rows bound to an order must go through Ganti (revoke+replace),
-      // never bare revoke — otherwise the DELIVERED order is orphaned.
+      // never bare revoke - otherwise the DELIVERED order is orphaned.
       else if (row.status === 'SOLD' && refs.has(id)) skipped.push({ id, reason: 'Terikat order, gunakan Ganti akses' })
       else eligible.push(id)
     }

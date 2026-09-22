@@ -114,6 +114,9 @@ export const productVariants = pgTable(
     accountType: text('account_type'),
     conditions: text('conditions'),
     fulfillmentType: text('fulfillment_type').notNull().default('vault'),
+    // Backorder flag: vault variant stays buyable at zero stock; admin
+    // fulfills from pool when restocked, else manual credential.
+    allowBackorder: boolean('allow_backorder').notNull().default(false),
     requiresDeliveryInfo: boolean('requires_delivery_info').notNull().default(false),
     isActive: boolean('is_active').notNull().default(true),
     deletedAt: timestamp('deleted_at', { withTimezone: true }),
@@ -208,6 +211,9 @@ export const orders = pgTable(
     paidAt: timestamp('paid_at', { withTimezone: true }),
     // Applied refund result (0025). NULL = never refunded / legacy full refund.
     refundAmount: integer('refund_amount'),
+    // Frozen at checkout from product_variants.allow_backorder. Toggling
+    // the variant later never retro-changes open orders.
+    backorderAllowed: boolean('backorder_allowed').notNull().default(false),
     // 0014: writer-owned mirror of Google Calendar reminder truth
     reminderState: text('reminder_state').notNull().default('none'),
   },

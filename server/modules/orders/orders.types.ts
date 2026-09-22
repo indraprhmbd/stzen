@@ -46,6 +46,8 @@ export interface PayableOrder {
   paymentRef: string | null
   paymentProvider: string | null
   fulfillmentType: string | null
+  // Frozen at checkout from product_variants.allow_backorder.
+  backorderAllowed: boolean
 }
 
 // ─── State Machine ──────────────────────────────────────────────────────────
