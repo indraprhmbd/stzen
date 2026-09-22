@@ -48,6 +48,7 @@ export const timelineActionLabel: Record<string, string> = {
   'order:deliver': 'Dikirim',
   'order:refund': 'Refund',
   'order:replace': 'Ganti akses',
+  'vault:revoke': 'Kredensial dicabut',
   'order:update': 'Diubah',
   'order:note': 'Catatan',
   'warranty:claim': 'Klaim garansi',

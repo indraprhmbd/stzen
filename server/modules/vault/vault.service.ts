@@ -322,6 +322,20 @@ export const vaultService = {
       .update({ status: 'REVOKED' })
       .eq('id', oldId)
 
+    // Order-keyed trace: bare vault:revoke rows are keyed by vault row id
+    // (resourceType stock), so the order Riwayat never sees them. This row
+    // lands even when allocation below throws STOK_HABIS — otherwise a
+    // failed Ganti orphans the order with zero history.
+    await appendAudit({
+      action: 'vault:revoke',
+      resourceType: 'order',
+      resourcePublicId: orderPublicId,
+      snapshotText: `Kredensial order dicabut oleh ${actor.email ?? actor.sub}`,
+      actorId: actor.sub,
+      actorEmail: actor.email ?? null,
+      actorType: 'admin',
+    }).catch(() => {})
+
     // Detect fulfillment type
     const { data: variantRow } = await supabaseAdmin
       .from(PRODUCT_VARIANTS)
