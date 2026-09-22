@@ -316,27 +316,7 @@ export const vaultService = {
 
     const oldId = order.vault_item_id
 
-    // Mark old credential revoked first
-    await supabaseAdmin
-      .from(VAULT_ITEMS)
-      .update({ status: 'REVOKED' })
-      .eq('id', oldId)
-
-    // Order-keyed trace: bare vault:revoke rows are keyed by vault row id
-    // (resourceType stock), so the order Riwayat never sees them. This row
-    // lands even when allocation below throws STOK_HABIS — otherwise a
-    // failed Ganti orphans the order with zero history.
-    await appendAudit({
-      action: 'vault:revoke',
-      resourceType: 'order',
-      resourcePublicId: orderPublicId,
-      snapshotText: `Kredensial order dicabut oleh ${actor.email ?? actor.sub}`,
-      actorId: actor.sub,
-      actorEmail: actor.email ?? null,
-      actorType: 'admin',
-    }).catch(() => {})
-
-    // Detect fulfillment type
+    // Detect fulfillment type before any write
     const { data: variantRow } = await supabaseAdmin
       .from(PRODUCT_VARIANTS)
       .select('fulfillment_type')
@@ -345,17 +325,22 @@ export const vaultService = {
 
     const fulfillmentType = variantRow?.[0]?.fulfillment_type || 'vault'
 
-    // On-demand: never use pooled stock; require manual credential
-    if (fulfillmentType === 'on_demand') {
-      const credential = (opts?.credential || '').trim()
-      if (!credential) {
-        throw new ConflictError('ON_DEMAND_REQUIRES_CREDENTIAL')
-      }
+    // Allocate-first: old stays live until replacement exists. Revoke-first
+    // orphaned the order on STOK_HABIS / missing credential.
+    // On-demand: validate upfront — never revoke before replacement exists.
+    if (fulfillmentType === 'on_demand' && !(opts?.credential || '').trim()) {
+      throw new ConflictError('ON_DEMAND_REQUIRES_CREDENTIAL')
+    }
 
+    // Replacement allocation. Old stays SOLD + linked until newId exists.
+    let newId: string | null = null
+
+    // On-demand: never use pooled stock; manual credential (validated above)
+    if (fulfillmentType === 'on_demand') {
       const aesSecret = getEnv('AES_SECRET_KEY')
       if (!aesSecret) throw new Error('AES_SECRET_KEY not configured')
       const key = await importKeyFromBase64(aesSecret)
-      const payload = await encrypt(key, credential)
+      const payload = await encrypt(key, (opts?.credential || '').trim())
 
       const { data: inserted, error: insertError } = await supabaseAdmin
         .from(VAULT_ITEMS)
@@ -369,30 +354,8 @@ export const vaultService = {
         .single()
 
       if (insertError) throw new Error(insertError.message)
-
-      await supabaseAdmin
-        .from(ORDERS)
-        .update({ vault_item_id: inserted.id })
-        .eq('id', order.id)
-
-      await appendAudit({
-        action: 'order:replace',
-        resourceType: 'order',
-        resourcePublicId: orderPublicId,
-        snapshotText: `Kredensial order diganti oleh ${actor.email ?? actor.sub}`,
-        actorId: actor.sub,
-        actorEmail: actor.email ?? null,
-        actorType: 'admin',
-      }).catch(() => {})
-
-      // Rotate counts as a warranty claim (single source: warranty_claims).
-      await insertWarrantyClaim(order.id, actor, 'Rotasi kredensial').catch(() => {})
-
-      return { oldId, newId: inserted.id }
+      newId = inserted.id
     }
-
-    // Vault flow: try RPC, then fallbacks
-    let newId: string | null = null
 
     // 1) Try auto-replace on the same variant
     if (!newId) {
@@ -449,8 +412,28 @@ export const vaultService = {
     }
 
     if (!newId) {
+      // Old untouched: order keeps its working credential, nothing to unwind.
       throw new ConflictError('STOK_HABIS: no replacement stock for this variant')
     }
+
+    // Swap: replacement exists — now revoke old + repoint. (RPC path already
+    // revoked atomically; re-revoke is idempotent.)
+    await supabaseAdmin
+      .from(VAULT_ITEMS)
+      .update({ status: 'REVOKED' })
+      .eq('id', oldId)
+
+    // Order-keyed trace: bare vault:revoke rows carry the vault row id, so
+    // the order Riwayat never sees them.
+    await appendAudit({
+      action: 'vault:revoke',
+      resourceType: 'order',
+      resourcePublicId: orderPublicId,
+      snapshotText: `Kredensial order dicabut oleh ${actor.email ?? actor.sub}`,
+      actorId: actor.sub,
+      actorEmail: actor.email ?? null,
+      actorType: 'admin',
+    }).catch(() => {})
 
     await supabaseAdmin
       .from(ORDERS)
