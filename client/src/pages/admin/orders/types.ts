@@ -11,6 +11,7 @@ export interface AdminOrder {
   customerAccount: string
   waNumber: string
   fulfillmentType: string
+  backorderAllowed: boolean
   vaultAvailable: number | null
   status: 'PENDING' | 'PAID' | 'DELIVERED' | 'REJECTED' | 'REFUNDED'
   refundAmount: number | null
@@ -78,7 +79,7 @@ export const refundTierLabel: Record<string, string> = {
 }
 
 // Blocked-reason for the Butuh Tindakan queue. Stock state belongs to the
-// variant, not the order — so instead of a "stok habis" badge on the row,
+// variant, not the order - so instead of a "stok habis" badge on the row,
 // the row says why it can't move: this orderId is stuck because of what.
 // Returns null when the row needs nothing (ready / terminal / waiting well).
 export interface BlockedReason {
@@ -86,7 +87,7 @@ export interface BlockedReason {
   tone: 'red' | 'amber' | 'neutral'
 }
 
-export function blockedReason(o: Pick<AdminOrder, 'status' | 'paymentProvider' | 'fulfillmentType' | 'variantId' | 'vaultAvailable' | 'vaultItemStatus' | 'createdAt'>): BlockedReason | null {
+export function blockedReason(o: Pick<AdminOrder, 'status' | 'paymentProvider' | 'fulfillmentType' | 'backorderAllowed' | 'variantId' | 'vaultAvailable' | 'vaultItemStatus' | 'createdAt'>): BlockedReason | null {
   if (o.status === 'PENDING') {
     if (o.paymentProvider === 'manual' || o.paymentProvider == null) {
       return { text: 'Perlu review manual', tone: 'amber' }
@@ -101,6 +102,11 @@ export function blockedReason(o: Pick<AdminOrder, 'status' | 'paymentProvider' |
       return { text: 'Varian tidak tertaut', tone: 'red' }
     }
     if ((o.vaultAvailable ?? 0) === 0) {
+      // Frozen at checkout: backorder orders are never stuck - admin types
+      // the credential manually (or restocks and the FIFO hook delivers).
+      if (o.backorderAllowed) {
+        return { text: 'Butuh input kredensial backorder', tone: 'amber' }
+      }
       return { text: 'Stok varian kosong, tambah stok dulu', tone: 'red' }
     }
     return null

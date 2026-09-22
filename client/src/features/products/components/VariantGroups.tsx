@@ -15,8 +15,9 @@ import BulkImportDialog, { varianBulkConfig } from './BulkImportDialog'
 import type { Variant, VariantGroup } from '../types'
 import { formatIdNumber } from '../../../lib/format'
 
-function stockTone(v: { fulfillmentType: string; stockCount: number }): { tone: ChipTone; label: string } {
+function stockTone(v: { fulfillmentType: string; stockCount: number; allowBackorder?: boolean }): { tone: ChipTone; label: string } {
   if (v.fulfillmentType === 'on_demand') return { tone: 'emerald', label: 'Tersedia' }
+  if (v.stockCount === 0 && v.allowBackorder) return { tone: 'amber', label: 'Indent' }
   if (v.stockCount === 0) return { tone: 'dark', label: '0' }
   if (v.stockCount < 5) return { tone: 'amber', label: String(v.stockCount) }
   return { tone: 'zinc', label: String(v.stockCount) }

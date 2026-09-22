@@ -22,6 +22,7 @@ type Product = {
   isActive: boolean
   stockCount: number
   fulfillmentType?: string
+  allowBackorder?: boolean
 }
 
 type PaginatedResult = {

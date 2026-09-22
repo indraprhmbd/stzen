@@ -4,14 +4,16 @@ import { openConfirm, closeConfirm } from './ConfirmDialog'
 interface DeliverDialogProps {
   id: string
   productName: string
+  title?: string
   onConfirm: (credential: string) => void
 }
 
 export { openConfirm }
 
-// On-demand delivery dialog: collects the credential that the server imports,
-// allocates, and delivers atomically. Vault orders skip this dialog entirely.
-export default function DeliverDialog({ id, productName, onConfirm }: DeliverDialogProps) {
+// Credential dialog: collects the credential that the server imports,
+// allocates, and delivers atomically. Vault orders with pool stock skip
+// this dialog entirely; backorder-at-zero orders land here too.
+export default function DeliverDialog({ id, productName, title, onConfirm }: DeliverDialogProps) {
   const [credential, setCredential] = useState('')
   const [error, setError] = useState<string | null>(null)
 
@@ -31,7 +33,7 @@ export default function DeliverDialog({ id, productName, onConfirm }: DeliverDia
     <dialog id={id} className="modal">
       <div className="modal-box ad-dialog max-w-md p-6">
         <h3 className="font-semibold text-[17px] tracking-tight text-[#1d1d1f]">
-          Kirim on-demand
+          {title ?? 'Kirim on-demand'}
         </h3>
         <p className="text-sm text-[#6e6e73] mt-2">
           {productName}. Kredensial diimpor ke vault lalu dialokasikan ke pesanan ini dalam satu aksi.

@@ -111,6 +111,12 @@ export default function VariantDialog({ products, form: v, onImportNow }: Props)
           </div>
           <RupiahInput label="Harga Coret (opsional)" value={v.vCompareAt} onChange={v.setVCompareAt} placeholder="60000" hint="Tampil dicoret bila lebih besar dari harga" />
           <label className="ad-label">Pemenuhan<select value={v.vFulfillmentType} onChange={(e) => v.setVFulfillmentType(e.target.value === 'on_demand' ? 'on_demand' : 'vault')} className="ad-input mt-1.5 normal-case"><option value="vault">Gudang</option><option value="on_demand">On Demand</option></select><p className="text-[11px] text-[#aeaeb2] mt-1">{v.vFulfillmentType === 'on_demand' ? 'Selalu tersedia, tanpa impor stok' : 'Perlu impor kredensial ke vault'}</p></label>
+          {v.vFulfillmentType === 'vault' && (
+            <label className="ad-input flex items-center gap-3 cursor-pointer">
+              <input type="checkbox" checked={v.vAllowBackorder} onChange={(e) => v.setVAllowBackorder(e.target.checked)} className="checkbox checkbox-sm rounded-full" />
+              <span className="ad-label">Tetap jual saat stok habis (indent)<span className="block text-[11px] text-[#aeaeb2] font-normal normal-case">Stok 0 tidak jadi Stok Habis; order menunggu, penuhi manual atau saat restok</span></span>
+            </label>
+          )}
           <label className="ad-input flex items-center gap-3 cursor-pointer">
             <input type="checkbox" checked={v.vRequiresDeliveryInfo} onChange={(e) => v.setVRequiresDeliveryInfo(e.target.checked)} className="checkbox checkbox-sm rounded-full" />
             <span className="ad-label">Minta akun + WA saat checkout</span>

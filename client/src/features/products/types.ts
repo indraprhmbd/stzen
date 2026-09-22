@@ -26,6 +26,7 @@ export interface Variant {
   accountType: string | null
   conditions: string | null
   fulfillmentType: string
+  allowBackorder?: boolean
   requiresDeliveryInfo: boolean
   isActive: boolean
   stockCount: number

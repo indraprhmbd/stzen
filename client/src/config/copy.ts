@@ -13,7 +13,7 @@ export interface Copy {
   }
   hero: { title1: string; title2: string; tagline: string; cta: string; cardTitle1: string; cardTitle2: string; cardTagline: string; statusPill: string; searchPlaceholder: string; searchHint: string }
   marquee: string[]
-  products: { title: string; buy: string; buyNow: string; soldOut: string; inStock: string; onlyXLeft: string; outOfStock: string; sortNewest: string; sortPrice: string; sortStock: string; sortOutOfStock: string; viewGrid: string; viewList: string; verifiedBuyer: string; loginForMore: string; confirmTitle: string; confirmNote: string; confirmCancel: string; confirmGo: string; confirmPlace: string; processing: string; methodTitle: string; methodAutoMin: string; methodManualHours: string; methodAuto: string; methodAutoDesc: string; methodManual: string; methodManualDesc: string; accountLabel: string; accountPlaceholder: string; waLabel: string; waPlaceholder: string; errAccount: string; errWa: string; termsAgree: string; termsShow: string; errTerms: string; manualPlaced: string; manualPlacedNote: string; waConfirm: string; waConfirmText: string; feeLabel: string; viewCategory: string; viewBadge: string; askAdmin: string; askAdminText: string }
+  products: { title: string; buy: string; buyNow: string; soldOut: string; inStock: string; backorder: string; onlyXLeft: string; outOfStock: string; sortNewest: string; sortPrice: string; sortStock: string; sortOutOfStock: string; viewGrid: string; viewList: string; verifiedBuyer: string; loginForMore: string; confirmTitle: string; confirmNote: string; confirmCancel: string; confirmGo: string; confirmPlace: string; processing: string; methodTitle: string; methodAutoMin: string; methodManualHours: string; methodAuto: string; methodAutoDesc: string; methodManual: string; methodManualDesc: string; accountLabel: string; accountPlaceholder: string; waLabel: string; waPlaceholder: string; errAccount: string; errWa: string; termsAgree: string; termsShow: string; errTerms: string; manualPlaced: string; manualPlacedNote: string; waConfirm: string; waConfirmText: string; feeLabel: string; viewCategory: string; viewBadge: string; askAdmin: string; askAdminText: string }
   howItWorks: { title: string; steps: { num: string; title: string; desc: string }[] }
   whyUs: { title: string; items: { title: string; desc: string }[] }
   testimonials: { title: string; items: { quote: string; name: string; product: string }[] }
@@ -66,6 +66,7 @@ const id: Copy = {
     buyNow: 'BELI SEKARANG',
     soldOut: 'Habis',
     inStock: 'Stok Tersedia',
+    backorder: 'Indent - tetap bisa dipesan',
     onlyXLeft: 'Sisa',
     outOfStock: 'Habis',
     sortNewest: 'Terbaru',
@@ -232,7 +233,7 @@ const id: Copy = {
         rows: [
           ['< 7 hari', 'Berapa pun', '× 0.8'],
           ['≥ 7 hari', '0', '× 0.7'],
-          ['≥ 7 hari', '1–2', '× 0.6'],
+          ['≥ 7 hari', '1-2', '× 0.6'],
           ['≥ 7 hari', '3', '× 0.5'],
           ['≥ 7 hari', '> 3', '× 0.4'],
         ],
@@ -274,6 +275,7 @@ const en: Copy = {
     buyNow: 'BUY NOW',
     soldOut: 'Sold Out',
     inStock: 'In Stock',
+    backorder: 'Backorder - still orderable',
     onlyXLeft: 'Only',
     outOfStock: 'Out of Stock',
     sortNewest: 'Newest',
@@ -440,7 +442,7 @@ const en: Copy = {
         rows: [
           ['< 7 days', 'Any', '× 0.8'],
           ['≥ 7 days', '0', '× 0.7'],
-          ['≥ 7 days', '1–2', '× 0.6'],
+          ['≥ 7 days', '1-2', '× 0.6'],
           ['≥ 7 days', '3', '× 0.5'],
           ['≥ 7 days', '> 3', '× 0.4'],
         ],

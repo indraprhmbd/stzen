@@ -252,6 +252,7 @@ export default function Orders() {
       <DeliverDialog
         id="deliver-dialog"
         productName={rowActions.pendingDeliver?.productName ?? ''}
+        title={rowActions.pendingDeliver?.fulfillmentType === 'on_demand' ? undefined : 'Kirim backorder'}
         onConfirm={(credential) => {
           if (!rowActions.pendingDeliver) return
           const id = rowActions.pendingDeliver.id

@@ -13,6 +13,7 @@ type Product = {
   price: string
   stockCount: number
   fulfillmentType?: string
+  allowBackorder?: boolean
 }
 
 interface SearchOverlayProps {
@@ -138,7 +139,7 @@ export default function SearchOverlay({ open, onClose }: SearchOverlayProps) {
           {!loading && results.length > 0 && (
             <div className="flex flex-col gap-1">
               {results.map((product) => {
-                const inStock = product.fulfillmentType === 'on_demand' || product.stockCount > 0
+                const inStock = product.fulfillmentType === 'on_demand' || (product.allowBackorder ?? false) || product.stockCount > 0
                 return (
                   <button
                     key={product.id}

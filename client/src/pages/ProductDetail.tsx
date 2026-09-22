@@ -29,6 +29,7 @@ type Product = {
   badge: string | null
   stockCount: number
   fulfillmentType?: string
+  allowBackorder?: boolean
   isActive: boolean
   requiresDeliveryInfo?: boolean
 }
@@ -109,7 +110,7 @@ export default function ProductDetail() {
             const products = Array.isArray(relData) ? relData : relData.products || []
             const filtered = products
               .filter((p: Product) => p.id !== data.id)
-              .filter((p: Product) => p.fulfillmentType === 'on_demand' || (p.stockCount ?? 0) > 0)
+              .filter((p: Product) => p.fulfillmentType === 'on_demand' || (p.allowBackorder ?? false) || (p.stockCount ?? 0) > 0)
               .slice(0, 4)
             setRelated(filtered)
           }
@@ -272,7 +273,8 @@ export default function ProductDetail() {
   if (!product) return <Layout><div className="text-center py-16"><p>Produk tidak ditemukan</p><Link to="/products" className="btn btn-sm mt-4">Kembali</Link></div></Layout>
 
   const isOnDemand = product.fulfillmentType === 'on_demand'
-  const inStock = isOnDemand || product.stockCount > 0
+  const isBackorder = !isOnDemand && (product.allowBackorder ?? false) && product.stockCount === 0
+  const inStock = isOnDemand || product.stockCount > 0 || isBackorder
   const pct = (() => {
     const p = Number(product.price)
     const c = product.compareAtPrice == null ? NaN : Number(product.compareAtPrice)
@@ -327,6 +329,10 @@ export default function ProductDetail() {
             {isOnDemand ? (
               <span className="bg-accent text-neutral font-black text-xs border-2 border-black px-2.5 py-1 rotate-1">
                 {t.products.inStock}
+              </span>
+            ) : isBackorder ? (
+              <span className="bg-secondary text-white font-black text-xs border-2 border-black px-2.5 py-1 -rotate-1">
+                {t.products.backorder}
               </span>
             ) : product.stockCount === 0 ? (
               <span className="bg-error text-white font-black text-xs border-2 border-black px-2.5 py-1 -rotate-1">

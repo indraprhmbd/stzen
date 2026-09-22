@@ -142,7 +142,9 @@ export function useOrderRowActions(opts: {
   }
 
   function askDeliver(o: AdminOrder) {
-    if (o.fulfillmentType === 'on_demand') {
+    // On-demand always needs the credential dialog. Backorder-at-zero too
+    // (server falls back to manual); pool-covered orders deliver directly.
+    if (o.fulfillmentType === 'on_demand' || (o.backorderAllowed && (o.vaultAvailable ?? 0) === 0)) {
       setPendingDeliver(o)
       openDialog('deliver-dialog')
     } else {

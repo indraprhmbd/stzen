@@ -16,6 +16,7 @@ interface Product {
   isActive: boolean
   stockCount: number
   fulfillmentType?: string
+  allowBackorder?: boolean
 }
 
 interface ProductCardProps {
@@ -49,14 +50,17 @@ function ProductCard({ product, index = 0, onBuy, view = 'grid' }: ProductCardPr
   const { t } = useCopy()
   const isMobile = useIsMobile()
   const isOnDemand = product.fulfillmentType === 'on_demand'
-  const inStock = isOnDemand || product.stockCount > 0
+  const isBackorder = !isOnDemand && (product.allowBackorder ?? false) && product.stockCount === 0
+  const inStock = isOnDemand || product.stockCount > 0 || isBackorder
   const statusLabel = !inStock
     ? t.products.soldOut
-    : isOnDemand
-      ? 'On Demand'
-      : product.stockCount <= 3
-        ? `⚡ ${product.stockCount} LEFT`
-        : t.products.inStock
+    : isBackorder
+      ? t.products.backorder
+      : isOnDemand
+        ? 'On Demand'
+        : product.stockCount <= 3
+          ? `⚡ ${product.stockCount} LEFT`
+          : t.products.inStock
   const pct = discountPct(product.price, product.compareAtPrice)
 
   // ═══ MOBILE: vertical card ═══

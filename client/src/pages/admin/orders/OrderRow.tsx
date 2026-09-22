@@ -10,7 +10,7 @@ import { formatAge, blockedReason, orderColumns } from './types'
 
 // NOTE: DataTable's thead hides below sm (app.css card view) and per-cell
 // data-labels take over as the "headers". DataTable can only stamp plain
-// <tr>/Fragment/SelectableRow children — this wrapper component is opaque
+// <tr>/Fragment/SelectableRow children - this wrapper component is opaque
 // to it, so each <td> carries its own data-label from orderColumns (same
 // array as the desktop headers, so labels can never drift).
 
@@ -36,7 +36,7 @@ export default function OrderRow(props: {
   const navigate = useNavigate()
   const overdue = (o.status === 'PENDING' || o.status === 'PAID') && Date.now() - new Date(o.createdAt).getTime() > 24 * 3600 * 1000
   const blocked = blockedReason(o)
-  const stockEmpty = o.status === 'PAID' && o.fulfillmentType !== 'on_demand' && o.variantId != null && (o.vaultAvailable ?? 0) === 0
+  const stockEmpty = o.status === 'PAID' && o.fulfillmentType !== 'on_demand' && !o.backorderAllowed && o.variantId != null && (o.vaultAvailable ?? 0) === 0
   const blockedTone = blocked?.tone === 'red' ? 'text-red-600' : blocked?.tone === 'amber' ? 'text-amber-700' : 'text-[#aeaeb2]'
 
   return (
