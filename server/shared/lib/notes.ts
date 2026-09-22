@@ -1,4 +1,5 @@
 import { supabaseAdmin } from '../db'
+import { NotFoundError } from '../errors/http'
 
 // Operator notes per order (spec docs/orders-overhaul2026-09-21.md Phase 3).
 // Ticket-style annotations: handover context, buyer promises, follow-ups.
@@ -12,10 +13,11 @@ export interface OrderNote {
 }
 
 export async function insertOrderNote(
-  orderId: string,
+  publicId: string,
   note: string,
   actor: { sub: string; email?: string | null }
 ): Promise<OrderNote> {
+  const orderId = await resolveOrderDbId(publicId)
   const { data, error } = await supabaseAdmin
     .from('order_notes')
     .insert({
@@ -35,7 +37,8 @@ export async function insertOrderNote(
   }
 }
 
-export async function listOrderNotes(orderId: string): Promise<OrderNote[]> {
+export async function listOrderNotes(publicId: string): Promise<OrderNote[]> {
+  const orderId = await resolveOrderDbId(publicId)
   const { data, error } = await supabaseAdmin
     .from('order_notes')
     .select('id, note, actor_email, created_at')
@@ -48,6 +51,19 @@ export async function listOrderNotes(orderId: string): Promise<OrderNote[]> {
     actorEmail: r.actor_email ?? null,
     createdAt: r.created_at,
   }))
+}
+
+// Admin routes carry public_id; order_notes.order_id is the db uuid FK.
+// Resolve first — raw public_id in .eq('order_id') throws uuid syntax error.
+async function resolveOrderDbId(publicId: string): Promise<string> {
+  const { data, error } = await supabaseAdmin
+    .from('orders')
+    .select('id')
+    .eq('public_id', publicId)
+    .limit(1)
+  if (error) throw new Error(error.message)
+  if (!data || data.length === 0) throw new NotFoundError('Order tidak ditemukan')
+  return (data[0] as any).id
 }
 
 // Batched per-order counts for a list page. One query per table,
