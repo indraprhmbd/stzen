@@ -59,3 +59,16 @@ export class WebhookCaptureError extends Error {
     this.headers = headers
   }
 }
+
+// ─── Webhook Test Ping ──────────────────────────────────────────────────────
+// Thrown by a provider's parseWebhook for the gateway dashboard's synthetic
+// connectivity ping (SumoPod: event_type=payment.test). Carries no order, no
+// amount - nothing to fulfill. webhooks.routes.ts answers 200 { ok, test }
+// so the dashboard shows success. Verified signature/token first inside
+// parseWebhook, same as real events - never an unauthenticated 200.
+export class WebhookTestPingError extends Error {
+  constructor(provider: string, eventType: string) {
+    super(`[${provider}] webhook test ping acknowledged (${eventType})`)
+    this.name = 'WebhookTestPingError'
+  }
+}

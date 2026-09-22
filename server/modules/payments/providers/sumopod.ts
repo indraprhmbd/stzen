@@ -1,5 +1,5 @@
 import type { PaymentProvider, WebhookResult } from '../payments.types'
-import { WebhookCaptureError } from '../payments.types'
+import { WebhookCaptureError, WebhookTestPingError } from '../payments.types'
 import { ForbiddenError, BadRequestError, ConflictError } from '../../../shared/errors/http'
 import { verifySvixSignature, verifyWebhookToken } from '../../../shared/lib/hmac'
 import { getEnv } from '../../../shared/lib/runtime-env'
@@ -149,6 +149,11 @@ export const sumopodProvider: PaymentProvider = {
       throw new BadRequestError('SumoPod webhook body is not valid JSON')
     }
     const eventType: string | undefined = body?.event_type
+    // Dashboard connectivity ping: verified above, carries no order.
+    // Answered 200 no-op by webhooks.routes.ts.
+    if (eventType === 'payment.test') {
+      throw new WebhookTestPingError('sumopod', eventType)
+    }
     const outcome = eventType ? OUTCOME[eventType] : undefined
     if (!outcome) {
       // Test pings and future unknown events: acknowledge nothing to process.

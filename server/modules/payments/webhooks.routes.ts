@@ -1,6 +1,6 @@
 import { Hono } from 'hono'
 import { paymentsService } from './payments.service'
-import { WebhookCaptureError } from './payments.types'
+import { WebhookCaptureError, WebhookTestPingError } from './payments.types'
 
 // ─── Webhook Routes (PUBLIC) ─────────────────────────────────────────────────
 // No authMiddleware - gateways call these directly, they can't send a
@@ -24,6 +24,10 @@ export const webhooksRoutes = new Hono()
     if (e instanceof WebhookCaptureError) {
       console.warn(`[webhook-capture] ${e.message} headers=${JSON.stringify(e.headers)} body=${e.raw.slice(0, 2000)}`)
       return c.json({ ok: true, captured: true })
+    }
+    // Gateway dashboard connectivity ping - verified upstream, no-op.
+    if (e instanceof WebhookTestPingError) {
+      return c.json({ ok: true, test: true })
     }
     throw e
   }
