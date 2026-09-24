@@ -1,4 +1,5 @@
 import type { Context } from 'hono'
+import { supabaseAdmin } from '../../shared/db'
 import { ordersService } from '../orders/orders.service'
 import { allocateCredential } from '../../shared/lib/db-helpers'
 import { appendAudit, claimIdempotencyKey, findAuditByIdempotencyKey } from '../../shared/lib/audit'
@@ -75,17 +76,12 @@ export const paymentsService = {
     const provider = getProvider(providerName)
     const parsed = await provider.parseWebhook(c)
 
-    // Event id is mandatory (providers reject deliveries without one). Claim
-    // first: unique violation means retried or replayed delivery, return the
-    // stored outcome instead of re-running fulfillment.
+    // Event id is mandatory (providers reject deliveries without one). Order
+    // lookup and amount validation run before the claim, so unknown orders
+    // and mismatched callbacks never poison retries. Concurrent duplicates
+    // still serialize on the claim below; losers replay the stored outcome.
     if (!parsed.eventId) {
       throw new BadRequestError('Webhook event is missing event id')
-    }
-    const idempotencyKey = `webhook:${providerName}:${parsed.eventId}`
-    const claimed = await claimIdempotencyKey(idempotencyKey).catch(() => null)
-    if (claimed === false) {
-      const prior = await findAuditByIdempotencyKey(idempotencyKey).catch(() => null)
-      return prior ?? { status: 'duplicate', skipped: true }
     }
 
     const order = await ordersService.findPayableByProviderRef(parsed.providerRef)
@@ -109,12 +105,39 @@ export const paymentsService = {
       }
     }
 
+    const idempotencyKey = `webhook:${providerName}:${parsed.eventId}`
+    const claimed = await claimIdempotencyKey(idempotencyKey).catch(() => null)
+    if (claimed === false) {
+      const prior = await findAuditByIdempotencyKey(idempotencyKey).catch(() => null)
+      return prior ?? { status: 'duplicate', skipped: true }
+    }
+
+    const { data: orderLink, error: linkError } = await supabaseAdmin
+      .from('orders')
+      .select('cart_id')
+      .eq('id', order.id)
+      .limit(1)
+    if (linkError) throw new Error(linkError.message)
+    const cartId = (orderLink?.[0] as any)?.cart_id ?? null
+
     let result: Record<string, unknown>
     if (order.status !== 'PENDING') {
       // Already processed (retried webhook, or admin acted first). Idempotent no-op.
       result = { status: order.status, skipped: true }
     } else if (parsed.outcome === 'paid') {
-      result = await this.fulfillPaidOrder(order)
+      result = cartId ? await this.fulfillCartPaidOrder(order) : await this.fulfillPaidOrder(order)
+    } else if (cartId) {
+      await this.releaseCartReservation(order, cartId, parsed.outcome)
+      try {
+        const updated = await ordersService.transitionStatus(order.publicId, 'reject')
+        result = { status: updated.status }
+      } catch (e) {
+        if (e instanceof ConflictError) {
+          result = { status: 'REJECTED', skipped: true }
+        } else {
+          throw e
+        }
+      }
     } else {
       const updated = await ordersService.transitionStatus(order.publicId, 'reject')
       result = { status: updated.status }
@@ -167,5 +190,124 @@ export const paymentsService = {
     await ordersService.setVaultItem(order.id, allocated.id)
     const delivered = await ordersService.transitionStatus(order.publicId, 'deliver')
     return { status: delivered.status, allocated: true }
+  },
+
+  async fulfillCartPaidOrder(order: PayableOrder): Promise<Record<string, unknown>> {
+    const claimed = await ordersService.claimPaid(order.publicId)
+    if (!claimed) {
+      const current = await ordersService.getById(order.publicId).catch(() => null)
+      return { status: current?.status ?? order.status, skipped: true }
+    }
+
+    const { data: units, error: unitsError } = await supabaseAdmin
+      .from('order_units')
+      .select('id,status,vault_item_id')
+      .eq('order_id', order.id)
+      .order('position')
+    if (unitsError) throw new Error(unitsError.message)
+    if (!units || units.length === 0) throw new Error('Cart order has no units')
+
+    let delivered = 0
+    for (const unit of units) {
+      if (unit.status !== 'RESERVED' || !unit.vault_item_id) continue
+      const { error: vaultError } = await supabaseAdmin
+        .from('vault_items')
+        .update({
+          status: 'SOLD',
+          allocated_at: new Date().toISOString(),
+          reserved_order_unit_id: null,
+          reserved_at: null,
+          reservation_expires_at: null,
+        })
+        .eq('id', unit.vault_item_id)
+        .eq('status', 'RESERVED')
+      if (vaultError) throw new Error(vaultError.message)
+      const { error: unitError } = await supabaseAdmin
+        .from('order_units')
+        .update({ status: 'DELIVERED', delivered_at: new Date().toISOString() })
+        .eq('id', unit.id)
+        .eq('status', 'RESERVED')
+      if (unitError) throw new Error(unitError.message)
+      delivered += 1
+    }
+
+    const { data: awaitingUnits, error: awaitingError } = await supabaseAdmin
+      .from('order_units')
+      .select('id')
+      .eq('order_id', order.id)
+      .eq('status', 'AWAITING_STOCK')
+    if (awaitingError) throw new Error(awaitingError.message)
+    const awaiting = awaitingUnits?.length ?? 0
+    const fulfillment =
+      delivered === units.length && awaiting === 0
+        ? 'COMPLETE'
+        : delivered > 0
+          ? 'PARTIAL'
+          : 'NOT_STARTED'
+
+    const { error: axesError } = await supabaseAdmin
+      .from('orders')
+      .update({ payment_status: 'PAID', fulfillment_status: fulfillment })
+      .eq('id', order.id)
+    if (axesError) throw new Error(axesError.message)
+
+    let status = 'PAID'
+    if (fulfillment === 'COMPLETE') {
+      const deliveredOrder = await ordersService.transitionStatus(order.publicId, 'deliver')
+      status = deliveredOrder.status
+    }
+    return { status, allocated: delivered, awaiting, total: units.length }
+  },
+
+  async releaseCartReservation(
+    order: PayableOrder,
+    cartId: string,
+    outcome: 'failed' | 'expired'
+  ): Promise<Record<string, unknown>> {
+    const { data: units, error: unitsError } = await supabaseAdmin
+      .from('order_units')
+      .select('id,vault_item_id')
+      .eq('order_id', order.id)
+      .eq('status', 'RESERVED')
+    if (unitsError) throw new Error(unitsError.message)
+
+    for (const unit of units ?? []) {
+      if (!unit.vault_item_id) continue
+      const { error: vaultError } = await supabaseAdmin
+        .from('vault_items')
+        .update({
+          status: 'AVAILABLE',
+          allocated_at: null,
+          reserved_order_unit_id: null,
+          reserved_at: null,
+          reservation_expires_at: null,
+        })
+        .eq('id', unit.vault_item_id)
+        .eq('status', 'RESERVED')
+        .eq('reserved_order_unit_id', unit.id)
+      if (vaultError) throw new Error(vaultError.message)
+      const { error: unitError } = await supabaseAdmin
+        .from('order_units')
+        .update({ status: 'PENDING_PAYMENT', vault_item_id: null, delivered_at: null })
+        .eq('id', unit.id)
+        .eq('status', 'RESERVED')
+      if (unitError) throw new Error(unitError.message)
+    }
+
+    const { error: axesError } = await supabaseAdmin
+      .from('orders')
+      .update({ payment_status: outcome === 'expired' ? 'EXPIRED' : 'FAILED' })
+      .eq('id', order.id)
+      .eq('payment_status', 'PENDING')
+    if (axesError) throw new Error(axesError.message)
+
+    const { error: cartError } = await supabaseAdmin
+      .from('carts')
+      .update({ status: 'ACTIVE', updated_at: new Date().toISOString() })
+      .eq('id', cartId)
+      .eq('status', 'CHECKOUT_PENDING')
+    if (cartError) throw new Error(cartError.message)
+
+    return { released: units?.length ?? 0 }
   },
 }
