@@ -1,6 +1,5 @@
 # STZEN - Credential Storefront
 
-[![Deploy to Cloudflare](https://github.com/indraprhmbd/stzen/actions/workflows/deploy.yml/badge.svg)](https://github.com/indraprhmbd/stzen/actions/workflows/deploy.yml)
 [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Hono](https://img.shields.io/badge/API-Hono_4-E36002?logo=hono&logoColor=white)](https://hono.dev/)
