@@ -7,6 +7,8 @@ import {
   timestamp,
   pgEnum,
   index,
+  uniqueIndex,
+  check,
 } from 'drizzle-orm/pg-core'
 import { sql } from 'drizzle-orm'
 
@@ -33,6 +35,30 @@ export const durationUnitEnum = pgEnum('duration_unit', [
   'day',
   'week',
   'month',
+])
+
+export const orderPaymentStatusEnum = pgEnum('order_payment_status', [
+  'PENDING',
+  'PAID',
+  'FAILED',
+  'EXPIRED',
+  'REJECTED',
+])
+
+export const orderFulfillmentStatusEnum = pgEnum('order_fulfillment_status', [
+  'NOT_STARTED',
+  'PARTIAL',
+  'COMPLETE',
+])
+
+export const orderUnitStatusEnum = pgEnum('order_unit_status', [
+  'PENDING_PAYMENT',
+  'RESERVED',
+  'AWAITING_STOCK',
+  'AWAITING_CREDENTIAL',
+  'DELIVERED',
+  'REFUNDED',
+  'REVOKED',
 ])
 
 // ─── Profiles ───────────────────────────────────────────────────────────────
@@ -138,6 +164,64 @@ export const productVariants = pgTable(
   ]
 )
 
+export const carts = pgTable(
+  'carts',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id').references(() => profiles.id, { onDelete: 'cascade' }),
+    guestTokenHash: text('guest_token_hash'),
+    status: text('status').notNull().default('ACTIVE'),
+    version: integer('version').notNull().default(0),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('carts_user_active_uq')
+      .on(table.userId)
+      .where(sql`user_id is not null and status in ('ACTIVE', 'CHECKOUT_PENDING')`),
+    uniqueIndex('carts_guest_active_uq')
+      .on(table.guestTokenHash)
+      .where(sql`guest_token_hash is not null and status in ('ACTIVE', 'CHECKOUT_PENDING')`),
+    index('carts_expiry_idx').on(table.expiresAt),
+    check('carts_owner_check', sql`num_nonnulls(user_id, guest_token_hash) = 1`),
+    check(
+      'carts_status_check',
+      sql`status in ('ACTIVE', 'CHECKOUT_PENDING', 'CONVERTED', 'ABANDONED')`
+    ),
+  ]
+)
+
+export const cartItems = pgTable(
+  'cart_items',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    cartId: uuid('cart_id')
+      .notNull()
+      .references(() => carts.id, { onDelete: 'cascade' }),
+    variantId: uuid('variant_id')
+      .notNull()
+      .references(() => productVariants.id, { onDelete: 'cascade' }),
+    quantity: integer('quantity').notNull().default(1),
+    unitPriceSnapshot: integer('unit_price_snapshot').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('cart_items_cart_variant_uq').on(table.cartId, table.variantId),
+    index('cart_items_cart_idx').on(table.cartId),
+    check('cart_items_quantity_check', sql`quantity > 0`),
+  ]
+)
+
 // ─── Vault Items ────────────────────────────────────────────────────────────
 // Encrypted credential payloads - AES-256-GCM at rest
 
@@ -153,6 +237,9 @@ export const vaultItems = pgTable(
       .notNull()
       .defaultNow(),
     allocatedAt: timestamp('allocated_at', { withTimezone: true }),
+    reservedOrderUnitId: uuid('reserved_order_unit_id'),
+    reservedAt: timestamp('reserved_at', { withTimezone: true }),
+    reservationExpiresAt: timestamp('reservation_expires_at', { withTimezone: true }),
   },
   (table) => [
     index('vault_items_product_id_idx').on(table.productId),
@@ -181,6 +268,10 @@ export const orders = pgTable(
     userId: uuid('user_id')
       .notNull()
       .references(() => profiles.id, { onDelete: 'cascade' }),
+    // Owning cart for atomic-checkout orders (0031). NULL for legacy
+    // direct-checkout rows. Lets webhook failures restore the exact cart
+    // instead of guessing the user's single CHECKOUT_PENDING row.
+    cartId: uuid('cart_id').references(() => carts.id, { onDelete: 'set null' }),
     productId: uuid('product_id').references(() => products.id, { onDelete: 'set null' }),
     variantId: uuid('variant_id').references(() => productVariants.id, { onDelete: 'set null' }),
     vaultItemId: uuid('vault_item_id').references(() => vaultItems.id, {
@@ -214,11 +305,21 @@ export const orders = pgTable(
     // Frozen at checkout from product_variants.allow_backorder. Toggling
     // the variant later never retro-changes open orders.
     backorderAllowed: boolean('backorder_allowed').notNull().default(false),
+    paymentStatus: orderPaymentStatusEnum('payment_status').notNull().default('PENDING'),
+    fulfillmentStatus: orderFulfillmentStatusEnum('fulfillment_status')
+      .notNull()
+      .default('NOT_STARTED'),
+    subtotal: integer('subtotal'),
+    paymentFee: integer('payment_fee'),
+    paymentTotal: integer('payment_total'),
+    checkoutAttemptId: uuid('checkout_attempt_id'),
+    termsConsentedAt: timestamp('terms_consented_at', { withTimezone: true }),
     // 0014: writer-owned mirror of Google Calendar reminder truth
     reminderState: text('reminder_state').notNull().default('none'),
   },
   (table) => [
     index('orders_user_id_idx').on(table.userId),
+    index('orders_cart_id_idx').on(table.cartId),
     index('orders_status_idx').on(table.status),
     index('orders_payment_ref_idx').on(table.paymentRef),
     index('orders_public_id_idx').on(table.publicId),
@@ -235,6 +336,111 @@ export const orders = pgTable(
       table.paidAt
     ),
     index('orders_created_at_idx').on(table.createdAt),
+  ]
+)
+
+export const orderUnits = pgTable(
+  'order_units',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    orderId: uuid('order_id')
+      .notNull()
+      .references(() => orders.id, { onDelete: 'cascade' }),
+    variantId: uuid('variant_id').references(() => productVariants.id, { onDelete: 'set null' }),
+    vaultItemId: uuid('vault_item_id').references(() => vaultItems.id, { onDelete: 'set null' }),
+    position: integer('position').notNull(),
+    status: orderUnitStatusEnum('status').notNull().default('PENDING_PAYMENT'),
+    productNameSnapshot: text('product_name_snapshot'),
+    variantNameSnapshot: text('variant_name_snapshot'),
+    variantSkuSnapshot: text('variant_sku_snapshot'),
+    priceAtPurchase: integer('price_at_purchase'),
+    costAtPurchase: integer('cost_at_purchase'),
+    profitAtPurchase: integer('profit_at_purchase'),
+    durationSnapshot: integer('duration_snapshot'),
+    durationSnapshotUnit: text('duration_snapshot_unit'),
+    accountTypeSnapshot: text('account_type_snapshot'),
+    conditionsSnapshot: text('conditions_snapshot'),
+    baseNameSnapshot: text('base_name_snapshot'),
+    backorderAllowed: boolean('backorder_allowed').notNull().default(false),
+    requiresDeliveryInfo: boolean('requires_delivery_info').notNull().default(false),
+    deliveredAt: timestamp('delivered_at', { withTimezone: true }),
+    refundedAmount: integer('refunded_amount'),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('order_units_order_position_uq').on(table.orderId, table.position),
+    index('order_units_order_idx').on(table.orderId),
+    index('order_units_variant_idx').on(table.variantId),
+    index('order_units_vault_item_idx').on(table.vaultItemId),
+    index('order_units_status_idx').on(table.status),
+  ]
+)
+
+export const orderUnitDeliveryInfo = pgTable(
+  'order_unit_delivery_info',
+  {
+    orderUnitId: uuid('order_unit_id')
+      .primaryKey()
+      .references(() => orderUnits.id, { onDelete: 'cascade' }),
+    customerAccount: text('customer_account').notNull().default(''),
+    waNumber: text('wa_number').notNull().default(''),
+  },
+  (table) => [index('order_unit_delivery_info_unit_idx').on(table.orderUnitId)]
+)
+
+export const paymentAttempts = pgTable(
+  'payment_attempts',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    orderId: uuid('order_id')
+      .notNull()
+      .references(() => orders.id, { onDelete: 'cascade' }),
+    provider: text('provider').notNull(),
+    idempotencyKey: text('idempotency_key').notNull(),
+    requestFingerprint: text('request_fingerprint').notNull(),
+    providerPaymentId: text('provider_payment_id'),
+    providerOrderRef: text('provider_order_ref'),
+    checkoutUrl: text('checkout_url'),
+    requestedAmount: integer('requested_amount').notNull(),
+    expectedWebhookAmount: integer('expected_webhook_amount'),
+    status: text('status').notNull().default('CREATED'),
+    expiresAt: timestamp('expires_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('payment_attempts_idempotency_uq').on(table.provider, table.idempotencyKey),
+    index('payment_attempts_order_idx').on(table.orderId),
+    index('payment_attempts_provider_ref_idx').on(table.provider, table.providerOrderRef),
+  ]
+)
+
+export const webhookEvents = pgTable(
+  'webhook_events',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    provider: text('provider').notNull(),
+    providerEventId: text('provider_event_id').notNull(),
+    payloadHash: text('payload_hash'),
+    processingStatus: text('processing_status').notNull().default('RECEIVED'),
+    attempts: integer('attempts').notNull().default(0),
+    orderId: uuid('order_id').references(() => orders.id, { onDelete: 'set null' }),
+    lastError: text('last_error'),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    processedAt: timestamp('processed_at', { withTimezone: true }),
+  },
+  (table) => [
+    uniqueIndex('webhook_events_provider_event_uq').on(table.provider, table.providerEventId),
+    index('webhook_events_order_idx').on(table.orderId),
+    index('webhook_events_status_idx').on(table.processingStatus),
   ]
 )
 
