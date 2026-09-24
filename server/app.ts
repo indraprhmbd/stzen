@@ -10,6 +10,7 @@ import { routes as authRoutes } from './modules/auth'
 import { routes as productRoutes } from './modules/products'
 import { routes as orderRoutes } from './modules/orders'
 import { routes as checkoutRoutes } from './modules/checkout'
+import { routes as cartRoutes } from './modules/cart'
 import { routes as adminRoutes } from './modules/admin'
 import { paymentsRoutes, webhooksRoutes } from './modules/payments'
 import { registerProvider } from './shared/lib/notify/notify.dispatcher'
@@ -104,7 +105,7 @@ export function createApp() {
   // 404 with the standard not-found body, identical to a nonexistent route.
   // Reason is logged internally for incident response. All other prefixes
   // keep 401 so the SPA re-login flow keeps working.
-  const PUBLIC_API_PREFIXES = ['/api/v1/products', '/api/v1/webhooks', '/api/v1/auth', '/api/v1/security']
+  const PUBLIC_API_PREFIXES = ['/api/v1/products', '/api/v1/webhooks', '/api/v1/auth', '/api/v1/security', '/api/v1/cart']
   const isConcealedScope = (path: string) =>
     path === '/api/v1/admin' || path.startsWith('/api/v1/admin/')
   base.use('/api/v1/*', async (c, next) => {
@@ -130,6 +131,9 @@ export function createApp() {
   // Danger Zone: destructive ops get their own strict bucket.
   base.use('/api/v1/admin/danger/*', rateLimit(10, 60_000))
   base.use('/api/v1/checkout/*', rateLimit(30, 60_000))
+  // Cart is public (guest cookie carts) but write-heavy: same bucket shape
+  // as checkout. Ownership is re-derived per request inside cart routes.
+  base.use('/api/v1/cart/*', rateLimit(60, 60_000))
   base.use('/api/v1/payments/*', rateLimit(30, 60_000))
   // Webhooks get their own lenient limit - gateway retries shouldn't 429 into a dropped payment.
   base.use('/api/v1/webhooks/*', rateLimit(120, 60_000))
@@ -174,6 +178,7 @@ export function createApp() {
     .route('/api/v1/auth', authRoutes)
     .route('/api/v1/products', productRoutes)
     .route('/api/v1/checkout', checkoutRoutes)
+    .route('/api/v1/cart', cartRoutes)
     .route('/api/v1/orders', orderRoutes)
     .route('/api/v1/admin', adminRoutes)
     .route('/api/v1/payments', paymentsRoutes)
