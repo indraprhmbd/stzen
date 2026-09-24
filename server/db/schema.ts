@@ -457,6 +457,9 @@ export const warrantyClaims = pgTable(
     orderId: uuid('order_id')
       .notNull()
       .references(() => orders.id, { onDelete: 'cascade' }),
+    orderUnitId: uuid('order_unit_id').references(() => orderUnits.id, {
+      onDelete: 'cascade',
+    }),
     note: text('note'),
     actorId: text('actor_id'),
     actorEmail: text('actor_email'),
@@ -464,7 +467,10 @@ export const warrantyClaims = pgTable(
       .notNull()
       .defaultNow(),
   },
-  (table) => [index('warranty_claims_order_idx').on(table.orderId)]
+  (table) => [
+    index('warranty_claims_order_idx').on(table.orderId),
+    index('warranty_claims_order_unit_idx').on(table.orderUnitId),
+  ]
 )
 
 // ─── Operator notes ─────────────────────────────────────────────────────────

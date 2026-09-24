@@ -1,18 +1,21 @@
 import { useState, useRef } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useCopy } from '../hooks/useCopy'
+import { useCart } from '../hooks/useCart'
 import { useRafScroll } from '../hooks/useRafScroll'
 
-const tabs = [
+const tabs: { to: string; icon: string; labelKey: 'home' | 'shop' | 'myOrders' | 'profile'; cart?: boolean }[] = [
   { to: '/', icon: 'house', labelKey: 'home' as const },
   { to: '/products', icon: 'storefront', labelKey: 'shop' as const },
   { to: '/dashboard', icon: 'receipt_long', labelKey: 'myOrders' as const },
+  { to: '/cart', icon: 'shopping_cart', labelKey: 'shop' as const, cart: true },
   { to: '/profile', icon: 'person', labelKey: 'profile' as const },
 ]
 
 export default function BottomNav() {
   const location = useLocation()
-  const { t } = useCopy()
+  const { t, lang } = useCopy()
+  const { itemCount } = useCart()
   const [visible, setVisible] = useState(true)
   const lastY = useRef(0)
 
@@ -44,7 +47,7 @@ export default function BottomNav() {
               key={tab.to}
               to={tab.to}
               className={`
-                flex flex-col items-center justify-center gap-0.5 w-16 h-14
+                relative flex flex-col items-center justify-center gap-0.5 w-16 h-14
                 transition-colors
                 ${active ? 'text-secondary' : 'text-black/50'}
               `}
@@ -55,11 +58,16 @@ export default function BottomNav() {
               >
                 {tab.icon}
               </span>
+              {tab.cart && itemCount > 0 && (
+                <span className="absolute top-1 ml-8 min-w-4 h-4 px-0.5 bg-secondary text-black text-[9px] font-black border-2 border-black flex items-center justify-center">
+                  {itemCount > 99 ? '99+' : itemCount}
+                </span>
+              )}
               <span
                 className="font-black text-[9px] uppercase leading-none"
                 style={{ fontFamily: "'Space Grotesk', sans-serif" }}
               >
-                {t.nav[tab.labelKey]}
+                {tab.cart ? (lang === 'id' ? 'Keranjang' : 'Cart') : t.nav[tab.labelKey]}
               </span>
             </Link>
           )

@@ -3,11 +3,16 @@
 
 export class AppError extends Error {
   status: number
+  // Machine-readable reason for clients that branch on it (single auto-
+  // retry on VERSION_CONFLICT, hard stop on CHECKOUT_IN_PROGRESS).
+  // Optional: omitted from the wire when unset.
+  code?: string
 
-  constructor(message: string, status: number) {
+  constructor(message: string, status: number, code?: string) {
     super(message)
     this.name = 'AppError'
     this.status = status
+    this.code = code
   }
 }
 
@@ -36,7 +41,7 @@ export class NotFoundError extends AppError {
 }
 
 export class ConflictError extends AppError {
-  constructor(message = 'Conflict') {
-    super(message, 409)
+  constructor(message = 'Conflict', code?: string) {
+    super(message, 409, code)
   }
 }

@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import { BrandProvider } from './hooks/useBrand'
+import { CartProvider } from './hooks/useCart'
 import { RequireAdmin } from './components/RequireAdmin'
 import { ErrorBoundary } from './components/ErrorBoundary'
 
@@ -18,6 +19,7 @@ const SignUp = lazy(() => import('./pages/SignUp'))
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'))
   const UpdatePassword = lazy(() => import('./pages/UpdatePassword'))
   const Dashboard = lazy(() => import('./pages/Dashboard'))
+const Cart = lazy(() => import('./pages/Cart'))
   const AuthCallback = lazy(() => import('./pages/AuthCallback'))
 const Profile = lazy(() => import('./pages/Profile'))
 // Admin shell stays out of the main bundle - loads only on /admin visits.
@@ -43,7 +45,8 @@ function PageLoader() {
 
 function App() {
   return (
-    <BrandProvider>
+      <BrandProvider>
+      <CartProvider>
       <ErrorBoundary>
       <Suspense fallback={<PageLoader />}>
         <Routes>
@@ -63,6 +66,7 @@ function App() {
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/update-password" element={<UpdatePassword />} />
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/cart" element={<Cart />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/payment/return" element={<PaymentReturn />} />
 
@@ -92,7 +96,8 @@ function App() {
         </Routes>
       </Suspense>
       </ErrorBoundary>
-    </BrandProvider>
+      </CartProvider>
+      </BrandProvider>
   )
 }
 

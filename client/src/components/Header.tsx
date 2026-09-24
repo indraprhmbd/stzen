@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
+import { useCart } from '../hooks/useCart'
 import { useCopy } from '../hooks/useCopy'
 import SearchOverlay from './SearchOverlay'
 import { useRafScroll } from '../hooks/useRafScroll'
@@ -8,6 +9,7 @@ import SignOutDialog, { openSignOutDialog } from './SignOutDialog'
 
 export default function Header() {
   const { user } = useAuth()
+  const { itemCount } = useCart()
   const location = useLocation()
   const { t, lang, toggle } = useCopy()
   const [scrolled, setScrolled] = useState(false)
@@ -79,6 +81,18 @@ export default function Header() {
                 <img src="/logo.svg" alt="ST.ZEN" className="h-7 w-auto" />
               </Link>
               <div className="flex items-center gap-2">
+                <Link
+                  to="/cart"
+                  className="relative w-8 h-8 border-2 border-black bg-white text-black flex items-center justify-center hover:bg-panel-dark hover:text-white transition-colors"
+                  aria-label="Cart"
+                >
+                  <span className="material-symbols-outlined text-sm">shopping_cart</span>
+                  {itemCount > 0 && (
+                    <span className="absolute -top-2 -right-2 min-w-4 h-4 px-0.5 bg-secondary text-black text-[9px] font-black border-2 border-black flex items-center justify-center">
+                      {itemCount > 99 ? '99+' : itemCount}
+                    </span>
+                  )}
+                </Link>
                 <button
                   onClick={() => setSearchOpen(true)}
                   className="w-8 h-8 border-2 border-black bg-white text-black flex items-center justify-center hover:bg-panel-dark hover:text-white transition-colors"
@@ -111,6 +125,18 @@ export default function Header() {
 
             {/* Right: nav pills + auth (desktop only) */}
             <div className="hidden md:flex items-center gap-2 relative">
+              <Link
+                to="/cart"
+                className={`${pillBase} relative ${pillActive(location.pathname === '/cart')}`}
+                style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+              >
+                {lang === 'id' ? 'Keranjang' : 'Cart'}
+                {itemCount > 0 && (
+                  <span className="absolute -top-2 -right-2 min-w-4 h-4 px-0.5 bg-secondary text-black text-[9px] font-black border-2 border-black flex items-center justify-center">
+                    {itemCount > 99 ? '99+' : itemCount}
+                  </span>
+                )}
+              </Link>
               {rightLinks.map((link) => (
                 <Link
                   key={link.to}

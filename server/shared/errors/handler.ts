@@ -4,7 +4,10 @@ import { HTTPException } from 'hono/http-exception'
 
 export const errorHandler: ErrorHandler = (err, c) => {
   if (err instanceof AppError) {
-    return c.json({ error: err.message }, err.status as any)
+    return c.json(
+      err.code ? { error: err.message, code: err.code } : { error: err.message },
+      err.status as any
+    )
   }
 
   if (err instanceof HTTPException) {

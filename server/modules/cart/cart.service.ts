@@ -25,6 +25,9 @@ export interface CartLine {
   quantity: number
   unitPrice: number
   lineTotal: number
+  // Strike-through anchor: null when no discount. Display only - checkout
+  // RPC charges unitPrice and ignores this field entirely.
+  compareAtPrice: number | null
 }
 
 export interface CartView {
@@ -81,6 +84,55 @@ async function findActiveCart(owner: CartOwner): Promise<CartRow | null> {
 async function findOrCreateCart(owner: CartOwner): Promise<CartRow> {
   const existing = await findActiveCart(owner)
   if (existing) return existing
+  // The partial unique index covers ACTIVE + CHECKOUT_PENDING regardless of
+  // expiry, so an invisible row can still block the insert below. Reuse it
+  // instead of colliding: expired carts reset to a clean slate, checkout-
+  // pending carts reject (an order is mid-payment for that cart).
+  let query = supabaseAdmin
+    .from('carts')
+    .select('id, version, status, expires_at')
+    .in('status', ['ACTIVE', 'CHECKOUT_PENDING'])
+    .limit(1)
+  query = owner.userId ? query.eq('user_id', owner.userId) : query.eq('guest_token_hash', owner.guestHash!)
+  const { data: stale, error: staleErr } = await query
+  if (staleErr) throw new Error(staleErr.message)
+  const blocked = stale && stale.length > 0 ? stale[0] as CartRow & { status: string; expires_at: string } : null
+  if (blocked) {
+    // CHECKOUT_PENDING blocks only while a SumoPod payment is actually in
+    // flight for it. Manual-provider PENDING orders (admin approval queue),
+    // failed/expired/rejected rows, and missing orders all mean the cart
+    // contents already converted (or died) - reclaim instead of wedging
+    // the buyer until cart expiry.
+    let reclaim = blocked.status === 'ACTIVE'
+    if (blocked.status === 'CHECKOUT_PENDING' && new Date(blocked.expires_at).getTime() > Date.now()) {
+      const { data: orders } = await supabaseAdmin
+        .from('orders')
+        .select('payment_status, payment_provider')
+        .eq('cart_id', blocked.id)
+        .limit(1)
+      const o = orders && orders.length > 0 ? orders[0] as { payment_status: string; payment_provider: string } : null
+      const inFlight = !!o && o.payment_status === 'PENDING' && o.payment_provider === 'sumopod'
+      if (inFlight) {
+        throw new ConflictError('Checkout in progress for this cart', 'CHECKOUT_IN_PROGRESS')
+      }
+      reclaim = true
+    } else if (blocked.status === 'CHECKOUT_PENDING') {
+      reclaim = true // expired pending: abandon it
+    }
+    if (reclaim) {
+      // Expired (or consumed) cart: reclaim the row, drop dead lines. The
+      // converted order keeps its own order_units snapshots - untouched.
+      await supabaseAdmin.from('cart_items').delete().eq('cart_id', blocked.id)
+      const { data: reset, error: resetErr } = await supabaseAdmin
+        .from('carts')
+        .update({ status: 'ACTIVE', version: blocked.version + 1, expires_at: freshExpiry(), updated_at: nowIso() })
+        .eq('id', blocked.id)
+        .select('id, version')
+        .limit(1)
+      if (resetErr) throw new Error(resetErr.message)
+      if (reset && reset.length > 0) return reset[0] as CartRow
+    }
+  }
   const payload = {
     user_id: owner.userId ?? null,
     guest_token_hash: owner.guestHash ?? null,
@@ -127,7 +179,7 @@ async function bumpVersion(cartId: string, expectedVersion: number): Promise<num
     .limit(1)
   if (error) throw new Error(error.message)
   if (!data || data.length === 0) {
-    throw new ConflictError('Cart changed, refresh and retry')
+    throw new ConflictError('Cart changed, refresh and retry', 'VERSION_CONFLICT')
   }
   return expectedVersion + 1
 }
@@ -148,7 +200,7 @@ export async function getCartView(owner: CartOwner): Promise<CartView> {
   const variantIds = [...new Set(items.map((item) => item.variant_id))]
   const { data: variants, error: variantsError } = await supabaseAdmin
     .from('product_variants')
-    .select('id, public_id, name, price, is_active')
+    .select('id, public_id, name, price, compare_at_price, is_active')
     .in('id', variantIds)
   if (variantsError) throw new Error(variantsError.message)
   const byId = new Map((variants ?? []).map((v) => [v.id, v]))
@@ -159,12 +211,14 @@ export async function getCartView(owner: CartOwner): Promise<CartView> {
     // checkout RPC rejects it anyway. Never fail the whole cart read.
     if (!variant || !variant.is_active) continue
     const unitPrice = Number(variant.price)
+    const rawCompare = variant.compare_at_price == null ? NaN : Number(variant.compare_at_price)
     lines.push({
       variantPublicId: variant.public_id as string,
       name: variant.name as string,
       quantity: item.quantity as number,
       unitPrice,
       lineTotal: unitPrice * (item.quantity as number),
+      compareAtPrice: Number.isFinite(rawCompare) && rawCompare > unitPrice ? rawCompare : null,
     })
   }
   const subtotal = lines.reduce((sum, line) => sum + line.lineTotal, 0)
@@ -188,7 +242,7 @@ export async function putItem(
   const variant = await resolveVaultVariant(variantPublicId)
   const cart = await findOrCreateCart(owner)
   if (cart.version !== expectedVersion) {
-    throw new ConflictError('Cart changed, refresh and retry')
+    throw new ConflictError('Cart changed, refresh and retry', 'VERSION_CONFLICT')
   }
   const { error: upsertError } = await supabaseAdmin.from('cart_items').upsert(
     {
@@ -213,7 +267,7 @@ export async function removeItem(
   const cart = await findActiveCart(owner)
   if (!cart) throw new NotFoundError('Cart not found or unavailable')
   if (cart.version !== expectedVersion) {
-    throw new ConflictError('Cart changed, refresh and retry')
+    throw new ConflictError('Cart changed, refresh and retry', 'VERSION_CONFLICT')
   }
   const { data: variants, error: variantError } = await supabaseAdmin
     .from('product_variants')
@@ -237,7 +291,7 @@ export async function clearCart(owner: CartOwner, expectedVersion: number): Prom
   const cart = await findActiveCart(owner)
   if (!cart) throw new NotFoundError('Cart not found or unavailable')
   if (cart.version !== expectedVersion) {
-    throw new ConflictError('Cart changed, refresh and retry')
+    throw new ConflictError('Cart changed, refresh and retry', 'VERSION_CONFLICT')
   }
   const { error: deleteError } = await supabaseAdmin.from('cart_items').delete().eq('cart_id', cart.id)
   if (deleteError) throw new Error(deleteError.message)

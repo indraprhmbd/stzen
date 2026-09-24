@@ -13,6 +13,7 @@ import { useBrand } from '../hooks/useBrand'
 import { useRafScroll } from '../hooks/useRafScroll'
 import { useCopy } from '../hooks/useCopy'
 import { useAuth } from '../hooks/useAuth'
+import { useCart } from '../hooks/useCart'
 import { formatIdNumber } from '../lib/format'
 
 // Lazy: description sits below related products, parser never costs paint.
@@ -48,7 +49,7 @@ export default function ProductDetail() {
   const navigate = useNavigate()
   const goBuy = useCallback((id: string) => navigate(`/products/${id}`), [navigate])
   const brand = useBrand()
-  const { t } = useCopy()
+  const { t, lang } = useCopy()
   const { session } = useAuth()
   const settings = usePublicSettings()
   // Server-gated rails: sumopod only when its key is configured AND the
@@ -70,6 +71,9 @@ export default function ProductDetail() {
   // Prefetched hit paints instantly - skip the skeleton, revalidate silently.
   const [loading, setLoading] = useState(() => !(id && getCachedDetail<Product>(id)))
   const [purchasing, setPurchasing] = useState(false)
+  const [qty, setQty] = useState(1)
+  const [adding, setAdding] = useState(false)
+  const { items: cartItems, setQuantity } = useCart()
   const [msg, setMsg] = useState('')
   const { toasts, showToast, dismissToast } = useToast()
   const [showStickyBar, setShowStickyBar] = useState(false)
@@ -380,6 +384,44 @@ export default function ProductDetail() {
           >
             {purchasing ? t.products.processing : (inStock ? t.products.buyNow : t.products.soldOut)}
           </button>
+
+          {/* Add to cart: guests welcome (server guest cart), quantity is
+              desired-state - checkout recomputes price server-side. */}
+          {inStock && (
+            <div className="flex gap-2 mt-2">
+              <div className="join border-comic">
+                <button className="btn join-item" onClick={() => setQty((q) => Math.max(1, q - 1))} aria-label="decrease">−</button>
+                <span className="join-item px-4 font-mono font-black flex items-center bg-white">{qty}</span>
+                <button className="btn join-item" onClick={() => setQty((q) => Math.min(10, q + 1))} aria-label="increase">+</button>
+              </div>
+              <button
+                disabled={adding}
+                onClick={async () => {
+                  if (!product || adding) return
+                  setAdding(true)
+                  try {
+                    // Additive on top of what's already in the cart (PUT is
+                    // desired-state, so read current line first, cap at 10).
+                    const inCart = cartItems.find((l) => l.variantPublicId === product.id)?.quantity ?? 0
+                    await setQuantity(product.id, Math.min(10, inCart + qty))
+                    showToast(
+                      lang === 'id'
+                        ? `${qty} barang dimasukkan ke keranjang!`
+                        : `${qty} item${qty > 1 ? 's' : ''} added to cart!`,
+                      'success'
+                    )
+                  } catch {
+                    showToast('Gagal', 'error')
+                  } finally {
+                    setAdding(false)
+                  }
+                }}
+                className="btn btn-primary border-comic shadow-comic btn-comic-interactive font-black uppercase flex-1"
+              >
+                {adding ? '...' : (lang === 'id' ? 'Keranjang' : 'Add to cart')}
+              </button>
+            </div>
+          )}
 
           {/* Success message */}
           {msg && (
